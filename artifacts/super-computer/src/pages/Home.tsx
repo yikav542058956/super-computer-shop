@@ -8,6 +8,7 @@ import {
   ShoppingCart, Star, ChevronLeft, ChevronRight,
   Zap, Info, AlertTriangle, CheckCircle, X, Megaphone,
   Shield, Truck, Wrench, Headphones, ArrowRight,
+  Users, Package, Award, ThumbsUp,
 } from "lucide-react";
 import { MdComputer } from "react-icons/md";
 import { formatINR } from "@/lib/utils";
@@ -221,43 +222,157 @@ function BannerSlider({ banners }: { banners: any[] }) {
   );
 }
 
-/* ─── Product Card ──────────────────────────────────────────── */
+/* ─── Animated Counter ──────────────────────────────────────── */
+function useCountUp(target: number, duration = 1800) {
+  const [count, setCount] = useState(0);
+  const [started, setStarted] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setStarted(true); },
+      { threshold: 0.4 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!started) return;
+    let start = 0;
+    const step = Math.ceil(target / (duration / 16));
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= target) { setCount(target); clearInterval(timer); }
+      else setCount(start);
+    }, 16);
+    return () => clearInterval(timer);
+  }, [started, target, duration]);
+
+  return { count, ref };
+}
+
+function StatCounter({ target, suffix, label, Icon, color }: {
+  target: number; suffix: string; label: string; Icon: any; color: string;
+}) {
+  const { count, ref } = useCountUp(target);
+  return (
+    <div ref={ref} className="flex flex-col items-center text-center group">
+      <div className={`h-14 w-14 rounded-2xl ${color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-lg`}>
+        <Icon className="h-7 w-7 text-white" />
+      </div>
+      <div className="text-3xl md:text-4xl font-black text-white tabular-nums">
+        {count.toLocaleString("en-IN")}<span className="text-green-400">{suffix}</span>
+      </div>
+      <p className="text-slate-400 text-sm font-medium mt-1">{label}</p>
+    </div>
+  );
+}
+
+/* ─── Stats Section ─────────────────────────────────────────── */
+function StatsSection() {
+  return (
+    <section className="py-12 md:py-16 bg-[#0D1117] border-b border-white/5 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-64 h-64 bg-green-500/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl" />
+      </div>
+      <div className="container mx-auto px-4 relative">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-bold mb-3">
+            📊 Our Numbers Speak
+          </div>
+          <h2 className="text-2xl md:text-3xl font-black text-white">
+            Trusted by <span className="text-green-400">Thousands</span> Across the Region
+          </h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+          <StatCounter target={600}  suffix="+"  label="Happy Customers"    Icon={Users}    color="bg-green-600" />
+          <StatCounter target={700}  suffix="+"  label="Products in Stock"  Icon={Package}  color="bg-blue-600" />
+          <StatCounter target={5}    suffix="+"  label="Years of Excellence" Icon={Award}   color="bg-yellow-600" />
+          <StatCounter target={98}   suffix="%"  label="Satisfaction Rate"  Icon={ThumbsUp} color="bg-purple-600" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── Product Card (Flipkart-style) ─────────────────────────── */
 function ProductCard({ product }: { product: any }) {
+  const hasDiscount = product.discountPrice && product.discountPrice < product.price;
+  const discountPct = hasDiscount
+    ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
+    : 0;
+
   return (
     <Link href={`/products/${product.id}`}>
-      <div className="group bg-[#161B22] border border-white/8 rounded-2xl overflow-hidden hover:border-green-500/40 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/5 cursor-pointer h-full">
-        <div className="relative bg-[#1C2128] flex justify-center items-center h-44 overflow-hidden p-4">
-          <img src={product.images?.[0]} alt={product.name}
-            className="h-full object-contain group-hover:scale-110 transition-transform duration-500" />
-          {product.discountPrice && product.discountPrice < product.price && (
-            <div className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">SALE</div>
+      <div className="group bg-[#161B22] border border-white/8 rounded-2xl overflow-hidden hover:border-green-500/40 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40 cursor-pointer h-full flex flex-col">
+        {/* Image area — white bg like Flipkart */}
+        <div className="relative bg-white flex justify-center items-center overflow-hidden" style={{ height: "180px" }}>
+          <img
+            src={product.images?.[0] || "/images/laptops/macbook-pro.png"}
+            alt={product.name}
+            className="h-36 w-auto max-w-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-lg"
+          />
+          {/* Discount badge */}
+          {hasDiscount && (
+            <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow">
+              {discountPct}% OFF
+            </div>
           )}
+          {/* New badge */}
           {product.isNewArrival && (
-            <div className="absolute top-3 right-3 bg-green-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full">NEW</div>
+            <div className="absolute top-2 right-2 bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded-md shadow">
+              NEW
+            </div>
           )}
+          {/* Featured badge */}
           {product.isFeatured && !product.isNewArrival && (
-            <div className="absolute top-3 right-3 bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full">TOP</div>
+            <div className="absolute top-2 right-2 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-md shadow">
+              ⭐ TOP
+            </div>
           )}
+          {/* Hover overlay */}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
         </div>
-        <div className="p-3 sm:p-4">
-          <p className="text-green-500 text-[10px] font-bold uppercase tracking-widest mb-1">{product.brand}</p>
-          <h3 className="font-semibold text-white line-clamp-2 mb-2 text-sm group-hover:text-green-400 transition-colors">{product.name}</h3>
-          <div className="flex items-center gap-1 mb-3">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className={`w-3 h-3 ${i < Math.floor(product.rating || 4) ? "fill-yellow-400 text-yellow-400" : "fill-white/10 text-white/10"}`} />
-            ))}
-            <span className="text-xs text-slate-400 ml-1">({product.reviewsCount || 0})</span>
+
+        {/* Content */}
+        <div className="p-3 sm:p-4 flex flex-col flex-1">
+          <p className="text-green-400 text-[10px] font-black uppercase tracking-widest mb-1">{product.brand}</p>
+          <h3 className="font-semibold text-white line-clamp-2 text-sm leading-snug mb-2 group-hover:text-green-400 transition-colors flex-1">
+            {product.name}
+          </h3>
+
+          {/* Rating row */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-0.5 bg-green-600 px-1.5 py-0.5 rounded text-white text-[10px] font-bold">
+              {(product.rating || 4).toFixed(1)}
+              <Star className="w-2.5 h-2.5 fill-white ml-0.5" />
+            </div>
+            <span className="text-xs text-slate-500">({product.reviewsCount || 0} reviews)</span>
           </div>
-          <div className="flex items-center justify-between">
+
+          {/* Price row */}
+          <div className="flex items-end justify-between gap-2">
             <div>
-              <p className="font-bold text-white text-base">{formatINR(product.discountPrice || product.price)}</p>
-              {product.discountPrice && product.discountPrice < product.price && (
-                <p className="text-xs text-slate-500 line-through">{formatINR(product.price)}</p>
+              <p className="font-black text-white text-lg leading-none">
+                {formatINR(product.discountPrice || product.price)}
+              </p>
+              {hasDiscount && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-xs text-slate-500 line-through">{formatINR(product.price)}</p>
+                  <p className="text-xs text-green-400 font-bold">Save {discountPct}%</p>
+                </div>
               )}
             </div>
-            <div className="h-8 w-8 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center group-hover:bg-green-500 transition-colors">
-              <ShoppingCart className="h-3.5 w-3.5 text-green-400 group-hover:text-black" />
-            </div>
+            {/* Cart button */}
+            <button
+              onClick={e => { e.preventDefault(); e.stopPropagation(); }}
+              className="h-9 px-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-bold flex items-center gap-1.5 group-hover:bg-green-500 group-hover:text-black group-hover:border-green-500 transition-all shrink-0"
+            >
+              <ShoppingCart className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Add</span>
+            </button>
           </div>
         </div>
       </div>
