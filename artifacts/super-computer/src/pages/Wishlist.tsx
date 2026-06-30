@@ -20,7 +20,7 @@ export default function Wishlist() {
       qty: 1,
       image: item.image,
     });
-    toast.success(`${item.name} cart mein add ho gaya!`);
+    toast.success(`${item.name} added to cart!`);
   };
 
   const handleMoveAllToCart = () => {
@@ -33,7 +33,7 @@ export default function Wishlist() {
         image: item.image,
       });
     });
-    toast.success("Saare items cart mein add ho gaye!");
+    toast.success("All items added to cart!");
   };
 
   const savings = wishlist.reduce((sum, item) => {
@@ -53,13 +53,13 @@ export default function Wishlist() {
               <Heart className="h-5 w-5 text-red-500 fill-red-500" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Meri Wishlist</h1>
+              <h1 className="text-2xl font-bold text-slate-900">My Wishlist</h1>
               <p className="text-sm text-slate-500">{wishlistCount} item{wishlistCount !== 1 ? "s" : ""} saved</p>
             </div>
           </div>
           {wishlist.length > 0 && (
             <Button onClick={handleMoveAllToCart} variant="outline" className="gap-2 hidden sm:flex">
-              <ShoppingCart className="h-4 w-4" /> Sab Cart Mein Dalo
+              <ShoppingCart className="h-4 w-4" /> Add All to Cart
             </Button>
           )}
         </div>
@@ -69,7 +69,7 @@ export default function Wishlist() {
           <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
             <span className="text-2xl">🎉</span>
             <p className="text-green-800 font-medium text-sm">
-              Aap {formatINR(savings)} ki total <span className="font-bold">bachat</span> kar rahe hain in wishlist items par!
+              You are saving <span className="font-bold">{formatINR(savings)}</span> in total on your wishlist items!
             </p>
           </div>
         )}
@@ -80,13 +80,13 @@ export default function Wishlist() {
             <div className="h-24 w-24 rounded-full bg-red-50 flex items-center justify-center mb-6">
               <Heart className="h-12 w-12 text-red-200" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-2">Wishlist Khaali Hai</h2>
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">Your Wishlist is Empty</h2>
             <p className="text-slate-500 mb-8 max-w-xs">
-              Apni pasand ke laptops aur accessories save karo aur baad mein kharido.
+              Save your favourite laptops and accessories here to buy them later.
             </p>
             <Link href="/products">
               <Button size="lg" className="gap-2">
-                <Package className="h-5 w-5" /> Products Dekhein
+                <Package className="h-5 w-5" /> Browse Products
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -120,7 +120,7 @@ export default function Wishlist() {
                         </span>
                       )}
                       <button
-                        onClick={() => { removeFromWishlist(item.productId); toast.success("Wishlist se remove ho gaya"); }}
+                        onClick={() => { removeFromWishlist(item.productId); toast.success("Removed from wishlist"); }}
                         className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white shadow border flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                         aria-label="Remove from wishlist"
                       >
@@ -153,7 +153,7 @@ export default function Wishlist() {
                           className="w-full gap-2 h-10"
                           size="sm"
                         >
-                          <ShoppingCart className="h-4 w-4" /> Cart Mein Dalo
+                          <ShoppingCart className="h-4 w-4" /> Add to Cart
                         </Button>
                         <WhatsAppProductButton
                           productName={item.name}
@@ -166,10 +166,10 @@ export default function Wishlist() {
               })}
             </div>
 
-            {/* Mobile move all button */}
+            {/* Mobile — add all to cart */}
             <div className="mt-6 sm:hidden">
               <Button onClick={handleMoveAllToCart} className="w-full gap-2" variant="outline">
-                <ShoppingCart className="h-4 w-4" /> Sab Cart Mein Dalo ({wishlistCount} items)
+                <ShoppingCart className="h-4 w-4" /> Add All to Cart ({wishlistCount} items)
               </Button>
             </div>
 
@@ -177,7 +177,7 @@ export default function Wishlist() {
             <div className="mt-8 text-center">
               <Link href="/products">
                 <Button variant="ghost" className="gap-2 text-primary">
-                  Aur Products Dekhein <ArrowRight className="h-4 w-4" />
+                  Continue Shopping <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
             </div>
