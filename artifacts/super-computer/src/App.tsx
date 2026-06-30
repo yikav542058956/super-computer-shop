@@ -6,6 +6,8 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
+import { LoginDialogProvider } from "@/contexts/LoginDialogContext";
+import { LoginDialog } from "@/components/auth/LoginDialog";
 import { useEffect } from "react";
 import { seedData } from "@/lib/seedData";
 import { AdminRoute, ProtectedRoute } from "@/components/auth/RouteGuards";
@@ -15,7 +17,6 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import ProductListing from "@/pages/ProductListing";
 import ProductDetail from "@/pages/ProductDetail";
-import Login from "@/pages/Login";
 import Cart from "@/pages/Cart";
 import Wishlist from "@/pages/Wishlist";
 import Checkout from "@/pages/Checkout";
@@ -56,7 +57,6 @@ function Router() {
           <Checkout />
         </ProtectedRoute>
       </Route>
-      <Route path="/login" component={Login} />
       <Route path="/profile">
         <ProtectedRoute>
           <Profile />
@@ -157,16 +157,19 @@ function App() {
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <TooltipProvider>
-                <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                  <Router />
-                </WouterRouter>
-                <Toaster />
-              </TooltipProvider>
-            </WishlistProvider>
-          </CartProvider>
+          <LoginDialogProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <TooltipProvider>
+                  <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                    <Router />
+                  </WouterRouter>
+                  <LoginDialog />
+                  <Toaster />
+                </TooltipProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </LoginDialogProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>

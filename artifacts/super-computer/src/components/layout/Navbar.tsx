@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { useLoginDialog } from "@/contexts/LoginDialogContext";
 import { useState } from "react";
 import { useTheme } from "next-themes";
 import {
@@ -38,6 +39,7 @@ export const Navbar = () => {
   const { cartCount } = useCart();
   const { wishlistCount } = useWishlist();
   const { currentUser, userData, extUser, isLoggedIn, logout } = useAuth();
+  const { openLoginDialog } = useLoginDialog();
   const [, setLocation] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -163,7 +165,7 @@ export const Navbar = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Link href="/login"><Button size="sm" className="rounded-full px-5">Login</Button></Link>
+              <Button size="sm" className="rounded-full px-5" onClick={openLoginDialog}>Login</Button>
             )}
           </div>
 
@@ -285,13 +287,13 @@ export const Navbar = () => {
                 </button>
               </>
             ) : (
-              <div className="px-4 py-3 flex gap-3">
-                <Link href="/login" onClick={() => setMobileOpen(false)} className="flex-1">
-                  <Button className="w-full rounded-full">Login</Button>
-                </Link>
-                <Link href="/login" onClick={() => setMobileOpen(false)} className="flex-1">
-                  <Button variant="outline" className="w-full rounded-full">Sign Up</Button>
-                </Link>
+              <div className="px-4 py-3">
+                <Button
+                  className="w-full rounded-full"
+                  onClick={() => { setMobileOpen(false); openLoginDialog(); }}
+                >
+                  Login / Sign Up
+                </Button>
               </div>
             )}
           </div>
