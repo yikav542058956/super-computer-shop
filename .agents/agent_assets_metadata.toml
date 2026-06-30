@@ -1,0 +1,50 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "YovMgGXOAHH_nFDE0UH4T"
+uri = "file://artifacts/super-computer/public/images/laptops/dell-xps.png"
+type = "image"
+title = "Dell XPS 15 laptop"
+
+[[generated]]
+id = "v-yW9xAX97SJcX5Q047o7"
+uri = "file://artifacts/super-computer/public/images/laptops/macbook-pro.png"
+type = "image"
+title = "MacBook Pro 16 laptop"
+
+[[generated]]
+id = "cEldOmLKPRcHP9dLmpGRn"
+uri = "file://artifacts/super-computer/public/images/laptops/hp-spectre.png"
+type = "image"
+title = "HP Spectre x360 laptop"
+
+[[generated]]
+id = "yruey69a7sPdpdV63i2AC"
+uri = "file://artifacts/super-computer/public/images/laptops/asus-rog.png"
+type = "image"
+title = "Asus ROG gaming laptop"
+
+[[generated]]
+id = "cZKn86P23ojZQ9dw1BEJr"
+uri = "file://artifacts/super-computer/public/images/laptops/lenovo-thinkpad.png"
+type = "image"
+title = "Lenovo ThinkPad laptop"
+
+[[generated]]
+id = "ff3a-UAF25xAX2GaGpB5i"
+uri = "file://artifacts/super-computer/public/images/laptops/msi-stealth.png"
+type = "image"
+title = "MSI Stealth laptop"
+
+[[generated]]
+id = "OLJywXZf0PhnNY5HJefCo"
+uri = "file://artifacts/super-computer/public/images/banners/banner-1.png"
+type = "image"
+title = "Gaming laptop sale banner"
+
+[[generated]]
+id = "L5yVSi3BE7KpPoXhPNRPF"
+uri = "file://artifacts/super-computer/public/images/banners/banner-2.png"
+type = "image"
+title = "Premium ultrabooks banner"

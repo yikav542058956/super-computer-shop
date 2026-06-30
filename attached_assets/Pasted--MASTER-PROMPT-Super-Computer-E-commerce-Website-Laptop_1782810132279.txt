@@ -1,0 +1,225 @@
+# MASTER PROMPT — "Super Computer" E-commerce Website (Laptop Store + Admin Panel)
+
+Use this entire prompt as one single instruction for an AI coding tool (Claude Code, Cursor, v0, Bolt, etc.) to generate the full website.
+
+---
+
+## 🎯 PROJECT OVERVIEW
+
+Build a complete e-commerce website named **"Super Computer"** for selling laptops and computer products (laptops, accessories, components etc.). The site must have:
+
+1. A **public-facing website** (home page, product listing, product detail, cart, checkout, user profile/orders).
+2. A **full Admin Panel** at `/admin` with login, dashboard, and tabs for managing everything.
+3. **Firebase Realtime Database** as the backend — no separate server needed, all data read/write directly from frontend using Firebase SDK.
+4. Clean, modern, professional **UI/UX** for both customer site and admin panel (not generic/templated — use good spacing, shadows, brand colors, icons).
+
+---
+
+## 🔥 FIREBASE CONFIG (use exactly this)
+
+```js
+const firebaseConfig = {
+  apiKey: "AIzaSyDEgc8jq0r0Osqq8zznNr-MBOm-HC_2iJ4",
+  authDomain: "super-computer-c6a99.firebaseapp.com",
+  databaseURL: "https://super-computer-c6a99-default-rtdb.firebaseio.com",
+  projectId: "super-computer-c6a99",
+  storageBucket: "super-computer-c6a99.firebasestorage.app",
+  messagingSenderId: "1031109156972",
+  appId: "1:1031109156972:web:db0e26ac43332830443849",
+  measurementId: "G-6QDLR8M346"
+};
+```
+
+Use:
+- **Firebase Authentication** → for customer login/signup (email-password + optionally Google login) and a separate **admin login** (restrict admin access via a fixed admin email/UID check or a `role: "admin"` field in the database).
+- **Firebase Realtime Database** → store products, categories, banners/sliders, orders, users, cart, reviews, coupons, site settings.
+- **Firebase Storage** → for uploading product images, banner images, category images, and brand logos from the admin panel.
+
+### Suggested Realtime Database structure:
+
+```
+super-computer-db/
+ ├── products/
+ │     └── productId/
+ │           ├── name, brand, category, price, discountPrice
+ │           ├── stock, description, specs (RAM, ROM, processor, display, etc.)
+ │           ├── images: [url1, url2, url3]
+ │           ├── rating, reviewsCount, isFeatured, isNewArrival, status (active/inactive)
+ │           └── createdAt
+ ├── categories/
+ ├── banners/        (homepage sliders)
+ ├── coupons/
+ ├── orders/
+ │     └── orderId/
+ │           ├── userId, items[], totalAmount, discount, finalAmount
+ │           ├── address, paymentMethod, paymentStatus
+ │           ├── orderStatus (pending/confirmed/shipped/out-for-delivery/delivered/cancelled/returned)
+ │           └── createdAt, updatedAt, statusHistory[]
+ ├── users/
+ │     └── userId/
+ │           ├── name, email, phone, addresses[]
+ │           ├── wishlist[], cart[]
+ │           └── role (user/admin)
+ ├── reviews/
+ ├── notifications/
+ └── settings/
+       ├── siteName, logo, contactInfo, socialLinks
+       ├── deliveryCharges, taxPercent
+       └── homepageSections order
+```
+
+---
+
+## 🌐 PUBLIC WEBSITE (Customer Side)
+
+### 1. Header / Navbar
+- Logo "Super Computer", search bar (live search from Firebase products), wishlist icon, cart icon (with live item count badge), login/profile dropdown.
+- Sticky navbar with category mega-menu (Laptops, Gaming Laptops, Accessories, Components, Brands, Deals).
+
+### 2. Home Page
+- **Hero Slider** (auto + manual swipe) — images/content fully controlled from admin (banners node).
+- Category cards row (clickable, image + name).
+- "Featured Products" section.
+- "New Arrivals" section.
+- "Best Sellers" / "Top Rated" section.
+- "Deal of the Day" with countdown timer.
+- Brand logos strip (HP, Dell, Lenovo, Asus, Apple, etc.).
+- Newsletter signup section.
+- Footer with links, social icons, contact info, payment icons.
+
+### 3. Product Listing Page
+- Filters sidebar: brand, price range slider, RAM, processor, category, rating, availability.
+- Sort by: price low-high, high-low, newest, rating, popularity.
+- Grid/List view toggle.
+- Pagination or infinite scroll.
+
+### 4. Product Detail Page
+- Image gallery with zoom + thumbnail switch.
+- Name, price, discount %, stock status, rating & reviews.
+- Full specifications table (processor, RAM, storage, display, graphics, OS, battery, ports, weight).
+- Quantity selector, "Add to Cart", "Buy Now", "Add to Wishlist".
+- Tabs: Description | Specifications | Reviews | Q&A.
+- Related products / "You may also like" carousel.
+- Review & rating submission (only for logged-in users who purchased).
+
+### 5. Cart Page
+- List of items with image, name, specs summary, quantity +/-, remove.
+- Auto-calculated subtotal, discount (coupon), delivery charge, total.
+- Coupon code input field (validated against `coupons` node).
+- "Proceed to Checkout" button.
+
+### 6. Checkout Page
+- Multi-step: Address → Payment method → Review & Place Order.
+- Saved addresses (add/edit/delete) stored under user node.
+- Payment options: COD, UPI/Card (Razorpay/Stripe integration placeholder), Wallet.
+- Order summary panel.
+- On order placement → write order to `orders/` node + clear cart + show success page with order ID.
+
+### 7. User Profile / Dashboard
+- My Profile (edit name, phone, photo).
+- My Orders (list with status badges, order tracking timeline, invoice download, cancel/return option).
+- My Addresses.
+- My Wishlist.
+- My Reviews.
+- Change Password / Logout.
+
+### 8. Other Pages
+- About Us, Contact Us (with form saving to Firebase + map), FAQs, Privacy Policy, Terms & Conditions, 404 page.
+- Login/Signup pages (with form validation, forgot password via Firebase Auth).
+
+---
+
+## 🛠️ ADMIN PANEL (`/admin`)
+
+### Admin Login
+- Separate secured login route `/admin/login`.
+- Only allow access if Firebase Auth user's UID/email matches an `admin` role stored in `users/{uid}/role === "admin"`.
+- Redirect non-admins automatically.
+
+### Admin Layout
+- Left sidebar with icons + collapsible menu, top bar with admin profile, notifications bell, logout.
+- Clean dashboard UI: cards, charts, tables — modern SaaS-style design (use a consistent color theme, shadows, rounded cards).
+
+### Admin Tabs/Sections (full feature list):
+
+1. **Dashboard**
+   - Total sales, total orders, total products, total customers (live cards).
+   - Sales graph (daily/weekly/monthly) using chart library.
+   - Recent orders table.
+   - Low stock alert widget.
+   - Top selling products widget.
+
+2. **Products Management**
+   - Add/Edit/Delete product.
+   - Form: name, brand, category, price, discount price, stock, description, full specs (dynamic key-value fields), tags, status toggle (active/inactive), featured toggle.
+   - **Multiple image upload** to Firebase Storage with preview, drag-drop reorder, delete image.
+   - Bulk actions: delete, change status.
+   - Search & filter product list table.
+
+3. **Categories Management**
+   - Add/Edit/Delete category & sub-category, category image upload, display order (drag to reorder).
+
+4. **Banners/Sliders Management**
+   - Upload homepage slider images, set title/subtitle/button link, order, active/inactive toggle.
+
+5. **Orders Management**
+   - Orders table with filters (status, date range, payment method).
+   - Order detail view: customer info, items, address, payment status.
+   - Update order status (pending → confirmed → shipped → delivered) with status history log auto-saved.
+   - Generate/download invoice (PDF).
+   - Cancel/refund order.
+
+6. **Customers Management**
+   - List all registered users, view profile, order history, block/unblock user.
+
+7. **Coupons & Offers**
+   - Create coupon code, discount type (flat/percentage), min order value, expiry date, usage limit, active toggle.
+
+8. **Reviews Management**
+   - View all reviews, approve/reject/delete, reply to review.
+
+9. **Reports & Analytics**
+   - Sales report by date range, best-selling products, category-wise sales, export to CSV.
+
+10. **Notifications**
+    - Send notification/announcement to all users or specific user (saved to `notifications/` node, shown in customer bell icon).
+
+11. **Site Settings**
+    - Site name, logo upload, favicon, contact info, social media links, delivery charge rules, tax %, currency, SEO meta tags, maintenance mode toggle.
+
+12. **Admin Users Management**
+    - Add/remove admin users, assign roles/permissions (super-admin, manager, support).
+
+13. **Profile / Account Settings (Admin)**
+    - Admin can update own profile photo, name, password.
+
+---
+
+## 🎨 UI/UX REQUIREMENTS
+
+- Responsive design — perfect on mobile, tablet, desktop.
+- Modern color palette (e.g., dark navy/electric blue + white, tech-feel), consistent fonts (e.g., Inter/Poppins).
+- Smooth loading skeletons/spinners while fetching from Firebase.
+- Toast notifications for success/error actions (add to cart, order placed, admin save, etc.).
+- Use icon library (Lucide/FontAwesome) throughout — for cart, wishlist, filters, admin sidebar.
+- Empty states (empty cart, no orders, no products found) with friendly illustration/message.
+- Form validation with inline error messages everywhere (login, checkout, admin forms).
+- Admin tables should have search, sort, pagination, and bulk-select checkboxes.
+
+---
+
+## ⚙️ TECHNICAL REQUIREMENTS
+
+- Use **React.js** (or Next.js) + Tailwind CSS for frontend.
+- Use **Firebase SDK v9+ (modular)** for Auth, Realtime Database, and Storage — using the config given above.
+- Real-time listeners (`onValue`) so admin changes (new product, banner, order status) reflect instantly on the live site without refresh.
+- Protect admin routes with auth guard (redirect to login if not authenticated admin).
+- Cart state persists per logged-in user in Firebase (`users/{uid}/cart`), and also support guest cart (localStorage merged into account on login).
+- Implement proper loading/error states for every Firebase read/write.
+- Code should be modular: separate components/folders for `Home`, `ProductCard`, `Cart`, `Checkout`, `Admin/Sidebar`, `Admin/Products`, `Admin/Orders`, etc.
+
+---
+
+## ✅ DELIVERABLE
+
+Generate the full project with this structure, working Firebase integration using the config provided, fully functional admin panel with all the above tabs/features, and a polished, professional customer-facing storefront — ready to run with `npm install && npm run dev`.
