@@ -3,16 +3,36 @@ import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useState } from "react";
+import { useTheme } from "next-themes";
 import {
-  ShoppingCart, Heart, Search, User as UserIcon, LogOut,
-  Package, MapPin, Menu, X, ChevronRight,
-} from "lucide-react";
+  MdShoppingCart, MdFavoriteBorder, MdFavorite,
+  MdSearch, MdMenu, MdClose, MdPerson, MdLogout,
+  MdReceiptLong, MdLocationOn, MdChevronRight,
+  MdLightMode, MdDarkMode, MdComputer, MdStore,
+  MdLocalOffer, MdSportsSoccer, MdHeadphones,
+} from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <button
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className="h-9 w-9 rounded-full flex items-center justify-center transition-all hover:bg-accent border border-border text-foreground"
+      title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+    >
+      {theme === "dark"
+        ? <MdLightMode size={20} className="text-yellow-400" />
+        : <MdDarkMode size={20} className="text-slate-600" />
+      }
+    </button>
+  );
+}
 
 export const Navbar = () => {
   const { cartCount } = useCart();
@@ -33,10 +53,10 @@ export const Navbar = () => {
   };
 
   const navLinks = [
-    { href: "/products?category=cat-1", label: "Laptops" },
-    { href: "/products?category=cat-2", label: "Gaming" },
-    { href: "/products?category=cat-3", label: "Accessories" },
-    { href: "/products?brand=Apple", label: "Brands" },
+    { href: "/products?category=cat-1", label: "Laptops",      Icon: MdComputer },
+    { href: "/products?category=cat-2", label: "Gaming",       Icon: MdSportsSoccer },
+    { href: "/products?category=cat-3", label: "Accessories",  Icon: MdHeadphones },
+    { href: "/products?brand=Apple",    label: "Brands",       Icon: MdStore },
   ];
 
   return (
@@ -55,96 +75,105 @@ export const Navbar = () => {
             placeholder="Search laptops, accessories..."
             className="w-full pr-10"
           />
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <MdSearch className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         </div>
 
         {/* Right Icons */}
-        <div className="flex items-center gap-1 md:gap-3">
-          <Button
-            variant="ghost" size="icon"
-            className="md:hidden"
+        <div className="flex items-center gap-1 md:gap-2">
+          {/* Mobile search toggle */}
+          <button
+            className="md:hidden h-9 w-9 rounded-full flex items-center justify-center hover:bg-accent transition-colors"
             onClick={() => setSearchOpen(!searchOpen)}
           >
-            <Search className="h-5 w-5" />
-          </Button>
+            <MdSearch size={22} className="text-foreground" />
+          </button>
 
+          {/* Cart */}
           <Link href="/cart">
-            <Button variant="ghost" size="icon" className="relative">
-              <ShoppingCart className="h-5 w-5" />
+            <button className="relative h-9 w-9 rounded-full flex items-center justify-center hover:bg-accent transition-colors">
+              <MdShoppingCart size={22} className="text-foreground" />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center shadow">
                   {cartCount > 9 ? "9+" : cartCount}
                 </span>
               )}
-            </Button>
+            </button>
           </Link>
 
-          {/* Desktop User Menu */}
-          <div className="hidden md:flex items-center gap-2">
+          {/* Desktop extras */}
+          <div className="hidden md:flex items-center gap-1.5">
+            {/* Wishlist */}
             <Link href="/wishlist">
-              <Button variant="ghost" size="icon" className="relative">
-                <Heart className="h-5 w-5" />
+              <button className="relative h-9 w-9 rounded-full flex items-center justify-center hover:bg-accent transition-colors">
+                {wishlistCount > 0
+                  ? <MdFavorite size={22} className="text-red-500" />
+                  : <MdFavoriteBorder size={22} className="text-foreground" />
+                }
                 {wishlistCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center shadow">
                     {wishlistCount > 9 ? "9+" : wishlistCount}
                   </span>
                 )}
-              </Button>
+              </button>
             </Link>
 
+            {/* Theme toggle */}
+            <ThemeToggle />
+
+            {/* User menu */}
             {isLoggedIn ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-bold text-primary">{avatarLetter}</span>
-                    </div>
-                  </Button>
+                  <button className="h-9 w-9 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors flex items-center justify-center border border-primary/20">
+                    <span className="text-sm font-bold text-primary">{avatarLetter}</span>
+                  </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{displayName}</p>
+                    <div className="flex flex-col space-y-0.5">
+                      <p className="text-sm font-semibold leading-none">{displayName}</p>
                       <p className="text-xs leading-none text-muted-foreground">{displayEmail}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setLocation("/profile")}>
-                    <UserIcon className="mr-2 h-4 w-4" /><span>My Profile</span>
+                  <DropdownMenuItem onClick={() => setLocation("/profile")} className="gap-2.5 cursor-pointer">
+                    <MdPerson size={18} className="text-muted-foreground" /><span>My Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation("/profile?tab=orders")}>
-                    <Package className="mr-2 h-4 w-4" /><span>My Orders</span>
+                  <DropdownMenuItem onClick={() => setLocation("/profile?tab=orders")} className="gap-2.5 cursor-pointer">
+                    <MdReceiptLong size={18} className="text-muted-foreground" /><span>My Orders</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation("/profile?tab=addresses")}>
-                    <MapPin className="mr-2 h-4 w-4" /><span>Addresses</span>
+                  <DropdownMenuItem onClick={() => setLocation("/wishlist")} className="gap-2.5 cursor-pointer">
+                    <MdFavoriteBorder size={18} className="text-muted-foreground" /><span>My Wishlist</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation("/profile?tab=addresses")} className="gap-2.5 cursor-pointer">
+                    <MdLocationOn size={18} className="text-muted-foreground" /><span>Addresses</span>
                   </DropdownMenuItem>
                   {userData?.role === "admin" && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setLocation("/admin/dashboard")}>
-                        <span>Admin Dashboard</span>
+                      <DropdownMenuItem onClick={() => setLocation("/admin/dashboard")} className="gap-2.5 cursor-pointer">
+                        <MdComputer size={18} className="text-primary" /><span className="text-primary font-medium">Admin Dashboard</span>
                       </DropdownMenuItem>
                     </>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" /><span>Log out</span>
+                  <DropdownMenuItem onClick={handleLogout} className="gap-2.5 cursor-pointer text-destructive focus:text-destructive">
+                    <MdLogout size={18} /><span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Link href="/login"><Button>Login</Button></Link>
+              <Link href="/login"><Button size="sm" className="rounded-full px-5">Login</Button></Link>
             )}
           </div>
 
           {/* Mobile Hamburger */}
-          <Button
-            variant="ghost" size="icon"
-            className="md:hidden"
+          <button
+            className="md:hidden h-9 w-9 rounded-full flex items-center justify-center hover:bg-accent transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
           >
-            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </Button>
+            {mobileOpen ? <MdClose size={24} className="text-foreground" /> : <MdMenu size={24} className="text-foreground" />}
+          </button>
         </div>
       </div>
 
@@ -158,7 +187,7 @@ export const Navbar = () => {
               className="w-full pr-10"
               autoFocus
             />
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <MdSearch className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           </div>
         </div>
       )}
@@ -166,65 +195,77 @@ export const Navbar = () => {
       {/* Desktop Category Bar */}
       <div className="border-t bg-card hidden md:block">
         <div className="container mx-auto px-4 h-10 flex items-center gap-6 text-sm font-medium">
-          {navLinks.map(l => (
-            <Link key={l.href} href={l.href} className="hover:text-primary transition-colors">{l.label}</Link>
+          {navLinks.map(({ href, label, Icon }) => (
+            <Link key={href} href={href} className="flex items-center gap-1.5 hover:text-primary transition-colors text-muted-foreground hover:text-foreground">
+              <Icon size={16} />{label}
+            </Link>
           ))}
-          <Link href="/products?deals=true" className="text-destructive hover:text-destructive/80 transition-colors font-semibold">Today's Deals</Link>
+          <Link href="/products?deals=true" className="flex items-center gap-1.5 text-destructive hover:text-destructive/80 transition-colors font-semibold">
+            <MdLocalOffer size={16} />Today's Deals
+          </Link>
         </div>
       </div>
 
       {/* Mobile Slide-Down Menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t bg-background shadow-lg">
-          <nav className="py-2">
-            {navLinks.map(l => (
+        <div className="md:hidden border-t bg-background shadow-xl">
+          <nav className="py-1">
+            {navLinks.map(({ href, label, Icon }) => (
               <Link
-                key={l.href} href={l.href}
+                key={href} href={href}
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-between px-5 py-3.5 text-base font-medium hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                className="flex items-center gap-3 px-5 py-3.5 text-base font-medium hover:bg-accent transition-colors"
               >
-                {l.label}
-                <ChevronRight className="h-4 w-4 text-slate-400" />
+                <Icon size={20} className="text-muted-foreground" />
+                {label}
+                <MdChevronRight size={18} className="ml-auto text-muted-foreground" />
               </Link>
             ))}
             <Link
               href="/products?deals=true"
               onClick={() => setMobileOpen(false)}
-              className="flex items-center justify-between px-5 py-3.5 text-base font-semibold text-destructive hover:bg-red-50 transition-colors"
+              className="flex items-center gap-3 px-5 py-3.5 text-base font-semibold text-destructive hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
             >
-              Today's Deals 🔥
-              <ChevronRight className="h-4 w-4 text-destructive/60" />
+              <MdLocalOffer size={20} />Today's Deals 🔥
+              <MdChevronRight size={18} className="ml-auto" />
             </Link>
           </nav>
 
           <div className="border-t mx-4" />
 
           <div className="py-2">
+            {/* Theme toggle in mobile menu */}
+            <div className="flex items-center justify-between px-5 py-3">
+              <span className="text-sm font-medium text-foreground">Theme</span>
+              <ThemeToggle />
+            </div>
+
+            <div className="border-t mx-4 mb-1" />
+
             {isLoggedIn ? (
               <>
                 <div className="px-5 py-3 flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
                     <span className="text-base font-bold text-primary">{avatarLetter}</span>
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-900 truncate">{displayName}</p>
-                    <p className="text-xs text-slate-500 truncate">{displayEmail}</p>
+                    <p className="font-semibold text-foreground truncate">{displayName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{displayEmail}</p>
                   </div>
                 </div>
-                <div className="border-t mx-4 mb-2" />
+                <div className="border-t mx-4 mb-1" />
                 {[
-                  { icon: UserIcon, label: "My Profile", href: "/profile" },
-                  { icon: Package, label: "My Orders", href: "/profile?tab=orders" },
-                  { icon: Heart, label: "Wishlist", href: "/wishlist" },
-                  { icon: MapPin, label: "Addresses", href: "/profile?tab=addresses" },
-                ].map(({ icon: Icon, label, href }) => (
+                  { Icon: MdPerson,       label: "My Profile",  href: "/profile" },
+                  { Icon: MdReceiptLong,  label: "My Orders",   href: "/profile?tab=orders" },
+                  { Icon: MdFavoriteBorder, label: "My Wishlist", href: "/wishlist" },
+                  { Icon: MdLocationOn,   label: "Addresses",   href: "/profile?tab=addresses" },
+                ].map(({ Icon, label, href }) => (
                   <Link
                     key={href} href={href}
                     onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-3 px-5 py-3 text-sm font-medium hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-3 px-5 py-3 text-sm font-medium hover:bg-accent transition-colors"
                   >
-                    <Icon className="h-4 w-4 text-slate-500" />
-                    {label}
+                    <Icon size={18} className="text-muted-foreground" />{label}
                   </Link>
                 ))}
                 {userData?.role === "admin" && (
@@ -233,23 +274,23 @@ export const Navbar = () => {
                     onClick={() => setMobileOpen(false)}
                     className="flex items-center gap-3 px-5 py-3 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
                   >
-                    Admin Dashboard
+                    <MdComputer size={18} />Admin Dashboard
                   </Link>
                 )}
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-3 px-5 py-3 text-sm font-medium text-destructive hover:bg-red-50 transition-colors w-full text-left"
+                  className="flex items-center gap-3 px-5 py-3 text-sm font-medium text-destructive hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors w-full text-left"
                 >
-                  <LogOut className="h-4 w-4" />Log out
+                  <MdLogout size={18} />Log out
                 </button>
               </>
             ) : (
               <div className="px-4 py-3 flex gap-3">
                 <Link href="/login" onClick={() => setMobileOpen(false)} className="flex-1">
-                  <Button className="w-full">Login</Button>
+                  <Button className="w-full rounded-full">Login</Button>
                 </Link>
                 <Link href="/login" onClick={() => setMobileOpen(false)} className="flex-1">
-                  <Button variant="outline" className="w-full">Sign Up</Button>
+                  <Button variant="outline" className="w-full rounded-full">Sign Up</Button>
                 </Link>
               </div>
             )}
