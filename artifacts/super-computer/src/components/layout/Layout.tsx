@@ -1,5 +1,6 @@
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
+import { WhatsAppFloat } from "@/components/WhatsAppButton";
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -9,6 +10,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         {children}
       </main>
       <Footer />
+      <WhatsAppFloat />
     </div>
   );
 };

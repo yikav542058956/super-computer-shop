@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { ShoppingCart, Heart, ShieldCheck, Truck, Star, Info, ChevronRight, Cpu, HardDrive, MemoryStick } from "lucide-react";
+import { WhatsAppProductButton } from "@/components/WhatsAppButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatINR } from "@/lib/utils";
 
@@ -125,10 +126,14 @@ export default function ProductDetail() {
               ))}
             </div>
 
-            <div className="flex gap-4 mt-auto">
-              <Button size="lg" className="flex-1 h-14 text-lg" onClick={handleAddToCart} disabled={product.stock <= 0}>
+            <div className="flex gap-3 mt-auto flex-wrap">
+              <Button size="lg" className="flex-1 h-14 text-base min-w-[140px]" onClick={handleAddToCart} disabled={product.stock <= 0}>
                 <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
               </Button>
+              <WhatsAppProductButton
+                productName={product.name}
+                productPrice={product.discountPrice || product.price}
+              />
               <Button size="lg" variant="outline" className="h-14 w-14 p-0 shrink-0">
                 <Heart className="h-5 w-5" />
               </Button>
