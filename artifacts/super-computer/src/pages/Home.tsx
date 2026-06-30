@@ -6,32 +6,52 @@ import { ref, onValue } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  ShoppingCart, Star, Truck, ShieldCheck, Clock,
-  ChevronLeft, ChevronRight, Wrench, Phone, Award,
+  ShoppingCart, Star, ChevronLeft, ChevronRight,
   Zap, Info, AlertTriangle, CheckCircle, X, Megaphone,
-  Laptop, Cpu, Package,
 } from "lucide-react";
+import {
+  MdLocalShipping, MdVerified, MdBuild, MdSupportAgent,
+  MdShoppingCart, MdChevronRight, MdComputer, MdHeadphones, MdSportsSoccer,
+} from "react-icons/md";
 import { formatINR } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 
 const DEFAULT_BANNERS = [
   {
     id: "d1",
-    title: "Next-Gen Gaming Performance",
-    subtitle: "Experience uncompromised power with the latest laptops.",
-    buttonText: "Shop Gaming",
-    buttonLink: "/products?category=cat-2",
-    imageUrl: "/images/banners/banner-1.png",
+    title: "Latest Laptops & Computers",
+    subtitle: "Shop the newest arrivals from Dell, HP, Lenovo and more — at the best prices.",
+    buttonText: "Shop Now",
+    buttonLink: "/products",
+    imageUrl: "/images/store/s4.jpeg",
     bg: "from-slate-900 via-blue-950 to-slate-900",
   },
   {
     id: "d2",
-    title: "Premium Ultrabooks",
-    subtitle: "Thin, light, and ready for anything.",
-    buttonText: "Explore Now",
-    buttonLink: "/products?category=cat-1",
-    imageUrl: "/images/banners/banner-2.png",
+    title: "Gaming Laptops — Unmatched Power",
+    subtitle: "Experience the thrill of high-performance gaming. In-store demos available.",
+    buttonText: "Explore Gaming",
+    buttonLink: "/products?category=cat-2",
+    imageUrl: "/images/store/s7.jpeg",
     bg: "from-indigo-950 via-slate-900 to-slate-900",
+  },
+  {
+    id: "d3",
+    title: "Free Delivery + Expert Support",
+    subtitle: "Every purchase comes with doorstep delivery and free setup assistance.",
+    buttonText: "View All Products",
+    buttonLink: "/products",
+    imageUrl: "/images/store/s2.jpeg",
+    bg: "from-blue-950 via-slate-900 to-indigo-950",
+  },
+  {
+    id: "d4",
+    title: "Visit Our Store in Kasganj",
+    subtitle: "Mirehachi, Kasganj Road, Distt. Etah — come see the latest models in person.",
+    buttonText: "Get Directions",
+    buttonLink: "/contact",
+    imageUrl: "/images/store/s6.jpeg",
+    bg: "from-slate-900 to-slate-800",
   },
 ];
 
@@ -182,7 +202,7 @@ function BannerSlider({ banners }: { banners: any[] }) {
                 <div className="container mx-auto px-5 sm:px-8 md:px-12">
                   <div className="max-w-xl">
                     <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur px-3 py-1 rounded-full text-white text-xs font-medium mb-3 border border-white/20">
-                      <Laptop className="h-3 w-3" />Super Computers — Kasganj Road
+                      <MdComputer className="h-3 w-3" />Super Computers — Kasganj Road
                     </div>
                     <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-3 md:mb-5 leading-tight">
                       {banner.title}
@@ -332,21 +352,21 @@ export default function Home() {
       <BannerSlider banners={banners} />
 
       {/* Trust Badges */}
-      <section className="border-b bg-white">
+      <section className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 md:py-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-6 text-center">
             {[
-              { emoji: "🚚", title: "Free Delivery",   sub: "Orders above ₹50,000", grad: "from-blue-500 to-cyan-400" },
-              { emoji: "🛡️", title: "1 Year Warranty", sub: "Brand warranty",        grad: "from-emerald-500 to-green-400" },
-              { emoji: "🔧", title: "Expert Repair",   sub: "Quick turnaround",      grad: "from-orange-500 to-amber-400" },
-              { emoji: "📞", title: "24/7 Support",    sub: "Call: 9761809960",      grad: "from-violet-500 to-purple-400" },
-            ].map(({ emoji, title, sub, grad }) => (
-              <div key={title} className="flex flex-col items-center py-3 md:py-5 group">
+              { Icon: MdLocalShipping, title: "Free Delivery",   sub: "Orders above ₹50,000", grad: "from-blue-500 to-cyan-400" },
+              { Icon: MdVerified,      title: "1 Year Warranty", sub: "Brand genuine products", grad: "from-emerald-500 to-green-400" },
+              { Icon: MdBuild,         title: "Expert Repair",   sub: "Quick turnaround",      grad: "from-orange-500 to-amber-400" },
+              { Icon: MdSupportAgent,  title: "24/7 Support",    sub: "Call: 9761809960",      grad: "from-violet-500 to-purple-400" },
+            ].map(({ Icon, title, sub, grad }) => (
+              <div key={title} className="flex flex-col items-center py-3 md:py-5 group cursor-default">
                 <div className={`h-12 w-12 md:h-16 md:w-16 rounded-2xl bg-gradient-to-br ${grad} flex items-center justify-center mb-2 md:mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <span className="text-2xl md:text-3xl">{emoji}</span>
+                  <Icon size={28} className="text-white md:text-[34px]" />
                 </div>
-                <h4 className="font-bold text-slate-900 text-xs sm:text-sm leading-tight">{title}</h4>
-                <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">{sub}</p>
+                <h4 className="font-bold text-foreground text-xs sm:text-sm leading-tight">{title}</h4>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{sub}</p>
               </div>
             ))}
           </div>
@@ -510,7 +530,7 @@ export default function Home() {
             </p>
             <a href="tel:9761809960">
               <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 gap-2">
-                <Phone className="h-4 w-4" />Call: 9761809960
+                <MdSupportAgent className="h-4 w-4" />Call: 9761809960
               </Button>
             </a>
           </div>

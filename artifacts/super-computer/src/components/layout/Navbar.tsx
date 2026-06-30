@@ -65,7 +65,11 @@ export const Navbar = () => {
       <div className="container mx-auto px-4 h-14 md:h-16 flex items-center justify-between gap-3">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0" onClick={() => setMobileOpen(false)}>
-          <span className="text-lg md:text-xl font-bold text-primary">Super Computer</span>
+          <img
+            src="/logo.png"
+            alt="Super Computer"
+            className="h-10 md:h-12 w-auto object-contain"
+          />
         </Link>
 
         {/* Desktop Search */}
