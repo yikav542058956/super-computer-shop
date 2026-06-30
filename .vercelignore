@@ -1,0 +1,14 @@
+node_modules
+.git
+.local
+.agents
+attached_assets
+artifacts/*/node_modules
+artifacts/*/dist
+artifacts/api-server
+artifacts/mockup-sandbox
+lib/*/node_modules
+scripts/node_modules
+dev
+*.log
+.tsbuildinfo

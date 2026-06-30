@@ -336,14 +336,14 @@ export default function Home() {
         <div className="container mx-auto px-4 py-4 md:py-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-6 text-center">
             {[
-              { icon: Truck,      title: "Free Delivery",  sub: "Orders above ₹50,000", color: "text-blue-600 bg-blue-50" },
-              { icon: ShieldCheck, title: "1 Year Warranty", sub: "Brand warranty",      color: "text-green-600 bg-green-50" },
-              { icon: Wrench,     title: "Expert Repair",  sub: "Quick turnaround",     color: "text-orange-600 bg-orange-50" },
-              { icon: Phone,      title: "24/7 Support",   sub: "Call: 9761809960",     color: "text-purple-600 bg-purple-50" },
-            ].map(({ icon: Icon, title, sub, color }) => (
-              <div key={title} className="flex flex-col items-center py-3 md:py-4">
-                <div className={`h-10 w-10 md:h-12 md:w-12 rounded-xl ${color} flex items-center justify-center mb-2`}>
-                  <Icon className="h-5 w-5 md:h-6 md:w-6" />
+              { emoji: "🚚", title: "Free Delivery",   sub: "Orders above ₹50,000", grad: "from-blue-500 to-cyan-400" },
+              { emoji: "🛡️", title: "1 Year Warranty", sub: "Brand warranty",        grad: "from-emerald-500 to-green-400" },
+              { emoji: "🔧", title: "Expert Repair",   sub: "Quick turnaround",      grad: "from-orange-500 to-amber-400" },
+              { emoji: "📞", title: "24/7 Support",    sub: "Call: 9761809960",      grad: "from-violet-500 to-purple-400" },
+            ].map(({ emoji, title, sub, grad }) => (
+              <div key={title} className="flex flex-col items-center py-3 md:py-5 group">
+                <div className={`h-12 w-12 md:h-16 md:w-16 rounded-2xl bg-gradient-to-br ${grad} flex items-center justify-center mb-2 md:mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                  <span className="text-2xl md:text-3xl">{emoji}</span>
                 </div>
                 <h4 className="font-bold text-slate-900 text-xs sm:text-sm leading-tight">{title}</h4>
                 <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">{sub}</p>
@@ -386,7 +386,7 @@ export default function Home() {
         <div className="flex justify-between items-center mb-4 md:mb-8">
           <div>
             <h2 className="text-xl md:text-3xl font-bold text-slate-900 flex items-center gap-2">
-              <Cpu className="h-6 w-6 text-primary" />Shop by Category
+              <span className="text-2xl">🛒</span> Shop by Category
             </h2>
             <p className="text-slate-500 text-sm mt-1">Find exactly what you need</p>
           </div>
@@ -432,7 +432,7 @@ export default function Home() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-6 md:mb-12">
               <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold mb-3 border border-yellow-200">
-                <Award className="h-3.5 w-3.5" />EDITOR'S PICK
+                <span>🏆</span> EDITOR'S PICK
               </div>
               <h2 className="text-xl md:text-3xl font-bold text-slate-900 mb-2 md:mb-4">Featured Products</h2>
               <p className="text-slate-500 max-w-2xl mx-auto text-sm md:text-base hidden sm:block">
@@ -454,10 +454,10 @@ export default function Home() {
           <div className="flex justify-between items-center mb-4 md:mb-8">
             <div>
               <div className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full text-[10px] font-bold mb-1 border border-green-200">
-                <Zap className="h-3 w-3" />JUST IN
+                <span>⚡</span> JUST IN
               </div>
               <h2 className="text-xl md:text-3xl font-bold text-slate-900 flex items-center gap-2">
-                <Package className="h-6 w-6 text-primary" />New Arrivals
+                <span className="text-2xl">📦</span> New Arrivals
               </h2>
             </div>
             <Link href="/products" className="text-primary font-medium hover:underline text-sm md:text-base flex items-center gap-1">
@@ -521,7 +521,7 @@ export default function Home() {
       <section className="py-8 md:py-12 bg-primary">
         <div className="container mx-auto px-4 text-center text-white">
           <div className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-sm font-bold mb-3">
-            <Zap className="h-4 w-4" />Limited Time Offer
+            <span>⚡</span> Limited Time Offer
           </div>
           <h2 className="text-xl md:text-3xl font-bold mb-2 md:mb-3">
             Use code <span className="bg-white/20 px-2 py-0.5 rounded-lg font-mono">SAVE10</span> for 10% off
