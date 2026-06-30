@@ -12,17 +12,20 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { auth } from "@/lib/firebase";
 
 export const Navbar = () => {
   const { cartCount } = useCart();
-  const { currentUser, userData } = useAuth();
+  const { currentUser, userData, extUser, isLoggedIn, logout } = useAuth();
   const [, setLocation] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
+  const displayName = userData?.name || extUser?.name || currentUser?.email || extUser?.phone || "User";
+  const displayEmail = currentUser?.email || extUser?.email || extUser?.phone || "";
+  const avatarLetter = displayName[0]?.toUpperCase() || "U";
+
   const handleLogout = async () => {
-    await auth.signOut();
+    await logout();
     setMobileOpen(false);
     setLocation("/");
   };
@@ -55,7 +58,6 @@ export const Navbar = () => {
 
         {/* Right Icons */}
         <div className="flex items-center gap-1 md:gap-3">
-          {/* Mobile Search Toggle */}
           <Button
             variant="ghost" size="icon"
             className="md:hidden"
@@ -83,22 +85,20 @@ export const Navbar = () => {
               </Button>
             </Link>
 
-            {currentUser ? (
+            {isLoggedIn ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-bold text-primary">
-                        {(userData?.name || currentUser.email || "U")[0].toUpperCase()}
-                      </span>
+                      <span className="text-sm font-bold text-primary">{avatarLetter}</span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{userData?.name || "User"}</p>
-                      <p className="text-xs leading-none text-muted-foreground">{currentUser.email || currentUser.phoneNumber}</p>
+                      <p className="text-sm font-medium leading-none">{displayName}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{displayEmail}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -169,7 +169,6 @@ export const Navbar = () => {
       {/* Mobile Slide-Down Menu */}
       {mobileOpen && (
         <div className="md:hidden border-t bg-background shadow-lg">
-          {/* Nav Links */}
           <nav className="py-2">
             {navLinks.map(l => (
               <Link
@@ -193,19 +192,16 @@ export const Navbar = () => {
 
           <div className="border-t mx-4" />
 
-          {/* User Section */}
           <div className="py-2">
-            {currentUser ? (
+            {isLoggedIn ? (
               <>
                 <div className="px-5 py-3 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <span className="text-base font-bold text-primary">
-                      {(userData?.name || currentUser.email || "U")[0].toUpperCase()}
-                    </span>
+                    <span className="text-base font-bold text-primary">{avatarLetter}</span>
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-900 truncate">{userData?.name || "User"}</p>
-                    <p className="text-xs text-slate-500 truncate">{currentUser.email || currentUser.phoneNumber}</p>
+                    <p className="font-semibold text-slate-900 truncate">{displayName}</p>
+                    <p className="text-xs text-slate-500 truncate">{displayEmail}</p>
                   </div>
                 </div>
                 <div className="border-t mx-4 mb-2" />

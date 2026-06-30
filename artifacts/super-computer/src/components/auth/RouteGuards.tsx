@@ -4,20 +4,20 @@ import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { currentUser, loading } = useAuth();
+  const { isLoggedIn, loading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!loading && !currentUser) {
+    if (!loading && !isLoggedIn) {
       setLocation("/login");
     }
-  }, [currentUser, loading, setLocation]);
+  }, [isLoggedIn, loading, setLocation]);
 
   if (loading) {
     return <div className="h-screen w-full flex items-center justify-center"><Skeleton className="h-32 w-32 rounded-full" /></div>;
   }
 
-  return currentUser ? <>{children}</> : null;
+  return isLoggedIn ? <>{children}</> : null;
 };
 
 export const AdminRoute = ({ children }: { children: React.ReactNode }) => {
