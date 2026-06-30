@@ -1,17 +1,52 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useEffect, useState } from "react";
-import { ref, onValue } from "firebase/database";
+import { useEffect, useState, useRef } from "react";
+import { ref, onValue, remove, push, update, get } from "firebase/database";
 import { db } from "@/lib/firebase";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Edit, Trash, Upload, ImageIcon, Loader2, X, Search, Star } from "lucide-react";
+import { toast } from "sonner";
+
+interface SpecField { key: string; value: string; }
+
+const EMPTY_FORM = {
+  name: "",
+  brand: "",
+  category: "",
+  price: "",
+  discountPrice: "",
+  stock: "",
+  description: "",
+  specs: [] as SpecField[],
+  images: [] as string[],
+  isFeatured: false,
+  isNewArrival: false,
+  status: "active" as "active" | "inactive",
+};
 
 export default function AdminProducts() {
   const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const productsRef = ref(db, 'products');
+    const productsRef = ref(db, "products");
     const unsubscribe = onValue(productsRef, (snap) => {
       if (snap.exists()) {
         const data = snap.val();
@@ -21,17 +56,166 @@ export default function AdminProducts() {
       }
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    get(ref(db, "categories")).then((snap) => {
+      if (snap.exists()) {
+        const data = snap.val();
+        setCategories(Object.entries(data).map(([id, val]: any) => ({ id, ...(val as any) })));
+      }
+    });
+  }, []);
+
+  const openAdd = () => {
+    setEditingId(null);
+    setForm({ ...EMPTY_FORM, specs: defaultSpecs() });
+    setShowDialog(true);
+  };
+
+  const defaultSpecs = (): SpecField[] => [
+    { key: "Processor", value: "" },
+    { key: "RAM", value: "" },
+    { key: "Storage", value: "" },
+    { key: "Display", value: "" },
+    { key: "Graphics", value: "" },
+    { key: "OS", value: "" },
+    { key: "Battery", value: "" },
+    { key: "Weight", value: "" },
+  ];
+
+  const openEdit = (product: any) => {
+    setEditingId(product.id);
+    const specs: SpecField[] = product.specs
+      ? Object.entries(product.specs).map(([key, value]) => ({ key, value: String(value) }))
+      : defaultSpecs();
+    setForm({
+      name: product.name || "",
+      brand: product.brand || "",
+      category: product.category || "",
+      price: String(product.price || ""),
+      discountPrice: String(product.discountPrice || ""),
+      stock: String(product.stock || ""),
+      description: product.description || "",
+      specs,
+      images: Array.isArray(product.images) ? product.images : product.images ? Object.values(product.images) : [],
+      isFeatured: product.isFeatured || false,
+      isNewArrival: product.isNewArrival || false,
+      status: product.status || "active",
+    });
+    setShowDialog(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      const urls = await Promise.all(files.map((f) => uploadToCloudinary(f)));
+      setForm((f) => ({ ...f, images: [...f.images, ...urls] }));
+      toast.success(`${urls.length} image${urls.length > 1 ? "s" : ""} uploaded`);
+    } catch {
+      toast.error("Some images failed to upload");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const removeImage = (idx: number) => {
+    setForm((f) => ({ ...f, images: f.images.filter((_, i) => i !== idx) }));
+  };
+
+  const addSpec = () => {
+    setForm((f) => ({ ...f, specs: [...f.specs, { key: "", value: "" }] }));
+  };
+
+  const updateSpec = (idx: number, field: "key" | "value", val: string) => {
+    setForm((f) => {
+      const specs = [...f.specs];
+      specs[idx] = { ...specs[idx], [field]: val };
+      return { ...f, specs };
+    });
+  };
+
+  const removeSpec = (idx: number) => {
+    setForm((f) => ({ ...f, specs: f.specs.filter((_, i) => i !== idx) }));
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) { toast.error("Product name is required"); return; }
+    if (!form.price || isNaN(Number(form.price))) { toast.error("Valid price is required"); return; }
+    if (!form.stock || isNaN(Number(form.stock))) { toast.error("Valid stock is required"); return; }
+    if (form.images.length === 0) { toast.error("Please upload at least one product image"); return; }
+
+    setSaving(true);
+    try {
+      const specsObj: Record<string, string> = {};
+      form.specs.filter((s) => s.key.trim()).forEach((s) => { specsObj[s.key.trim()] = s.value.trim(); });
+
+      const data: any = {
+        name: form.name.trim(),
+        brand: form.brand.trim(),
+        category: form.category,
+        price: Number(form.price),
+        discountPrice: form.discountPrice ? Number(form.discountPrice) : null,
+        stock: Number(form.stock),
+        description: form.description.trim(),
+        specs: specsObj,
+        images: form.images,
+        isFeatured: form.isFeatured,
+        isNewArrival: form.isNewArrival,
+        status: form.status,
+        rating: editingId ? undefined : 0,
+        reviewsCount: editingId ? undefined : 0,
+        createdAt: editingId ? undefined : Date.now(),
+      };
+      if (editingId) {
+        delete data.rating; delete data.reviewsCount; delete data.createdAt;
+        await update(ref(db, `products/${editingId}`), data);
+        toast.success("Product updated");
+      } else {
+        await push(ref(db, "products"), data);
+        toast.success("Product added");
+      }
+      setShowDialog(false);
+    } catch {
+      toast.error("Failed to save product");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await remove(ref(db, `products/${id}`));
+      toast.success("Product deleted");
+      setDeleteConfirm(null);
+    } catch {
+      toast.error("Failed to delete");
+    }
+  };
+
+  const filtered = products.filter(
+    (p) =>
+      !search ||
+      p.name?.toLowerCase().includes(search.toLowerCase()) ||
+      p.brand?.toLowerCase().includes(search.toLowerCase()) ||
+      p.category?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <AdminLayout>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Products</h1>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Add Product
-        </Button>
+        <div className="flex gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-none sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input placeholder="Search products..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <Button onClick={openAdd}><Plus className="mr-2 h-4 w-4" /> Add Product</Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
@@ -49,28 +233,49 @@ export default function AdminProducts() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8">Loading...</TableCell></TableRow>
-            ) : products.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8">No products found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-400" /></TableCell></TableRow>
+            ) : filtered.length === 0 ? (
+              <TableRow><TableCell colSpan={7} className="text-center py-12 text-slate-400">{search ? "No products match your search." : "No products yet."}</TableCell></TableRow>
             ) : (
-              products.map(product => (
+              filtered.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>
-                    <img src={product.images?.[0]} alt={product.name} className="w-12 h-12 object-contain bg-slate-50 rounded" />
+                    {product.images?.[0] ? (
+                      <img src={product.images[0]} alt={product.name} className="w-12 h-12 object-contain bg-slate-50 rounded-lg" />
+                    ) : (
+                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center"><ImageIcon className="h-5 w-5 text-slate-300" /></div>
+                    )}
                   </TableCell>
-                  <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>{product.brand}</TableCell>
-                  <TableCell>₹{product.price.toLocaleString()}</TableCell>
-                  <TableCell>{product.stock}</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-semibold text-sm leading-tight">{product.name}</span>
+                      <div className="flex gap-1">
+                        {product.isFeatured && <Badge variant="secondary" className="text-xs py-0 h-4">Featured</Badge>}
+                        {product.isNewArrival && <Badge variant="outline" className="text-xs py-0 h-4">New</Badge>}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-slate-600">{product.brand}</TableCell>
+                  <TableCell>
+                    <div>
+                      <span className="font-semibold">₹{product.price?.toLocaleString()}</span>
+                      {product.discountPrice && (
+                        <p className="text-xs text-green-600 font-medium">₹{product.discountPrice.toLocaleString()}</p>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className={product.stock <= 5 ? "text-red-600 font-bold" : "text-slate-600"}>{product.stock}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${product.status === "active" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>
                       {product.status}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="text-destructive"><Trash className="h-4 w-4" /></Button>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(product)}><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteConfirm(product.id)}><Trash className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -79,6 +284,168 @@ export default function AdminProducts() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Delete confirmation */}
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Delete Product</DialogTitle></DialogHeader>
+          <p className="text-slate-600 text-sm">This will permanently delete the product and cannot be undone.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add / Edit dialog */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingId ? "Edit Product" : "Add Product"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-2">
+            {/* Basic info */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2 space-y-1">
+                <Label>Product Name *</Label>
+                <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Dell XPS 15 9530 Laptop" />
+              </div>
+              <div className="space-y-1">
+                <Label>Brand *</Label>
+                <Input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))} placeholder="Dell, HP, Asus..." />
+              </div>
+              <div className="space-y-1">
+                <Label>Category</Label>
+                <Select value={form.category} onValueChange={(v) => setForm((f) => ({ ...f, category: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                    <SelectItem value="Laptops">Laptops</SelectItem>
+                    <SelectItem value="Gaming Laptops">Gaming Laptops</SelectItem>
+                    <SelectItem value="Accessories">Accessories</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Price (₹) *</Label>
+                <Input type="number" min={0} value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="85000" />
+              </div>
+              <div className="space-y-1">
+                <Label>Discount Price (₹)</Label>
+                <Input type="number" min={0} value={form.discountPrice} onChange={(e) => setForm((f) => ({ ...f, discountPrice: e.target.value }))} placeholder="75000" />
+              </div>
+              <div className="space-y-1">
+                <Label>Stock *</Label>
+                <Input type="number" min={0} value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} placeholder="50" />
+              </div>
+              <div className="space-y-1">
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={(v: "active" | "inactive") => setForm((f) => ({ ...f, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Toggles */}
+            <div className="flex gap-6">
+              <div className="flex items-center gap-2">
+                <Switch checked={form.isFeatured} onCheckedChange={(v) => setForm((f) => ({ ...f, isFeatured: v }))} />
+                <Label className="cursor-pointer flex items-center gap-1"><Star className="h-3.5 w-3.5 text-amber-500" />Featured</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={form.isNewArrival} onCheckedChange={(v) => setForm((f) => ({ ...f, isNewArrival: v }))} />
+                <Label className="cursor-pointer">New Arrival</Label>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-1">
+              <Label>Description</Label>
+              <Textarea rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Detailed product description..." />
+            </div>
+
+            {/* Images */}
+            <div className="space-y-2">
+              <Label>Product Images *</Label>
+              <div
+                className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center cursor-pointer hover:border-primary transition-colors"
+                onClick={() => !uploading && fileRef.current?.click()}
+              >
+                {uploading ? (
+                  <div className="py-4"><Loader2 className="h-7 w-7 animate-spin mx-auto text-slate-400 mb-2" /><p className="text-sm text-slate-400">Uploading...</p></div>
+                ) : (
+                  <div className="py-4"><Upload className="h-7 w-7 mx-auto text-slate-400 mb-2" /><p className="text-sm text-slate-400">Click to upload images (multiple allowed)</p></div>
+                )}
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
+
+              {form.images.length > 0 && (
+                <div className="grid grid-cols-4 gap-3 mt-2">
+                  {form.images.map((url, idx) => (
+                    <div key={idx} className="relative group">
+                      <img src={url} alt={`Product ${idx + 1}`} className="w-full h-20 object-contain bg-slate-50 rounded-lg border" />
+                      <button
+                        onClick={() => removeImage(idx)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                      {idx === 0 && <span className="absolute bottom-1 left-1 bg-primary text-white text-xs px-1 rounded">Main</span>}
+                    </div>
+                  ))}
+                  <div
+                    className="h-20 border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => fileRef.current?.click()}
+                  >
+                    <Plus className="h-5 w-5 text-slate-400" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Specs */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label>Specifications</Label>
+                <Button variant="outline" size="sm" onClick={addSpec}><Plus className="h-3 w-3 mr-1" /> Add Spec</Button>
+              </div>
+              <div className="space-y-2 bg-slate-50 rounded-xl p-3">
+                {form.specs.map((spec, idx) => (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <Input
+                      value={spec.key}
+                      onChange={(e) => updateSpec(idx, "key", e.target.value)}
+                      placeholder="e.g. Processor"
+                      className="bg-white flex-1 text-sm"
+                    />
+                    <Input
+                      value={spec.value}
+                      onChange={(e) => updateSpec(idx, "value", e.target.value)}
+                      placeholder="e.g. Intel Core i7-13700H"
+                      className="bg-white flex-[2] text-sm"
+                    />
+                    <button onClick={() => removeSpec(idx)} className="text-slate-400 hover:text-red-500 flex-shrink-0">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saving || uploading}>
+              {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</> : editingId ? "Update Product" : "Add Product"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
