@@ -32,6 +32,7 @@ import AdminCoupons from "@/pages/admin/AdminCoupons";
 import AdminReviews from "@/pages/admin/AdminReviews";
 import AdminReports from "@/pages/admin/AdminReports";
 import AdminSettings from "@/pages/admin/AdminSettings";
+import AdminAnnouncements from "@/pages/admin/AdminAnnouncements";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 
 const queryClient = new QueryClient();
@@ -120,6 +121,12 @@ function Router() {
       <Route path="/admin/settings">
         <AdminRoute>
           <AdminSettings />
+        </AdminRoute>
+      </Route>
+
+      <Route path="/admin/announcements">
+        <AdminRoute>
+          <AdminAnnouncements />
         </AdminRoute>
       </Route>
 
