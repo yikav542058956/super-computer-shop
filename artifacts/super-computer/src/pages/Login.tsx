@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { Layout } from "@/components/layout/Layout";
 import {
   Loader2, Phone, Mail, Lock, User, ArrowRight,
-  ShieldCheck, ChevronLeft, Eye, EyeOff,
+  ShieldCheck, ChevronLeft, Eye, EyeOff, AlertTriangle,
 } from "lucide-react";
 
 declare global {
@@ -35,7 +35,6 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { currentUser } = useAuth();
 
-  // Email/password state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -43,15 +42,16 @@ export default function Login() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [forgotMode, setForgotMode] = useState(false);
 
-  // Phone OTP state
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [phoneStep, setPhoneStep] = useState<PhoneStep>("phone");
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
+  const [phoneError, setPhoneError] = useState<"domain" | "not-enabled" | null>(null);
+
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const recaptchaContainerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recaptchaInitialized = useRef(false);
 
   useEffect(() => {
     if (currentUser) setLocation("/");
@@ -60,12 +60,19 @@ export default function Login() {
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      cleanupRecaptcha();
+    };
+  }, []);
+
+  const cleanupRecaptcha = () => {
+    try {
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
         window.recaptchaVerifier = undefined;
       }
-    };
-  }, []);
+    } catch { /* ignore */ }
+    recaptchaInitialized.current = false;
+  };
 
   const startResendTimer = (seconds = 30) => {
     setResendCountdown(seconds);
@@ -78,18 +85,29 @@ export default function Login() {
     }, 1000);
   };
 
-  const setupRecaptcha = () => {
-    if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
-      window.recaptchaVerifier = undefined;
+  const setupRecaptcha = async (): Promise<boolean> => {
+    try {
+      cleanupRecaptcha();
+      const container = document.getElementById("recaptcha-container");
+      if (!container) {
+        toast.error("reCAPTCHA container not found. Please refresh.");
+        return false;
+      }
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+        size: "invisible",
+        callback: () => {},
+        "expired-callback": () => {
+          cleanupRecaptcha();
+        },
+      });
+      await window.recaptchaVerifier.render();
+      recaptchaInitialized.current = true;
+      return true;
+    } catch (err: any) {
+      console.error("Recaptcha setup error:", err);
+      cleanupRecaptcha();
+      return false;
     }
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-      size: "invisible",
-      callback: () => {},
-      "expired-callback": () => {
-        toast.error("reCAPTCHA expired. Please try again.");
-      },
-    });
   };
 
   const handleSendOtp = async () => {
@@ -99,8 +117,13 @@ export default function Login() {
       return;
     }
     setPhoneLoading(true);
+    setPhoneError(null);
     try {
-      setupRecaptcha();
+      const ready = await setupRecaptcha();
+      if (!ready) {
+        toast.error("Could not initialize reCAPTCHA. Please refresh and try again.");
+        return;
+      }
       const fullNumber = "+91" + digits;
       const confirmation = await signInWithPhoneNumber(auth, fullNumber, window.recaptchaVerifier!);
       window.confirmationResult = confirmation;
@@ -109,17 +132,23 @@ export default function Login() {
       toast.success(`OTP sent to +91 ${digits}`);
       setTimeout(() => otpRefs.current[0]?.focus(), 100);
     } catch (err: any) {
-      console.error(err);
-      if (err.code === "auth/too-many-requests") {
-        toast.error("Too many attempts. Please try again later.");
+      console.error("Send OTP error:", err?.code, err);
+      cleanupRecaptcha();
+
+      if (err.code === "auth/operation-not-allowed") {
+        setPhoneError("not-enabled");
+        toast.error("Phone sign-in is not enabled in Firebase.");
+      } else if (err.code === "auth/unauthorized-domain") {
+        setPhoneError("domain");
+        toast.error("This domain is not authorized in Firebase.");
+      } else if (err.code === "auth/too-many-requests") {
+        toast.error("Too many requests. Please wait a few minutes and try again.");
       } else if (err.code === "auth/invalid-phone-number") {
-        toast.error("Invalid phone number. Use a valid Indian mobile number.");
+        toast.error("Invalid phone number. Please enter a valid Indian mobile number.");
+      } else if (err.code === "auth/captcha-check-failed") {
+        toast.error("reCAPTCHA check failed. Please refresh and try again.");
       } else {
-        toast.error("Failed to send OTP. Please try again.");
-      }
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = undefined;
+        toast.error(`Failed to send OTP. (${err.code || "unknown"})`);
       }
     } finally {
       setPhoneLoading(false);
@@ -129,6 +158,7 @@ export default function Login() {
   const handleResend = async () => {
     if (resendCountdown > 0) return;
     setOtp(["", "", "", "", "", ""]);
+    setPhoneStep("phone");
     await handleSendOtp();
   };
 
@@ -147,6 +177,7 @@ export default function Login() {
     if (e.key === "Backspace" && !otp[idx] && idx > 0) {
       otpRefs.current[idx - 1]?.focus();
     }
+    if (e.key === "Enter") verifyOtp();
   };
 
   const verifyOtp = async (code?: string) => {
@@ -192,7 +223,7 @@ export default function Login() {
       toast.success("Logged in successfully");
       setLocation("/");
     } catch (err: any) {
-      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+      if (["auth/user-not-found", "auth/wrong-password", "auth/invalid-credential"].includes(err.code)) {
         toast.error("Invalid email or password");
       } else {
         toast.error(err.message || "Failed to log in");
@@ -209,11 +240,7 @@ export default function Login() {
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       await set(ref(db, `users/${cred.user.uid}`), {
-        name,
-        email,
-        phone: "",
-        role: "user",
-        createdAt: Date.now(),
+        name, email, phone: "", role: "user", createdAt: Date.now(),
       });
       toast.success("Account created! Welcome.");
       setLocation("/");
@@ -245,13 +272,13 @@ export default function Login() {
 
   return (
     <Layout>
-      {/* invisible reCAPTCHA mount point */}
-      <div id="recaptcha-container" ref={recaptchaContainerRef} />
+      {/* reCAPTCHA invisible mount point - must be in DOM */}
+      <div id="recaptcha-container" style={{ position: "fixed", bottom: 0, right: 0, zIndex: 9999 }} />
 
-      <div className="min-h-[calc(100vh-160px)] flex items-center justify-center px-4 py-12 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
+      <div className="min-h-[calc(100vh-160px)] flex items-center justify-center px-4 py-10 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
         <div className="w-full max-w-md">
-          {/* Logo & Heading */}
-          <div className="text-center mb-8">
+          {/* Header */}
+          <div className="text-center mb-6 md:mb-8">
             <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-primary shadow-lg shadow-primary/30 mb-4">
               <ShieldCheck className="h-7 w-7 text-white" />
             </div>
@@ -277,7 +304,40 @@ export default function Login() {
               </TabsList>
 
               {/* ── PHONE OTP TAB ── */}
-              <TabsContent value="phone" className="p-6 space-y-0 mt-0">
+              <TabsContent value="phone" className="p-5 md:p-6 space-y-0 mt-0">
+                {/* Firebase setup error banners */}
+                {phoneError === "not-enabled" && (
+                  <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm">
+                    <div className="flex items-start gap-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                      <p className="font-semibold text-amber-800">Phone Auth Not Enabled</p>
+                    </div>
+                    <p className="text-amber-700 text-xs mb-2">Enable it in Firebase Console:</p>
+                    <ol className="text-xs text-amber-700 space-y-0.5 list-decimal ml-4">
+                      <li>Go to <strong>console.firebase.google.com</strong></li>
+                      <li>Select your project → <strong>Authentication</strong></li>
+                      <li>Click <strong>Sign-in method</strong> tab</li>
+                      <li>Enable <strong>Phone</strong> provider → Save</li>
+                    </ol>
+                  </div>
+                )}
+
+                {phoneError === "domain" && (
+                  <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-sm">
+                    <div className="flex items-start gap-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                      <p className="font-semibold text-red-800">Domain Not Authorized</p>
+                    </div>
+                    <p className="text-red-700 text-xs mb-2">Add this domain in Firebase Console:</p>
+                    <ol className="text-xs text-red-700 space-y-0.5 list-decimal ml-4">
+                      <li>Go to <strong>Authentication → Settings</strong></li>
+                      <li>Click <strong>Authorized domains</strong></li>
+                      <li>Add: <strong className="font-mono">{window.location.hostname}</strong></li>
+                      <li>Save and try again</li>
+                    </ol>
+                  </div>
+                )}
+
                 {phoneStep === "phone" ? (
                   <div className="space-y-5">
                     <div className="text-center">
@@ -291,8 +351,8 @@ export default function Login() {
                     <div className="space-y-2">
                       <Label>Mobile Number</Label>
                       <div className="flex gap-2">
-                        <div className="flex items-center px-3 bg-slate-100 border rounded-lg text-slate-600 font-medium text-sm">
-                          +91
+                        <div className="flex items-center px-3 bg-slate-100 border rounded-lg text-slate-600 font-bold text-sm shrink-0">
+                          🇮🇳 +91
                         </div>
                         <Input
                           type="tel"
@@ -300,10 +360,12 @@ export default function Login() {
                           maxLength={10}
                           placeholder="Enter 10-digit number"
                           value={phone}
-                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                          onChange={(e) => {
+                            setPhoneError(null);
+                            setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
+                          }}
                           onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
                           className="flex-1 text-lg tracking-widest font-mono"
-                          data-testid="input-phone"
                           autoFocus
                         />
                       </div>
@@ -314,13 +376,16 @@ export default function Login() {
                       className="w-full h-12 text-base"
                       onClick={handleSendOtp}
                       disabled={phoneLoading || phone.length !== 10}
-                      data-testid="button-send-otp"
                     >
                       {phoneLoading
                         ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Sending OTP...</>
                         : <>Send OTP <ArrowRight className="ml-2 h-4 w-4" /></>
                       }
                     </Button>
+
+                    <p className="text-center text-xs text-slate-400">
+                      Phone OTP requires Firebase Phone Auth to be enabled
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-5">
@@ -340,10 +405,9 @@ export default function Login() {
                       </button>
                     </div>
 
-                    {/* 6-box OTP input */}
                     <div>
-                      <Label className="mb-3 block text-center">Enter 6-digit OTP</Label>
-                      <div className="flex gap-2 justify-center">
+                      <Label className="mb-3 block text-center text-sm text-slate-500">Enter 6-digit OTP</Label>
+                      <div className="flex gap-1.5 sm:gap-2 justify-center">
                         {otp.map((digit, idx) => (
                           <input
                             key={idx}
@@ -354,10 +418,9 @@ export default function Login() {
                             value={digit}
                             onChange={(e) => handleOtpChange(idx, e.target.value)}
                             onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                            className={`w-11 h-12 text-center text-xl font-bold border-2 rounded-xl outline-none transition-all
+                            className={`w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-bold border-2 rounded-xl outline-none transition-all
                               ${digit ? "border-primary bg-primary/5 text-primary" : "border-slate-200 bg-slate-50"}
                               focus:border-primary focus:ring-2 focus:ring-primary/20`}
-                            data-testid={`input-otp-${idx}`}
                           />
                         ))}
                       </div>
@@ -367,7 +430,6 @@ export default function Login() {
                       className="w-full h-12 text-base"
                       onClick={() => verifyOtp()}
                       disabled={phoneLoading || otp.join("").length !== 6}
-                      data-testid="button-verify-otp"
                     >
                       {phoneLoading
                         ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Verifying...</>
@@ -378,7 +440,7 @@ export default function Login() {
                     <div className="text-center">
                       {resendCountdown > 0 ? (
                         <p className="text-sm text-slate-500">
-                          Resend OTP in <span className="font-bold text-primary">{resendCountdown}s</span>
+                          Resend in <span className="font-bold text-primary">{resendCountdown}s</span>
                         </p>
                       ) : (
                         <button
@@ -395,7 +457,7 @@ export default function Login() {
               </TabsContent>
 
               {/* ── EMAIL TAB ── */}
-              <TabsContent value="email" className="p-6 mt-0">
+              <TabsContent value="email" className="p-5 md:p-6 mt-0">
                 <Tabs defaultValue="login">
                   <TabsList className="grid w-full grid-cols-2 mb-5">
                     <TabsTrigger value="login" onClick={() => setForgotMode(false)}>Login</TabsTrigger>
@@ -405,7 +467,7 @@ export default function Login() {
                   <TabsContent value="login" className="mt-0">
                     {forgotMode ? (
                       <form onSubmit={handleForgotPassword} className="space-y-4">
-                        <div className="text-center mb-4">
+                        <div className="text-center mb-2">
                           <p className="text-sm text-slate-600">Enter your email and we'll send a reset link.</p>
                         </div>
                         <div className="space-y-1">
@@ -419,7 +481,7 @@ export default function Login() {
                           {emailLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Sending...</> : "Send Reset Link"}
                         </Button>
                         <button type="button" className="text-sm text-primary hover:underline w-full text-center" onClick={() => setForgotMode(false)}>
-                          Back to Login
+                          ← Back to Login
                         </button>
                       </form>
                     ) : (
@@ -428,7 +490,7 @@ export default function Login() {
                           <Label>Email</Label>
                           <div className="relative">
                             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input type="email" required placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-9" data-testid="input-email" />
+                            <Input type="email" required placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-9" />
                           </div>
                         </div>
                         <div className="space-y-1">
@@ -438,13 +500,13 @@ export default function Login() {
                           </div>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input type={showPass ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} className="pl-9 pr-10" data-testid="input-password" />
+                            <Input type={showPass ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} className="pl-9 pr-10" />
                             <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" onClick={() => setShowPass(!showPass)}>
                               {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                           </div>
                         </div>
-                        <Button type="submit" className="w-full h-11" disabled={emailLoading} data-testid="button-email-login">
+                        <Button type="submit" className="w-full h-11" disabled={emailLoading}>
                           {emailLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Logging in...</> : "Log In"}
                         </Button>
                       </form>
@@ -457,27 +519,28 @@ export default function Login() {
                         <Label>Full Name</Label>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                          <Input required placeholder="Your full name" value={name} onChange={(e) => setName(e.target.value)} className="pl-9" data-testid="input-name" />
+                          <Input required placeholder="Your full name" value={name} onChange={(e) => setName(e.target.value)} className="pl-9" />
                         </div>
                       </div>
                       <div className="space-y-1">
                         <Label>Email</Label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                          <Input type="email" required placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-9" data-testid="input-signup-email" />
+                          <Input type="email" required placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-9" />
                         </div>
                       </div>
                       <div className="space-y-1">
                         <Label>Password</Label>
                         <div className="relative">
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                          <Input type={showPass ? "text" : "password"} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="pl-9 pr-10" data-testid="input-signup-password" />
+                          <Input type={showPass ? "text" : "password"} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="pl-9 pr-10" />
                           <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" onClick={() => setShowPass(!showPass)}>
                             {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </button>
                         </div>
+                        <p className="text-xs text-slate-400">Minimum 6 characters</p>
                       </div>
-                      <Button type="submit" className="w-full h-11" disabled={emailLoading} data-testid="button-signup">
+                      <Button type="submit" className="w-full h-11" disabled={emailLoading}>
                         {emailLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Creating...</> : "Create Account"}
                       </Button>
                     </form>
