@@ -3,12 +3,12 @@ import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useLoginDialog } from "@/contexts/LoginDialogContext";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   MdShoppingCart, MdFavoriteBorder, MdFavorite,
   MdSearch, MdMenu, MdClose, MdPerson, MdLogout,
   MdReceiptLong, MdLocationOn, MdChevronRight,
-  MdComputer, MdStore, MdLocalOffer, MdSportsSoccer, MdHeadphones,
+  MdComputer, MdStore, MdLocalOffer, MdSportsSoccer, MdHeadphones, MdMic,
 } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,15 +16,36 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/* ─── Category chips ─────────────────────────────────────────── */
+const CATEGORY_CHIPS = [
+  { href: "/products",                label: "For You",    icon: "✨" },
+  { href: "/products?category=cat-1", label: "Laptops",    icon: "💻" },
+  { href: "/products?category=cat-2", label: "Gaming",     icon: "🎮" },
+  { href: "/products?category=cat-3", label: "Accessories",icon: "🖱️" },
+  { href: "/products",                label: "Components", icon: "⚙️" },
+  { href: "/products?brand=Apple",    label: "Brands",     icon: "🏷️" },
+  { href: "/products?deals=true",     label: "Deals 🔥",   icon: "%" },
+];
+
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
 export const Navbar = () => {
   const { cartCount } = useCart();
   const { wishlistCount } = useWishlist();
   const { currentUser, userData, extUser, isLoggedIn, logout } = useAuth();
   const { openLoginDialog } = useLoginDialog();
   const [, setLocation] = useLocation();
+  const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const displayName = userData?.name || extUser?.name || currentUser?.email || extUser?.phone || "User";
   const displayEmail = currentUser?.email || extUser?.email || extUser?.phone || "";
@@ -40,59 +61,89 @@ export const Navbar = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       setLocation(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchOpen(false);
     }
   };
 
-  const navLinks = [
-    { href: "/products?category=cat-1", label: "Laptops",      Icon: MdComputer },
-    { href: "/products?category=cat-2", label: "Gaming",        Icon: MdSportsSoccer },
-    { href: "/products?category=cat-3", label: "Accessories",  Icon: MdHeadphones },
-    { href: "/products?brand=Apple",    label: "Brands",        Icon: MdStore },
-  ];
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice search is not supported in this browser.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "hi-IN";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setSearchQuery(transcript);
+      setListening(false);
+      if (transcript.trim()) {
+        setLocation(`/products?search=${encodeURIComponent(transcript.trim())}`);
+      }
+    };
+    recognition.onerror = () => setListening(false);
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setListening(true);
+  };
+
+  const activeChip = (href: string) => {
+    const base = href.split("?")[0];
+    const params = new URLSearchParams(href.includes("?") ? href.split("?")[1] : "");
+    if (href === "/products" && !params.has("category") && !params.has("brand") && !params.has("deals")) {
+      return location === "/products";
+    }
+    return location.startsWith(base) && location !== "/products" || (params.get("deals") === "true" && location.includes("deals=true"));
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/8 bg-[#0D1117]/95 backdrop-blur">
-      {/* Main Bar */}
-      <div className="container mx-auto px-4 h-14 md:h-16 flex items-center justify-between gap-3">
+      {/* ── Main Bar ── */}
+      <div className="container mx-auto px-3 h-14 flex items-center justify-between gap-2">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 shrink-0" onClick={() => setMobileOpen(false)}>
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-green-500 flex items-center justify-center shadow-lg shadow-green-500/30">
-              <span className="text-black font-black text-sm">S</span>
-            </div>
-            <div className="leading-none">
-              <span className="text-white font-black text-base tracking-tight">SUPER </span>
-              <span className="text-green-400 font-black text-base tracking-tight">COMPUTER</span>
-            </div>
+        <Link href="/" className="flex items-center gap-1.5 shrink-0" onClick={() => setMobileOpen(false)}>
+          <div className="h-7 w-7 rounded-lg bg-green-500 flex items-center justify-center shadow-lg shadow-green-500/30">
+            <span className="text-black font-black text-sm">S</span>
+          </div>
+          <div className="leading-none hidden sm:block">
+            <span className="text-white font-black text-base tracking-tight">SUPER </span>
+            <span className="text-green-400 font-black text-base tracking-tight">COMPUTER</span>
           </div>
         </Link>
 
-        {/* Desktop Search */}
-        <form onSubmit={handleSearch} className="flex-1 max-w-xl hidden md:flex relative">
-          <input
-            type="search"
-            placeholder="Search laptops, accessories..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pr-10 h-9 rounded-xl border border-white/10 bg-white/5 text-white placeholder-slate-500 px-4 text-sm outline-none focus:border-green-500/50 transition-all"
-          />
-          <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2">
-            <MdSearch className="h-5 w-5 text-slate-400 hover:text-white transition-colors" />
-          </button>
+        {/* Search Bar — always visible, flex-1 */}
+        <form onSubmit={handleSearch} className="flex-1 max-w-2xl flex relative min-w-0">
+          <div className="relative w-full flex items-center">
+            <MdSearch className="absolute left-3 h-5 w-5 text-slate-400 shrink-0 z-10" />
+            <input
+              ref={searchRef}
+              type="search"
+              placeholder="Laptops, accessories search karein..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full h-9 rounded-xl border border-white/10 bg-white/5 text-white placeholder-slate-500 pl-9 pr-10 text-sm outline-none focus:border-green-500/50 transition-all"
+            />
+            {/* Mic button */}
+            <button
+              type="button"
+              onClick={startListening}
+              className={`absolute right-2.5 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full transition-all ${
+                listening
+                  ? "bg-red-500 text-white animate-pulse"
+                  : "text-slate-400 hover:text-green-400"
+              }`}
+              title="Voice search"
+            >
+              <MdMic size={16} />
+            </button>
+          </div>
         </form>
 
-        {/* Right Icons */}
-        <div className="flex items-center gap-1 md:gap-2">
-          {/* Mobile search toggle */}
-          <button
-            className="md:hidden h-9 w-9 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
-            onClick={() => setSearchOpen(!searchOpen)}
-          >
-            <MdSearch size={22} className="text-white" />
-          </button>
-
-          {/* Cart */}
+        {/* Right icons */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          {/* Cart — always visible */}
           <Link href="/cart">
             <button className="relative h-9 w-9 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
               <MdShoppingCart size={22} className="text-white" />
@@ -105,23 +156,20 @@ export const Navbar = () => {
           </Link>
 
           {/* Desktop extras */}
-          <div className="hidden md:flex items-center gap-1.5">
-            {/* Wishlist */}
+          <div className="hidden md:flex items-center gap-1">
             <Link href="/wishlist">
               <button className="relative h-9 w-9 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
                 {wishlistCount > 0
                   ? <MdFavorite size={22} className="text-red-400" />
-                  : <MdFavoriteBorder size={22} className="text-white" />
-                }
+                  : <MdFavoriteBorder size={22} className="text-white" />}
                 {wishlistCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center shadow">
+                  <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
                     {wishlistCount > 9 ? "9+" : wishlistCount}
                   </span>
                 )}
               </button>
             </Link>
 
-            {/* User menu */}
             {isLoggedIn ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -132,22 +180,19 @@ export const Navbar = () => {
                 <DropdownMenuContent align="end" className="w-56 bg-[#161B22] border-white/10 text-white">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-0.5">
-                      <p className="text-sm font-semibold leading-none text-white">{displayName}</p>
-                      <p className="text-xs leading-none text-slate-400">{displayEmail}</p>
+                      <p className="text-sm font-semibold text-white">{displayName}</p>
+                      <p className="text-xs text-slate-400">{displayEmail}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-white/10" />
-                  <DropdownMenuItem onClick={() => setLocation("/profile")} className="gap-2.5 cursor-pointer text-slate-200 focus:bg-white/10 focus:text-white">
+                  <DropdownMenuItem onClick={() => setLocation("/profile")} className="gap-2.5 cursor-pointer text-slate-200 focus:bg-white/10">
                     <MdPerson size={18} className="text-slate-400" /><span>My Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation("/profile?tab=orders")} className="gap-2.5 cursor-pointer text-slate-200 focus:bg-white/10 focus:text-white">
+                  <DropdownMenuItem onClick={() => setLocation("/profile?tab=orders")} className="gap-2.5 cursor-pointer text-slate-200 focus:bg-white/10">
                     <MdReceiptLong size={18} className="text-slate-400" /><span>My Orders</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation("/wishlist")} className="gap-2.5 cursor-pointer text-slate-200 focus:bg-white/10 focus:text-white">
+                  <DropdownMenuItem onClick={() => setLocation("/wishlist")} className="gap-2.5 cursor-pointer text-slate-200 focus:bg-white/10">
                     <MdFavoriteBorder size={18} className="text-slate-400" /><span>My Wishlist</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation("/profile?tab=addresses")} className="gap-2.5 cursor-pointer text-slate-200 focus:bg-white/10 focus:text-white">
-                    <MdLocationOn size={18} className="text-slate-400" /><span>Addresses</span>
                   </DropdownMenuItem>
                   {userData?.role === "admin" && (
                     <>
@@ -164,11 +209,7 @@ export const Navbar = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button
-                size="sm"
-                className="rounded-full px-5 bg-green-500 hover:bg-green-400 text-black font-bold shadow-lg shadow-green-500/20"
-                onClick={openLoginDialog}
-              >
+              <Button size="sm" className="rounded-full px-5 bg-green-500 hover:bg-green-400 text-black font-bold shadow-lg shadow-green-500/20" onClick={openLoginDialog}>
                 Login
               </Button>
             )}
@@ -184,62 +225,27 @@ export const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Search Bar */}
-      {searchOpen && (
-        <div className="md:hidden border-t border-white/8 px-4 py-3 bg-[#0D1117]">
-          <form onSubmit={handleSearch} className="relative">
-            <input
-              type="search"
-              placeholder="Search laptops, accessories..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pr-10 h-9 rounded-xl border border-white/10 bg-white/5 text-white placeholder-slate-500 px-4 text-sm outline-none focus:border-green-500/50"
-              autoFocus
-            />
-            <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2">
-              <MdSearch className="h-5 w-5 text-slate-400" />
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* Desktop Category Bar */}
-      <div className="border-t border-white/8 bg-[#161B22] hidden md:block">
-        <div className="container mx-auto px-4 h-10 flex items-center gap-6 text-sm font-medium">
-          {navLinks.map(({ href, label, Icon }) => (
-            <Link key={href} href={href}
-              className="flex items-center gap-1.5 text-slate-400 hover:text-green-400 transition-colors">
-              <Icon size={16} />{label}
+      {/* ── Category Chips — scrollable, always visible ── */}
+      <div className="border-t border-white/5 bg-[#0D1117] overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-1 px-3 py-2 w-max min-w-full">
+          {CATEGORY_CHIPS.map(({ href, label, icon }) => (
+            <Link key={href + label} href={href}>
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
+                activeChip(href)
+                  ? "bg-green-500/15 border-green-500/40 text-green-400"
+                  : "border-white/8 text-slate-400 hover:text-white hover:border-white/20 bg-white/3"
+              }`}>
+                <span>{icon}</span>
+                {label}
+              </div>
             </Link>
           ))}
-          <Link href="/products?deals=true"
-            className="flex items-center gap-1.5 text-red-400 hover:text-red-300 transition-colors font-semibold ml-auto">
-            <MdLocalOffer size={16} />Today's Deals 🔥
-          </Link>
         </div>
       </div>
 
-      {/* Mobile Slide-Down Menu */}
+      {/* ── Mobile Slide-Down Menu ── */}
       {mobileOpen && (
         <div className="md:hidden border-t border-white/8 bg-[#0D1117] shadow-2xl">
-          <nav className="py-1">
-            {navLinks.map(({ href, label, Icon }) => (
-              <Link key={href} href={href} onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 px-5 py-3.5 text-base font-medium text-slate-300 hover:bg-white/5 transition-colors">
-                <Icon size={20} className="text-slate-500" />
-                {label}
-                <MdChevronRight size={18} className="ml-auto text-slate-600" />
-              </Link>
-            ))}
-            <Link href="/products?deals=true" onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-3 px-5 py-3.5 text-base font-semibold text-red-400 hover:bg-red-500/10 transition-colors">
-              <MdLocalOffer size={20} />Today's Deals 🔥
-              <MdChevronRight size={18} className="ml-auto" />
-            </Link>
-          </nav>
-
-          <div className="border-t border-white/8 mx-0" />
-
           <div className="py-2">
             {isLoggedIn ? (
               <>
@@ -262,12 +268,14 @@ export const Navbar = () => {
                   <Link key={href} href={href} onClick={() => setMobileOpen(false)}
                     className="flex items-center gap-3 px-5 py-3 text-sm font-medium text-slate-300 hover:bg-white/5 transition-colors">
                     <Icon size={18} className="text-slate-500" />{label}
+                    <MdChevronRight size={18} className="ml-auto text-slate-600" />
                   </Link>
                 ))}
                 {userData?.role === "admin" && (
                   <Link href="/admin/dashboard" onClick={() => setMobileOpen(false)}
                     className="flex items-center gap-3 px-5 py-3 text-sm font-medium text-green-400 hover:bg-green-500/10 transition-colors">
                     <MdComputer size={18} />Admin Dashboard
+                    <MdChevronRight size={18} className="ml-auto" />
                   </Link>
                 )}
                 <button onClick={handleLogout}
@@ -277,10 +285,8 @@ export const Navbar = () => {
               </>
             ) : (
               <div className="px-4 py-3">
-                <Button
-                  className="w-full rounded-full bg-green-500 hover:bg-green-400 text-black font-bold"
-                  onClick={() => { setMobileOpen(false); openLoginDialog(); }}
-                >
+                <Button className="w-full rounded-full bg-green-500 hover:bg-green-400 text-black font-bold"
+                  onClick={() => { setMobileOpen(false); openLoginDialog(); }}>
                   Login / Sign Up
                 </Button>
               </div>

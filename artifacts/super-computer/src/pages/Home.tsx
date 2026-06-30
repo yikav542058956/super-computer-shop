@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { ref, onValue } from "firebase/database";
+import { ref, onValue, get } from "firebase/database";
 import { db } from "@/lib/firebase";
 import {
   ShoppingCart, Star, ChevronLeft, ChevronRight,
@@ -443,12 +443,50 @@ function CustomersSlider() {
   );
 }
 
+/* ─── Still Looking Section ─────────────────────────────────── */
+function StillLooking({ products }: { products: any[] }) {
+  if (!products.length) return null;
+  return (
+    <section className="py-4 bg-[#161B22] border-b border-white/5">
+      <div className="px-4">
+        <p className="text-white font-black text-sm mb-3">
+          🔍 Still looking for these?
+        </p>
+        <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+          {products.map((p) => (
+            <Link key={p.id} href={`/products/${p.id}`}>
+              <div className="flex-shrink-0 w-28 bg-[#0D1117] border border-white/8 rounded-xl overflow-hidden hover:border-green-500/30 transition-all cursor-pointer">
+                <div className="h-20 bg-[#F0F2F5] flex items-center justify-center p-2">
+                  <img
+                    src={p.images?.[0] || "/images/laptops/macbook-pro.png"}
+                    alt={p.name}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <div className="p-2">
+                  <p className="text-white text-[10px] font-semibold line-clamp-2 leading-tight mb-1">{p.name}</p>
+                  <p className="text-green-400 text-[10px] font-bold">
+                    {p.salePrice
+                      ? `₹${Number(p.salePrice).toLocaleString("en-IN")}`
+                      : `₹${Number(p.price).toLocaleString("en-IN")}`}
+                  </p>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ─── Main Page ─────────────────────────────────────────────── */
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [newArrivals, setNewArrivals] = useState<any[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
 
   useEffect(() => {
     const unsubProducts = onValue(ref(db, "products"), (snap) => {
@@ -481,6 +519,24 @@ export default function Home() {
     return () => { unsubProducts(); unsubBanners(); unsubAnn(); };
   }, []);
 
+  useEffect(() => {
+    try {
+      const ids: string[] = JSON.parse(localStorage.getItem("sc_recently_viewed") || "[]");
+      if (!ids.length) return;
+      Promise.all(
+        ids.map((id) =>
+          get(ref(db, `products/${id}`)).then((snap) =>
+            snap.exists() ? { id, ...snap.val() } : null
+          )
+        )
+      ).then((results) => {
+        setRecentlyViewed(
+          results.filter(Boolean).filter((p: any) => p.status === "active")
+        );
+      });
+    } catch {}
+  }, []);
+
   const tickerItems = announcements.filter(a => a.showAsTicker);
   const popupItems = announcements.filter(a => a.showAsPopup);
 
@@ -491,6 +547,9 @@ export default function Home() {
 
       {/* Hero */}
       <BannerSlider banners={banners} />
+
+      {/* Still Looking — recently viewed */}
+      <StillLooking products={recentlyViewed} />
 
       {/* Trust Badges */}
       <section className="bg-[#161B22] border-b border-white/5">

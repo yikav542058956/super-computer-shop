@@ -23,6 +23,7 @@ import Checkout from "@/pages/Checkout";
 import Profile from "@/pages/Profile";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
+import Play from "@/pages/Play";
 
 // Admin Pages
 import AdminLogin from "@/pages/admin/AdminLogin";
@@ -48,6 +49,7 @@ function Router() {
     <Switch>
       {/* Customer Routes */}
       <Route path="/" component={Home} />
+      <Route path="/play" component={Play} />
       <Route path="/products" component={ProductListing} />
       <Route path="/products/:id" component={ProductDetail} />
       <Route path="/cart" component={Cart} />

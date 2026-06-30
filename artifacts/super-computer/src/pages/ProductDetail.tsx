@@ -186,6 +186,12 @@ export default function ProductDetail() {
       if (snap.exists()) setProduct({ id, ...snap.val() });
       setLoading(false);
     });
+    // Track recently viewed
+    try {
+      const stored: string[] = JSON.parse(localStorage.getItem("sc_recently_viewed") || "[]");
+      const updated = [id, ...stored.filter((i) => i !== id)].slice(0, 8);
+      localStorage.setItem("sc_recently_viewed", JSON.stringify(updated));
+    } catch {}
   }, [id]);
 
   useEffect(() => {

@@ -1,0 +1,2 @@
+artifacts/super-computer/public/videos/promo.mp4 filter=lfs diff=lfs merge=lfs -text
+attached_assets/video_20260630_222452_1782838576810.mp4 filter=lfs diff=lfs merge=lfs -text
