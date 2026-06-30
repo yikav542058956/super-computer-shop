@@ -551,84 +551,22 @@ export default function Home() {
       {/* Still Looking — recently viewed */}
       <StillLooking products={recentlyViewed} />
 
-      {/* Trust Badges */}
-      <section className="bg-[#161B22] border-b border-white/5">
-        <div className="container mx-auto px-4 py-5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-            {[
-              { Icon: Shield,     title: "100% Genuine",    sub: "Products",          color: "text-green-400",  bg: "bg-green-500/10" },
-              { Icon: Truck,      title: "1 Year Warranty", sub: "On All Products",   color: "text-blue-400",   bg: "bg-blue-500/10" },
-              { Icon: Zap,        title: "Fast Delivery",   sub: "Across India",      color: "text-yellow-400", bg: "bg-yellow-500/10" },
-              { Icon: Headphones, title: "Secure Payment",  sub: "100% Safe",         color: "text-purple-400", bg: "bg-purple-500/10" },
-            ].map(({ Icon, title, sub, color, bg }) => (
-              <div key={title} className="flex items-center gap-3 justify-center py-2">
-                <div className={`h-10 w-10 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
-                  <Icon className={`h-5 w-5 ${color}`} />
-                </div>
-                <div className="text-left">
-                  <p className="text-white font-bold text-xs sm:text-sm">{title}</p>
-                  <p className="text-slate-500 text-[10px]">{sub}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Counter */}
-      <StatsSection />
-
-      {/* Categories */}
-      <section className="py-10 md:py-16 bg-[#0D1117]">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-6 md:mb-10">
-            <div>
-              <h2 className="text-xl md:text-3xl font-black text-white">Shop by Category</h2>
-              <p className="text-slate-500 text-sm mt-1">Browse to find what you need</p>
-            </div>
-            <Link href="/products" className="text-green-400 hover:text-green-300 text-sm font-semibold flex items-center gap-1">
-              View All <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
-            {[
-              { href: "/products?category=cat-1", label: "Laptops",          sub: "High performance",  img: "/images/laptops/macbook-pro.png",  emoji: "💻" },
-              { href: "/products?category=cat-2", label: "Gaming Laptops",   sub: "Build for Gamers",  img: "/images/laptops/asus-rog.png",      emoji: "🎮" },
-              { href: "/products?category=cat-3", label: "Desktop PCs",      sub: "Powerful & Fast",   img: "/images/laptops/hp-spectre.png",    emoji: "🖥️" },
-              { href: "/products?category=cat-3", label: "Accessories",      sub: "Enhance Your Setup", img: "/images/laptops/dell-xps.png",     emoji: "🖱️" },
-              { href: "/products",                label: "Components",       sub: "Build Your PC",     img: "/images/laptops/lenovo-thinkpad.png", emoji: "⚙️" },
-            ].map(({ href, label, sub, img, emoji }) => (
-              <Link href={href} key={label}>
-                <div className="group bg-[#161B22] border border-white/8 rounded-2xl p-4 flex flex-col items-center text-center hover:border-green-500/40 transition-all cursor-pointer hover:bg-[#1C2128]">
-                  <div className="h-20 w-full flex items-center justify-center mb-3 overflow-hidden">
-                    <img src={img} alt={label} className="h-full object-contain group-hover:scale-110 transition-transform duration-300" />
-                  </div>
-                  <p className="text-white font-bold text-sm mb-0.5">{label}</p>
-                  <p className="text-slate-500 text-[10px]">{sub}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Products */}
+      {/* Featured Products — right after banner */}
       {featuredProducts.length > 0 && (
-        <section className="py-10 md:py-16 bg-[#161B22] border-t border-b border-white/5">
+        <section className="py-8 md:py-12 bg-[#0D1117] border-b border-white/5">
           <div className="container mx-auto px-4">
-            <div className="flex justify-between items-center mb-6 md:mb-10">
+            <div className="flex justify-between items-center mb-5">
               <div>
-                <div className="inline-flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold mb-2">
+                <div className="inline-flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold mb-1.5">
                   🏆 EDITOR'S PICK
                 </div>
-                <h2 className="text-xl md:text-3xl font-black text-white">Featured Products</h2>
-                <p className="text-slate-500 text-sm mt-1">Handpicked by our tech experts</p>
+                <h2 className="text-lg md:text-2xl font-black text-white">Featured Products</h2>
               </div>
-              <Link href="/products" className="text-green-400 hover:text-green-300 text-sm font-semibold flex items-center gap-1">
-                View All <ChevronRight className="h-4 w-4" />
+              <Link href="/products" className="text-green-400 hover:text-green-300 text-xs font-semibold flex items-center gap-1">
+                View All <ChevronRight className="h-3.5 w-3.5" />
               </Link>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {featuredProducts.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           </div>
@@ -637,100 +575,56 @@ export default function Home() {
 
       {/* New Arrivals */}
       {newArrivals.length > 0 && (
-        <section className="py-10 md:py-16 bg-[#0D1117] border-b border-white/5">
+        <section className="py-8 md:py-12 bg-[#161B22] border-b border-white/5">
           <div className="container mx-auto px-4">
-            <div className="flex justify-between items-center mb-6 md:mb-10">
+            <div className="flex justify-between items-center mb-5">
               <div>
-                <div className="inline-flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 text-green-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold mb-2">
+                <div className="inline-flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 text-green-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold mb-1.5">
                   ⚡ JUST IN
                 </div>
-                <h2 className="text-xl md:text-3xl font-black text-white">New Arrivals</h2>
-                <p className="text-slate-500 text-sm mt-1">Check out the latest additions</p>
+                <h2 className="text-lg md:text-2xl font-black text-white">New Arrivals</h2>
               </div>
-              <Link href="/products" className="text-green-400 hover:text-green-300 text-sm font-semibold flex items-center gap-1">
-                View All <ChevronRight className="h-4 w-4" />
+              <Link href="/products" className="text-green-400 hover:text-green-300 text-xs font-semibold flex items-center gap-1">
+                View All <ChevronRight className="h-3.5 w-3.5" />
               </Link>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {newArrivals.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           </div>
         </section>
       )}
 
-      {/* Build Your Dream PC */}
-      <section className="py-10 md:py-16 bg-[#161B22] border-b border-white/5 relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-1/2 h-full opacity-20">
-          <img src="/images/store/s3.jpeg" alt="" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#161B22] to-transparent" />
-        </div>
-        <div className="container mx-auto px-4 relative">
-          <div className="max-w-lg">
-            <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-bold mb-4">
-              🔧 CUSTOM BUILD
-            </div>
-            <h2 className="text-2xl md:text-4xl font-black text-white mb-2">
-              Build Your Dream PC<br /><span className="text-green-400">Your Way!</span>
-            </h2>
-            <p className="text-slate-400 text-sm md:text-base mb-6 leading-relaxed">
-              Custom PC builds tailored to your needs. Gaming, Editing, Office — we've got you covered.
-            </p>
-            <div className="flex gap-3 mb-8">
-              <a href="tel:9761809960">
-                <Button className="bg-green-500 hover:bg-green-400 text-black font-bold px-6 h-10 rounded-full shadow-lg shadow-green-500/25">
-                  Build Now
-                </Button>
-              </a>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { Icon: Headphones, text: "Expert Support",   sub: "We are always ready" },
-                { Icon: Shield,     text: "Easy Returns",     sub: "7-day easy returns" },
-                { Icon: Truck,      text: "EMI Available",    sub: "0% EMI on orders" },
-                { Icon: Zap,        text: "Best Price",       sub: "Price guaranteed" },
-              ].map(({ Icon, text, sub }) => (
-                <div key={text} className="flex items-start gap-2">
-                  <div className="h-8 w-8 bg-green-500/10 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
-                    <Icon className="h-4 w-4 text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-white text-xs font-semibold">{text}</p>
-                    <p className="text-slate-500 text-[10px]">{sub}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Happy Customers — Auto Slider */}
-      <CustomersSlider />
-
-      {/* Newsletter */}
-      <section className="py-10 md:py-14 bg-[#161B22] border-t border-white/5">
+      {/* Categories */}
+      <section className="py-8 md:py-12 bg-[#0D1117] border-b border-white/5">
         <div className="container mx-auto px-4">
-          <div className="max-w-xl mx-auto text-center">
-            <div className="h-12 w-12 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Zap className="h-6 w-6 text-green-400" />
-            </div>
-            <h2 className="text-xl md:text-2xl font-black text-white mb-2">
-              Stay Updated with <span className="text-green-400">Latest Offers</span>
-            </h2>
-            <p className="text-slate-400 text-sm mb-6">Subscribe to get special offers, free giveaways, and once-in-a-lifetime deals.</p>
-            <div className="flex gap-2 max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Enter your email address"
-                className="flex-1 bg-[#0D1117] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-slate-500 outline-none focus:border-green-500/50 transition-all"
-              />
-              <Button className="bg-green-500 hover:bg-green-400 text-black font-bold px-5 rounded-xl shrink-0">
-                Subscribe
-              </Button>
-            </div>
+          <h2 className="text-lg md:text-2xl font-black text-white mb-5">Shop by Category</h2>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+            {[
+              { href: "/products?category=cat-1", label: "Laptops",       img: "/images/laptops/macbook-pro.png"    },
+              { href: "/products?category=cat-2", label: "Gaming",        img: "/images/laptops/asus-rog.png"        },
+              { href: "/products?category=cat-3", label: "Desktop PCs",   img: "/images/laptops/hp-spectre.png"      },
+              { href: "/products?category=cat-3", label: "Accessories",   img: "/images/laptops/dell-xps.png"        },
+              { href: "/products",                label: "Components",    img: "/images/laptops/lenovo-thinkpad.png" },
+            ].map(({ href, label, img }) => (
+              <Link href={href} key={label}>
+                <div className="group bg-[#161B22] border border-white/8 rounded-xl p-3 flex flex-col items-center text-center hover:border-green-500/40 transition-all cursor-pointer">
+                  <div className="h-16 w-full flex items-center justify-center mb-2 overflow-hidden">
+                    <img src={img} alt={label} className="h-full object-contain group-hover:scale-110 transition-transform duration-300" />
+                  </div>
+                  <p className="text-white font-semibold text-xs">{label}</p>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
+
+      {/* Stats Counter */}
+      <StatsSection />
+
+      {/* Happy Customers */}
+      <CustomersSlider />
 
       {/* Announcement cards */}
       {announcements.length > 0 && (
