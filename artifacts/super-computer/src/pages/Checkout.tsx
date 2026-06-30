@@ -12,6 +12,7 @@ import { ref, push, set } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { CheckCircle2, CreditCard, Banknote, Landmark } from "lucide-react";
+import { formatINR } from "@/lib/utils";
 
 export default function Checkout() {
   const { cart, cartTotal, clearCart } = useCart();
@@ -217,14 +218,14 @@ export default function Checkout() {
                         <p className="font-medium line-clamp-1">{item.name}</p>
                         <p className="text-slate-500">Qty: {item.qty}</p>
                       </div>
-                      <p className="font-medium">₹{(item.price * item.qty).toLocaleString()}</p>
+                      <p className="font-medium">{formatINR(item.price * item.qty)}</p>
                     </div>
                   ))}
                 </div>
                 <div className="border-t pt-4 space-y-2 text-sm">
                   <div className="flex justify-between text-slate-600">
                     <span>Subtotal</span>
-                    <span>₹{cartTotal.toLocaleString()}</span>
+                    <span>{formatINR(cartTotal)}</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>Delivery</span>
@@ -232,7 +233,7 @@ export default function Checkout() {
                   </div>
                   <div className="border-t pt-2 flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span>₹{cartTotal.toLocaleString()}</span>
+                    <span>{formatINR(cartTotal)}</span>
                   </div>
                 </div>
               </CardContent>

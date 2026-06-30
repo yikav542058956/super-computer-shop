@@ -6,6 +6,7 @@ import { ref, onValue } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Card, CardContent } from "@/components/ui/card";
 import { ShoppingCart, Star, Clock, Truck, ShieldCheck } from "lucide-react";
+import { formatINR } from "@/lib/utils";
 
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
@@ -68,9 +69,9 @@ export default function Home() {
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-bold text-lg">₹{(product.discountPrice || product.price).toLocaleString()}</p>
+              <p className="font-bold text-lg">{formatINR(product.discountPrice || product.price)}</p>
               {product.discountPrice && product.discountPrice < product.price && (
-                <p className="text-xs text-slate-400 line-through">₹{product.price.toLocaleString()}</p>
+                <p className="text-xs text-slate-400 line-through">{formatINR(product.price)}</p>
               )}
             </div>
             <Button size="icon" variant="secondary" className="rounded-full h-8 w-8 group-hover:bg-primary group-hover:text-white transition-colors">

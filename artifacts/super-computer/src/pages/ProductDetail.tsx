@@ -8,6 +8,7 @@ import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { ShoppingCart, Heart, ShieldCheck, Truck, Star, Info, ChevronRight, Cpu, HardDrive, MemoryStick } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatINR } from "@/lib/utils";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -103,9 +104,9 @@ export default function ProductDetail() {
 
             <div className="mb-8">
               <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-4xl font-bold text-slate-900">₹{(product.discountPrice || product.price).toLocaleString()}</span>
+                <span className="text-4xl font-bold text-slate-900">{formatINR(product.discountPrice || product.price)}</span>
                 {product.discountPrice && product.discountPrice < product.price && (
-                  <span className="text-xl text-slate-400 line-through">₹{product.price.toLocaleString()}</span>
+                  <span className="text-xl text-slate-400 line-through">{formatINR(product.price)}</span>
                 )}
               </div>
               <p className="text-sm text-slate-500">Inclusive of all taxes</p>

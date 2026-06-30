@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ShoppingCart, Star, Search, Filter } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
+import { formatINR } from "@/lib/utils";
 
 export default function ProductListing() {
   const [products, setProducts] = useState<any[]>([]);
@@ -193,9 +194,9 @@ export default function ProductListing() {
                       </div>
                       <div className="flex items-end justify-between mt-4 pt-4 border-t border-slate-100">
                         <div>
-                          <p className="font-bold text-xl">₹{(product.discountPrice || product.price).toLocaleString()}</p>
+                          <p className="font-bold text-xl">{formatINR(product.discountPrice || product.price)}</p>
                           {product.discountPrice && product.discountPrice < product.price && (
-                            <p className="text-xs text-slate-400 line-through">₹{product.price.toLocaleString()}</p>
+                            <p className="text-xs text-slate-400 line-through">{formatINR(product.price)}</p>
                           )}
                         </div>
                         <Button size="icon" className="rounded-full h-10 w-10 shadow-md" onClick={(e) => handleAddToCart(e, product)}>

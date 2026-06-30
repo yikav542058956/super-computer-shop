@@ -2,7 +2,8 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import { db } from "@/lib/firebase";
-import { Package, Users, ShoppingCart, DollarSign } from "lucide-react";
+import { Package, Users, ShoppingCart, IndianRupee } from "lucide-react";
+import { formatINR } from "@/lib/utils";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -47,11 +48,11 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl border shadow-sm flex items-center gap-4">
           <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-            <DollarSign className="h-6 w-6" />
+            <IndianRupee className="h-6 w-6" />
           </div>
           <div>
             <p className="text-sm font-medium text-slate-500">Total Revenue</p>
-            <p className="text-2xl font-bold">₹{stats.revenue.toLocaleString()}</p>
+            <p className="text-2xl font-bold">{formatINR(stats.revenue)}</p>
           </div>
         </div>
         

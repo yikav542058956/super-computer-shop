@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash, Loader2, Tag, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { formatINR } from "@/lib/utils";
 
 const EMPTY_FORM = {
   code: "",
@@ -165,9 +166,9 @@ export default function AdminCoupons() {
                     </div>
                   </TableCell>
                   <TableCell className="font-semibold">
-                    {coupon.discountType === "percentage" ? `${coupon.discountValue}% off` : `₹${coupon.discountValue} off`}
+                    {coupon.discountType === "percentage" ? `${coupon.discountValue}% off` : `${formatINR(coupon.discountValue)} off`}
                   </TableCell>
-                  <TableCell>{coupon.minOrderValue > 0 ? `₹${coupon.minOrderValue.toLocaleString()}` : "—"}</TableCell>
+                  <TableCell>{coupon.minOrderValue > 0 ? formatINR(coupon.minOrderValue) : "—"}</TableCell>
                   <TableCell>{coupon.usedCount || 0} / {coupon.maxUses || "∞"}</TableCell>
                   <TableCell>
                     {coupon.expiryDate ? (

@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash, Upload, ImageIcon, Loader2, X, Search, Star } from "lucide-react";
+import { formatINR } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface SpecField { key: string; value: string; }
@@ -258,9 +259,9 @@ export default function AdminProducts() {
                   <TableCell className="text-slate-600">{product.brand}</TableCell>
                   <TableCell>
                     <div>
-                      <span className="font-semibold">₹{product.price?.toLocaleString()}</span>
+                      <span className="font-semibold">{formatINR(product.price)}</span>
                       {product.discountPrice && (
-                        <p className="text-xs text-green-600 font-medium">₹{product.discountPrice.toLocaleString()}</p>
+                        <p className="text-xs text-green-600 font-medium">{formatINR(product.discountPrice)}</p>
                       )}
                     </div>
                   </TableCell>

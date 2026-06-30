@@ -5,6 +5,7 @@ import { db } from "@/lib/firebase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Eye, Edit } from "lucide-react";
+import { formatINR } from "@/lib/utils";
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -54,7 +55,7 @@ export default function AdminOrders() {
                   <TableCell className="font-mono font-medium text-xs">{order.id.slice(-8).toUpperCase()}</TableCell>
                   <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell>{order.address?.name}</TableCell>
-                  <TableCell className="font-bold">₹{order.finalAmount.toLocaleString()}</TableCell>
+                  <TableCell className="font-bold">{formatINR(order.finalAmount)}</TableCell>
                   <TableCell>
                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 uppercase">
                       {order.orderStatus}

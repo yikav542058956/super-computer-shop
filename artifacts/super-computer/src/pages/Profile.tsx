@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { formatINR } from "@/lib/utils";
 import {
   Package, MapPin, Heart, Settings, User, ChevronRight, CheckCircle2,
   Circle, Truck, Home, ShoppingBag, Clock, XCircle, RotateCcw, Loader2, Download
@@ -263,7 +264,7 @@ export default function Profile() {
                               )}
                             </div>
                             <div className="text-right flex-shrink-0">
-                              <p className="font-bold text-lg">₹{order.finalAmount?.toLocaleString()}</p>
+                              <p className="font-bold text-lg">{formatINR(order.finalAmount)}</p>
                               <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold mt-1 ${statusCfg.bg}`}>
                                 {statusCfg.label}
                               </span>
@@ -379,7 +380,7 @@ export default function Profile() {
                             <p className="font-semibold text-sm leading-snug">{item.name}</p>
                             <p className="text-xs text-slate-500 mt-0.5">Qty: {item.qty}</p>
                           </div>
-                          <p className="font-bold text-slate-800">₹{(item.price * item.qty).toLocaleString()}</p>
+                          <p className="font-bold text-slate-800">{formatINR(item.price * item.qty)}</p>
                         </div>
                       ))}
                     </div>
@@ -404,21 +405,21 @@ export default function Profile() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between text-slate-600">
                         <span>Listing Price</span>
-                        <span>₹{selectedOrder.totalAmount?.toLocaleString()}</span>
+                        <span>{formatINR(selectedOrder.totalAmount)}</span>
                       </div>
                       {selectedOrder.discount > 0 && (
                         <div className="flex justify-between text-green-600">
                           <span>Coupon Discount</span>
-                          <span>−₹{selectedOrder.discount?.toLocaleString()}</span>
+                          <span>−{formatINR(selectedOrder.discount)}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-slate-600">
                         <span>Delivery Charges</span>
-                        <span>{selectedOrder.deliveryCharge > 0 ? `₹${selectedOrder.deliveryCharge}` : "Free"}</span>
+                        <span>{selectedOrder.deliveryCharge > 0 ? formatINR(selectedOrder.deliveryCharge) : "Free"}</span>
                       </div>
                       <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
                         <span>Total Amount</span>
-                        <span>₹{selectedOrder.finalAmount?.toLocaleString()}</span>
+                        <span>{formatINR(selectedOrder.finalAmount)}</span>
                       </div>
                       <div className="flex justify-between text-slate-500">
                         <span>Payment Method</span>
