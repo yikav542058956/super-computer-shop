@@ -1,0 +1,113 @@
+curl ^"https://rozgarapinew.teachx.in/get/sendotp?phone=8630996536^" ^
+  -X ^"OPTIONS^" ^
+  -H ^"accept: */*^" ^
+  -H ^"accept-language: en-US,en;q=0.9^" ^
+  -H ^"access-control-request-headers: auth-key,client-service,device-type,source^" ^
+  -H ^"access-control-request-method: GET^" ^
+  -H ^"origin: https://www.rojgarwithankit.co.in^" ^
+  -H ^"priority: u=1, i^" ^
+  -H ^"referer: https://www.rojgarwithankit.co.in/^" ^
+  -H ^"sec-fetch-dest: empty^" ^
+  -H ^"sec-fetch-mode: cors^" ^
+  -H ^"sec-fetch-site: cross-site^" ^
+  -H ^"user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36^"
+
+
+
+Request URL
+https://rozgarapinew.teachx.in/get/otpverify?useremail=8630996536&otp=1504&device_id=WebBrowser1782812199588d1oafnmjwvm&mydeviceid=&mydeviceid2=
+Request Method
+GET
+Status Code
+200 OK
+Remote Address
+[2600:1901:0:237b::]:443
+Referrer Policy
+origin
+access-control-allow-headers
+*, client-service, auth-key, User-ID, Authorization, source, Device-Type
+access-control-allow-methods
+GET, OPTIONS, POST, PUT, DELETE
+access-control-allow-origin
+*
+alt-svc
+h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+content-encoding
+gzip
+content-type
+application/json; charset=UTF-8
+date
+Tue, 30 Jun 2026 09:38:14 GMT
+server
+openresty/1.29.2.3
+vary
+Accept-Encoding
+via
+1.1 google
+:authority
+rozgarapinew.teachx.in
+:method
+GET
+:path
+/get/otpverify?useremail=8630996536&otp=1504&device_id=WebBrowser1782812199588d1oafnmjwvm&mydeviceid=&mydeviceid2=
+:scheme
+https
+accept
+*/*
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-US,en;q=0.9
+auth-key
+appxapi
+client-service
+Appx
+device-type
+origin
+https://www.rojgarwithankit.co.in
+priority
+u=1, i
+referer
+https://www.rojgarwithankit.co.in/
+sec-ch-ua
+"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+cross-site
+source
+website
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36
+
+{
+    "status": 200,
+    "message": "OTP is Valid",
+    "data": "",
+    "user": {
+        "userid": "11406516",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjExNDA2NTE2IiwidGltZXN0YW1wIjoxNzgyODEyMjk0LCJpdl92ZXIiOjMxLCJzZXNzaW9uIjoiZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SnBaQ0k2SWpFeE5EQTJOVEUySWl3aVpXMWhhV3dpT2lKa1pYWmxjMmhpWVdkb1pXdzNPRE13UUdkdFlXbHNMbU52YlNJc0ltNWhiV1VpT2lKb1puWmthQ0lzSW5SbGJtRnVkRlI1Y0dVaU9pSjFjMlZ5SWl3aWRHVnVZVzUwVG1GdFpTSTZJbkp2ZW1kaGNsOWtZaUlzSW5SbGJtRnVkRWxrSWpvaUlpd2laR2x6Y0c5ellXSnNaU0k2Wm1Gc2MyVjkuT29IemFLNUNHdUtSVzJvOXRQZnBrd2dBTUlTQmlhVGlNUkVZZmswb2FMSSJ9.r1pM5o-Eo2EMl8GdefLocjIv2FORxRrVWKWfsbO_HBc",
+        "email": "deveshbaghel7830@gmail.com",
+        "phone": "8630996536",
+        "info_1": "OBC",
+        "info_2": "Male",
+        "name": "hfvdh",
+        "username": "4i8bnY",
+        "is_blank": false,
+        "state": "Gujarat",
+        "app_category": "",
+        "aadhar_status": "0",
+        "report_url": "hO9QW8fuFa9hV2bvPGoEfAGek3PTou5U1w0ufDOpMsGvaIGi8HsdUwN2OTt61jJS4yprzaskpEYk1wWcHn26jJuVwb+B826ax4yzmU4jN5ZgYf3zo3vsui2VPxGRxt0T:ZmVkY2JhOTg3NjU0MzIxMA==",
+        "cd": "IAJOQTM6fsvkKiAXSE6lZg==:ZmVkY2JhOTg3NjU0MzIxMA==",
+        "is_tester": false,
+        "is_paid_user": "0"
+    }
+}
+
+
