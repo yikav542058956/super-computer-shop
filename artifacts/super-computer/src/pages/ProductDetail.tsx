@@ -5,6 +5,7 @@ import { ref, get } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
+import { useWishlist } from "@/contexts/WishlistContext";
 import { toast } from "sonner";
 import { ShoppingCart, Heart, ShieldCheck, Truck, Star, Info, ChevronRight, Cpu, HardDrive, MemoryStick } from "lucide-react";
 import { WhatsAppProductButton } from "@/components/WhatsAppButton";
@@ -16,6 +17,7 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
+  const { isWishlisted, toggleWishlist } = useWishlist();
   const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
@@ -43,7 +45,24 @@ export default function ProductDetail() {
       qty: 1,
       image: product.images?.[0] || ""
     });
-    toast.success("Added to cart");
+    toast.success("Cart mein add ho gaya!");
+  };
+
+  const handleToggleWishlist = () => {
+    toggleWishlist({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      discountPrice: product.discountPrice,
+      image: product.images?.[0] || "",
+      brand: product.brand,
+      addedAt: Date.now(),
+    });
+    if (isWishlisted(product.id)) {
+      toast("Wishlist se remove ho gaya", { icon: "💔" });
+    } else {
+      toast.success("Wishlist mein save ho gaya! ❤️");
+    }
   };
 
   const SpecsIcon = ({ label }: { label: string }) => {
@@ -134,8 +153,14 @@ export default function ProductDetail() {
                 productName={product.name}
                 productPrice={product.discountPrice || product.price}
               />
-              <Button size="lg" variant="outline" className="h-14 w-14 p-0 shrink-0">
-                <Heart className="h-5 w-5" />
+              <Button
+                size="lg"
+                variant="outline"
+                className={`h-14 w-14 p-0 shrink-0 transition-colors ${isWishlisted(product.id) ? "border-red-400 bg-red-50 hover:bg-red-100" : ""}`}
+                onClick={handleToggleWishlist}
+                title={isWishlisted(product.id) ? "Wishlist se hatao" : "Wishlist mein save karo"}
+              >
+                <Heart className={`h-5 w-5 transition-all ${isWishlisted(product.id) ? "fill-red-500 text-red-500 scale-110" : ""}`} />
               </Button>
             </div>
 

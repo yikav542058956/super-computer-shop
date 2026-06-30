@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { WishlistProvider } from "@/contexts/WishlistContext";
 import { useEffect } from "react";
 import { seedData } from "@/lib/seedData";
 import { AdminRoute, ProtectedRoute } from "@/components/auth/RouteGuards";
@@ -15,6 +16,7 @@ import ProductListing from "@/pages/ProductListing";
 import ProductDetail from "@/pages/ProductDetail";
 import Login from "@/pages/Login";
 import Cart from "@/pages/Cart";
+import Wishlist from "@/pages/Wishlist";
 import Checkout from "@/pages/Checkout";
 import Profile from "@/pages/Profile";
 import About from "@/pages/About";
@@ -47,6 +49,7 @@ function Router() {
       <Route path="/products" component={ProductListing} />
       <Route path="/products/:id" component={ProductDetail} />
       <Route path="/cart" component={Cart} />
+      <Route path="/wishlist" component={Wishlist} />
       <Route path="/checkout">
         <ProtectedRoute>
           <Checkout />
@@ -153,12 +156,14 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <CartProvider>
+          <WishlistProvider>
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <Router />
             </WouterRouter>
             <Toaster />
           </TooltipProvider>
+          </WishlistProvider>
         </CartProvider>
       </AuthProvider>
     </QueryClientProvider>

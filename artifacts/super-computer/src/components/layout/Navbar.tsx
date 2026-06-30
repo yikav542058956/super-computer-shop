@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWishlist } from "@/contexts/WishlistContext";
 import { useState } from "react";
 import {
   ShoppingCart, Heart, Search, User as UserIcon, LogOut,
@@ -15,6 +16,7 @@ import {
 
 export const Navbar = () => {
   const { cartCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const { currentUser, userData, extUser, isLoggedIn, logout } = useAuth();
   const [, setLocation] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -80,8 +82,13 @@ export const Navbar = () => {
           {/* Desktop User Menu */}
           <div className="hidden md:flex items-center gap-2">
             <Link href="/wishlist">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="relative">
                 <Heart className="h-5 w-5" />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
+                    {wishlistCount > 9 ? "9+" : wishlistCount}
+                  </span>
+                )}
               </Button>
             </Link>
 
