@@ -306,63 +306,67 @@ function ProductCard({ product }: { product: any }) {
 
   return (
     <Link href={`/products/${product.id}`}>
-      <div className="group bg-[#161B22] border border-white/8 rounded-2xl overflow-hidden hover:border-green-500/40 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40 cursor-pointer h-full flex flex-col">
-        {/* Image area — white bg like Flipkart */}
-        <div className="relative bg-white flex justify-center items-center overflow-hidden" style={{ height: "180px" }}>
+      <div className="group bg-[#161B22] border border-white/8 rounded-2xl overflow-hidden hover:border-green-500/50 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_8px_32px_rgba(0,0,0,0.5)] cursor-pointer h-full flex flex-col">
+        {/* Image area — Flipkart-style clean bg with generous padding */}
+        <div className="relative bg-[#F0F2F5] flex justify-center items-center overflow-hidden" style={{ height: "190px", padding: "20px" }}>
           <img
             src={product.images?.[0] || "/images/laptops/macbook-pro.png"}
             alt={product.name}
-            className="h-36 w-auto max-w-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-lg"
+            className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-500 drop-shadow-xl"
+            style={{ maxHeight: "150px" }}
           />
           {/* Discount badge */}
           {hasDiscount && (
-            <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow">
+            <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[11px] font-black px-2.5 py-1 rounded-lg shadow-lg">
               {discountPct}% OFF
             </div>
           )}
           {/* New badge */}
           {product.isNewArrival && (
-            <div className="absolute top-2 right-2 bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded-md shadow">
-              NEW
+            <div className="absolute top-2.5 right-2.5 bg-green-500 text-black text-[11px] font-black px-2.5 py-1 rounded-lg shadow-lg">
+              NEW ✨
             </div>
           )}
           {/* Featured badge */}
           {product.isFeatured && !product.isNewArrival && (
-            <div className="absolute top-2 right-2 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-md shadow">
+            <div className="absolute top-2.5 right-2.5 bg-yellow-400 text-black text-[11px] font-black px-2.5 py-1 rounded-lg shadow-lg">
               ⭐ TOP
             </div>
           )}
-          {/* Hover overlay */}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
+          {/* Bottom gradient for smooth transition */}
+          <div className="absolute bottom-0 inset-x-0 h-6 bg-gradient-to-t from-[#161B22]/20 to-transparent pointer-events-none" />
         </div>
 
         {/* Content */}
-        <div className="p-3 sm:p-4 flex flex-col flex-1">
-          <p className="text-green-400 text-[10px] font-black uppercase tracking-widest mb-1">{product.brand}</p>
-          <h3 className="font-semibold text-white line-clamp-2 text-sm leading-snug mb-2 group-hover:text-green-400 transition-colors flex-1">
-            {product.name}
-          </h3>
-
-          {/* Rating row */}
-          <div className="flex items-center gap-2 mb-3">
+        <div className="p-3 sm:p-4 flex flex-col flex-1 border-t border-white/5">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-green-400 text-[10px] font-black uppercase tracking-widest">{product.brand}</p>
+            {/* Rating pill */}
             <div className="flex items-center gap-0.5 bg-green-600 px-1.5 py-0.5 rounded text-white text-[10px] font-bold">
               {(product.rating || 4).toFixed(1)}
               <Star className="w-2.5 h-2.5 fill-white ml-0.5" />
             </div>
-            <span className="text-xs text-slate-500">({product.reviewsCount || 0} reviews)</span>
           </div>
 
+          <h3 className="font-semibold text-white line-clamp-2 text-sm leading-snug mb-1 group-hover:text-green-400 transition-colors flex-1">
+            {product.name}
+          </h3>
+
+          <p className="text-[10px] text-slate-500 mb-3">({product.reviewsCount || 0} reviews)</p>
+
           {/* Price row */}
-          <div className="flex items-end justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 mt-auto">
             <div>
               <p className="font-black text-white text-lg leading-none">
                 {formatINR(product.discountPrice || product.price)}
               </p>
-              {hasDiscount && (
+              {hasDiscount ? (
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <p className="text-xs text-slate-500 line-through">{formatINR(product.price)}</p>
                   <p className="text-xs text-green-400 font-bold">Save {discountPct}%</p>
                 </div>
+              ) : (
+                <p className="text-[10px] text-slate-500 mt-0.5">Best Price</p>
               )}
             </div>
             {/* Cart button */}
@@ -511,6 +515,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Stats Counter */}
+      <StatsSection />
 
       {/* Categories */}
       <section className="py-10 md:py-16 bg-[#0D1117]">
