@@ -499,25 +499,6 @@ export default function SearchPage() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              {/* Live suggestions while typing */}
-              {suggestions.length > 0 && !loading && (
-                <div className="bg-white mx-4 mt-3 rounded-xl overflow-hidden shadow-sm" style={{ border: "1px solid #E5E7EB" }}>
-                  {suggestions.slice(0, 5).map(s => (
-                    <button
-                      key={s}
-                      onClick={() => { setQuery(s); handleSearch(s); }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-[#F5F7FB] border-b border-[#F3F4F6] last:border-0 transition-colors"
-                    >
-                      <Search size={13} className="text-[#9CA3AF] flex-shrink-0" />
-                      <span className="text-[13px] text-[#111827] text-left">
-                        <span className="text-[#2563EB] font-semibold">{query}</span>
-                        {s.slice(query.length)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
               {/* Result count */}
               {!loading && (
                 <div className="flex items-center justify-between px-4 mt-3 mb-2">
