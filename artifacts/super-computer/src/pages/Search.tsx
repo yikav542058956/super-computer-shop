@@ -87,8 +87,8 @@ function SkeletonCard() {
 /* ─── ProductCard ────────────────────────────── */
 function ProductCard({ product, index, onNavigate }: { product: any; index: number; onNavigate: (id: string) => void }) {
   const { addToCart } = useCart();
-  const { wishlistIds, toggleWishlist } = useWishlist();
-  const isWished = wishlistIds.includes(product.id);
+  const { isWishlisted, toggleWishlist } = useWishlist();
+  const isWished = isWishlisted(product.id);
   const disc = discount(product);
   const price = product.discountPrice || product.price;
 
@@ -100,7 +100,7 @@ function ProductCard({ product, index, onNavigate }: { product: any; index: numb
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleWishlist(product.id);
+    toggleWishlist({ productId: product.id, name: product.name, price: price, image: product.images?.[0] || "", addedAt: Date.now() });
   };
 
   const handleWhatsApp = (e: React.MouseEvent) => {
