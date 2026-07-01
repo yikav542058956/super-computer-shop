@@ -45,7 +45,7 @@ export const Navbar = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim()) setLocation(`/products?search=${encodeURIComponent(query.trim())}`);
+    setLocation("/search");
   };
 
   const startListening = () => {
@@ -101,8 +101,9 @@ export const Navbar = () => {
               type="search"
               placeholder="Search laptops, accessories, brands..."
               value={query}
-              onChange={e => setQuery(e.target.value)}
-              className="w-full h-10 text-sm outline-none font-medium text-white placeholder-slate-500"
+              readOnly
+              onClick={() => setLocation("/search")}
+              className="w-full h-10 text-sm outline-none font-medium text-white placeholder-slate-500 cursor-pointer"
               style={{
                 background: "#151A24",
                 border: "1px solid rgba(255,255,255,0.08)",
