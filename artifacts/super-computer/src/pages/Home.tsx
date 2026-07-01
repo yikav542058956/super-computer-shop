@@ -270,21 +270,7 @@ function HeroBanner({ banners }: { banners: any[] }) {
         </div>
       </div>
 
-      {/* Controls */}
-      {slides.length > 1 && (
-        <>
-          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={prev}
-            className="absolute left-5 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.9)", boxShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
-            <ChevronLeft size={18} className="text-gray-800" />
-          </motion.button>
-          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={next}
-            className="absolute right-5 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.9)", boxShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
-            <ChevronRight size={18} className="text-gray-800" />
-          </motion.button>
-        </>
-      )}
+      {/* No arrow controls — swipe/dots only */}
       <div className="flex justify-center gap-2 pt-3 pb-1">
         {slides.map((_, i) => (
           <motion.button key={i} onClick={() => goTo(i)} animate={{ width: i === sel ? 24 : 7 }}

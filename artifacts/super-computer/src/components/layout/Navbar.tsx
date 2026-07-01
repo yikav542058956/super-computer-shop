@@ -75,67 +75,23 @@ export const Navbar = () => {
       className="sticky top-0 z-50 w-full"
       style={{ background: "rgba(11,15,25,0.95)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
     >
-      {/* ── Main row ── */}
-      <div className="container mx-auto px-4 h-14 flex items-center gap-3">
+      {/* ── Row 1: Logo + Icons ── */}
+      <div className="container mx-auto px-4 h-12 flex items-center gap-3">
 
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 shrink-0 group">
+        {/* Brand name */}
+        <Link href="/" className="flex items-center gap-2 shrink-0 group flex-1">
           <motion.div
             whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-            className="h-8 w-8 rounded-xl flex items-center justify-center shadow-lg"
-            style={{ background: "linear-gradient(135deg,#22C55E,#16A34A)", boxShadow: "0 0 16px rgba(34,197,94,0.3)" }}
+            className="h-7 w-7 rounded-lg flex items-center justify-center shadow-lg flex-shrink-0"
+            style={{ background: "linear-gradient(135deg,#22C55E,#16A34A)", boxShadow: "0 0 12px rgba(34,197,94,0.3)" }}
           >
-            <span className="text-black font-black text-sm">S</span>
+            <span className="text-black font-black text-xs">S</span>
           </motion.div>
-          <div className="hidden sm:block leading-none">
-            <span className="font-black text-base tracking-tight text-white">SUPER </span>
-            <span className="font-black text-base tracking-tight" style={{ color: "#22C55E" }}>COMPUTER</span>
+          <div className="leading-none">
+            <span className="font-black text-base tracking-tight text-white">SUPER</span>
+            <span className="font-black text-base tracking-tight ml-1" style={{ color: "#22C55E" }}>COMPUTER</span>
           </div>
         </Link>
-
-        {/* Search */}
-        <form onSubmit={handleSearch} className="flex-1 max-w-2xl min-w-0">
-          <div className="relative flex items-center">
-            <Search size={17} className="absolute left-3.5 z-10 pointer-events-none" style={{ color: "#64748B" }} />
-            <input
-              type="search"
-              placeholder="Search laptops, accessories, brands..."
-              value={query}
-              readOnly
-              onClick={() => setLocation("/search")}
-              className="w-full h-10 text-sm outline-none font-medium text-white placeholder-slate-500 cursor-pointer"
-              style={{
-                background: "#151A24",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 12,
-                paddingLeft: 40,
-                paddingRight: 80,
-                transition: "border-color .2s, box-shadow .2s",
-              }}
-              onFocus={e => {
-                e.target.style.borderColor = "rgba(34,197,94,0.5)";
-                e.target.style.boxShadow  = "0 0 0 3px rgba(34,197,94,0.08)";
-              }}
-              onBlur={e => {
-                e.target.style.borderColor = "rgba(255,255,255,0.08)";
-                e.target.style.boxShadow  = "none";
-              }}
-            />
-            <div className="absolute right-2 flex items-center gap-0.5">
-              <motion.button type="button" whileTap={{ scale: 0.85 }}
-                className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors hover:bg-white/8 ripple"
-                title="Search by image">
-                <Camera size={15} style={{ color: "#64748B" }} />
-              </motion.button>
-              <motion.button type="button" whileTap={{ scale: 0.85 }}
-                onClick={startListening}
-                className={`h-7 w-7 flex items-center justify-center rounded-lg transition-colors ripple ${listening ? "animate-pulse" : "hover:bg-white/8"}`}
-                title="Voice search">
-                <Mic size={15} style={{ color: listening ? "#22C55E" : "#64748B" }} />
-              </motion.button>
-            </div>
-          </div>
-        </form>
 
         {/* Right icons */}
         <div className="flex items-center gap-1 shrink-0">
@@ -220,6 +176,40 @@ export const Navbar = () => {
             </motion.div>
           )}
         </div>
+      </div>
+
+      {/* ── Row 2: Search bar ── */}
+      <div className="px-3 pb-2.5">
+        <form onSubmit={handleSearch}>
+          <div className="relative flex items-center">
+            <Search size={16} className="absolute left-3.5 z-10 pointer-events-none" style={{ color: "#64748B" }} />
+            <input
+              type="search"
+              placeholder="Search laptops, brands, processors..."
+              value={query}
+              readOnly
+              onClick={() => setLocation("/search")}
+              className="w-full h-10 text-sm outline-none font-medium text-white placeholder-slate-500 cursor-pointer"
+              style={{
+                background: "#151A24",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 12,
+                paddingLeft: 40,
+                paddingRight: 76,
+              }}
+            />
+            <div className="absolute right-2 flex items-center gap-0.5">
+              <button type="button" onClick={() => setLocation("/search")}
+                className="h-7 w-7 flex items-center justify-center rounded-lg">
+                <Camera size={15} style={{ color: "#64748B" }} />
+              </button>
+              <button type="button" onClick={startListening}
+                className={`h-7 w-7 flex items-center justify-center rounded-lg ${listening ? "animate-pulse" : ""}`}>
+                <Mic size={15} style={{ color: listening ? "#22C55E" : "#64748B" }} />
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
 
       {/* ── Category chips ── */}
