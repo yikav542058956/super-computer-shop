@@ -13,14 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const CATEGORIES = [
-  { key: "gaming",      href: "/products?category=cat-2", label: "Gaming",      icon: Gamepad2,    color: "#EF4444" },
-  { key: "business",    href: "/products?category=cat-1", label: "Business",    icon: Briefcase,   color: "#3B82F6" },
-  { key: "student",     href: "/products?category=cat-1", label: "Student",     icon: GraduationCap, color: "#8B5CF6" },
-  { key: "creator",     href: "/products?category=cat-2", label: "Creator",     icon: Palette,     color: "#F59E0B" },
-  { key: "accessories", href: "/products?category=cat-3", label: "Accessories", icon: Cpu,         color: "#10B981" },
-  { key: "refurbished", href: "/products",                label: "Refurbished", icon: Recycle,     color: "#6B7280" },
-  { key: "premium",     href: "/products",                label: "Premium",     icon: Star,        color: "#FFD700" },
-  { key: "laptops",     href: "/products?category=cat-1", label: "All Laptops", icon: Laptop,      color: "#22C55E" },
+  { key: "gaming",      href: "/search?q=Gaming",      label: "Gaming",      icon: Gamepad2,    color: "#EF4444" },
+  { key: "business",    href: "/search?q=Business",    label: "Business",    icon: Briefcase,   color: "#3B82F6" },
+  { key: "student",     href: "/search?q=Student",     label: "Student",     icon: GraduationCap, color: "#8B5CF6" },
+  { key: "creator",     href: "/search?q=Creator",     label: "Creator",     icon: Palette,     color: "#F59E0B" },
+  { key: "accessories", href: "/search?q=Accessories", label: "Accessories", icon: Cpu,         color: "#10B981" },
+  { key: "refurbished", href: "/search?q=Refurbished", label: "Refurbished", icon: Recycle,     color: "#6B7280" },
+  { key: "premium",     href: "/search?q=Premium",     label: "Premium",     icon: Star,        color: "#FFD700" },
+  { key: "laptops",     href: "/search",               label: "All Laptops", icon: Laptop,      color: "#22C55E" },
 ];
 
 declare global {
@@ -79,17 +79,10 @@ export const Navbar = () => {
       <div className="container mx-auto px-4 h-12 flex items-center gap-3">
 
         {/* Brand name */}
-        <Link href="/" className="flex items-center gap-2 shrink-0 group flex-1">
-          <motion.div
-            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-            className="h-7 w-7 rounded-lg flex items-center justify-center shadow-lg flex-shrink-0"
-            style={{ background: "linear-gradient(135deg,#22C55E,#16A34A)", boxShadow: "0 0 12px rgba(34,197,94,0.3)" }}
-          >
-            <span className="text-black font-black text-xs">S</span>
-          </motion.div>
+        <Link href="/" className="flex items-center shrink-0 group flex-1">
           <div className="leading-none">
-            <span className="font-black text-base tracking-tight text-white">SUPER</span>
-            <span className="font-black text-base tracking-tight ml-1" style={{ color: "#22C55E" }}>COMPUTER</span>
+            <span className="font-black text-lg tracking-tight text-white">SUPER</span>
+            <span className="font-black text-lg tracking-tight ml-1" style={{ color: "#22C55E" }}>COMPUTER</span>
           </div>
         </Link>
 

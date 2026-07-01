@@ -251,10 +251,16 @@ export default function SearchPage() {
     return () => unsub();
   }, []);
 
-  /* Load recent searches */
+  /* Load recent searches + read URL ?q= param on mount */
   useEffect(() => {
     setRecentSearches(getRecent());
-    setTimeout(() => inputRef.current?.focus(), 200);
+    const params = new URLSearchParams(window.location.search);
+    const urlQ = params.get("q");
+    if (urlQ) {
+      setQuery(urlQ);
+    } else {
+      setTimeout(() => inputRef.current?.focus(), 200);
+    }
   }, []);
 
   /* Search logic */

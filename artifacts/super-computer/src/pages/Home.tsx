@@ -74,14 +74,14 @@ const BRANDS = [
 ];
 
 const CATEGORIES = [
-  { href: "/products?category=cat-2", label: "Gaming",      icon: Gamepad2,      color: "#EF4444", bg: "#EF44441A" },
-  { href: "/products?category=cat-1", label: "Business",    icon: Briefcase,     color: "#3B82F6", bg: "#3B82F61A" },
-  { href: "/products?category=cat-1", label: "Student",     icon: GraduationCap, color: "#8B5CF6", bg: "#8B5CF61A" },
-  { href: "/products?category=cat-2", label: "Creator",     icon: Palette,       color: "#F59E0B", bg: "#F59E0B1A" },
-  { href: "/products?category=cat-3", label: "Accessories", icon: Cpu,           color: "#10B981", bg: "#10B9811A" },
-  { href: "/products?category=cat-1", label: "All Laptops", icon: Laptop,        color: "#22C55E", bg: "#22C55E1A" },
-  { href: "/products",                label: "Refurbished", icon: MonitorCheck,  color: "#64748B", bg: "#64748B1A" },
-  { href: "/products",                label: "Workstation", icon: Package,       color: "#F97316", bg: "#F973161A" },
+  { href: "/search?q=Gaming",      label: "Gaming",      icon: Gamepad2,      color: "#EF4444", bg: "#EF44441A" },
+  { href: "/search?q=Business",    label: "Business",    icon: Briefcase,     color: "#3B82F6", bg: "#3B82F61A" },
+  { href: "/search?q=Student",     label: "Student",     icon: GraduationCap, color: "#8B5CF6", bg: "#8B5CF61A" },
+  { href: "/search?q=Creator",     label: "Creator",     icon: Palette,       color: "#F59E0B", bg: "#F59E0B1A" },
+  { href: "/search?q=Accessories", label: "Accessories", icon: Cpu,           color: "#10B981", bg: "#10B9811A" },
+  { href: "/search",               label: "All Laptops", icon: Laptop,        color: "#22C55E", bg: "#22C55E1A" },
+  { href: "/search?q=Refurbished", label: "Refurbished", icon: MonitorCheck,  color: "#64748B", bg: "#64748B1A" },
+  { href: "/search?q=Workstation", label: "Workstation", icon: Package,       color: "#F97316", bg: "#F973161A" },
 ];
 
 const TESTIMONIALS = [
@@ -292,12 +292,12 @@ function BrandCarousel() {
           <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Authorized Reseller</p>
           <h3 className="text-slate-200 font-bold text-sm mt-0.5">Top Brands</h3>
         </div>
-        <Link href="/products"><span className="text-xs font-semibold" style={{ color: "#22C55E" }}>View All →</span></Link>
+        <Link href="/search"><span className="text-xs font-semibold" style={{ color: "#22C55E" }}>View All →</span></Link>
       </div>
       <div className="overflow-x-auto scrollbar-none">
         <div className="flex items-center gap-3 px-4 w-max">
           {BRANDS.map(brand => (
-            <Link key={brand.name} href={`/products?brand=${brand.name}`}>
+            <Link key={brand.name} href={`/search?q=${encodeURIComponent(brand.name)}`}>
               <motion.div
                 whileHover={{ scale: 1.06, y: -2 }} whileTap={{ scale: 0.94 }}
                 className="flex flex-col items-center gap-2 p-3 rounded-2xl cursor-pointer flex-shrink-0 transition-all"
