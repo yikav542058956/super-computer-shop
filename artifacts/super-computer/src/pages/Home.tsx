@@ -8,7 +8,7 @@ import Marquee from "react-fast-marquee";
 import {
   ShoppingCart, Star, ChevronLeft, ChevronRight, ArrowRight,
   Heart, Eye, Zap, Shield, Truck, Headphones, RotateCcw, CreditCard,
-  Users, Package, Award, ThumbsUp, ChevronDown, Mail, Gamepad2,
+  Users, Package, Award, ChevronDown, Gamepad2,
   Briefcase, GraduationCap, Palette, Cpu, Laptop, MonitorCheck,
   Info, AlertTriangle, CheckCircle, Megaphone, X,
 } from "lucide-react";
@@ -38,27 +38,27 @@ const DEFAULT_BANNERS = [
     title: "Power Your World",
     accent: "with Premium Tech",
     sub: "High-performance laptops & custom PCs at Kasganj Road",
-    btn: "Shop Now", link: "/products",
+    btn: "Shop Now", link: "/search",
     img: "/images/store/s4.jpeg",
-    from: "#0B0F19", via: "#0f1f2f", badge: "🔥 Best Sellers",
+    from: "#0B0F19", via: "#0f1f2f", badge: "Best Sellers",
   },
   {
     id: "d2",
     title: "Built to Dominate",
     accent: "Game Everything",
     sub: "RTX-powered gaming laptops with in-store demos available",
-    btn: "Explore Gaming", link: "/products?category=cat-2",
+    btn: "Explore Gaming", link: "/search?q=Gaming",
     img: "/images/store/s7.jpeg",
-    from: "#0d0f1a", via: "#1a0d2e", badge: "🎮 Gaming",
+    from: "#0d0f1a", via: "#1a0d2e", badge: "Gaming",
   },
   {
     id: "d3",
     title: "Free Delivery &",
     accent: "Expert Support",
     sub: "Every purchase includes doorstep delivery + free setup",
-    btn: "View Deals", link: "/products?deals=true",
+    btn: "View Deals", link: "/search",
     img: "/images/store/s2.jpeg",
-    from: "#0a1a12", via: "#0f2318", badge: "⚡ New Arrivals",
+    from: "#0a1a12", via: "#0f2318", badge: "New Arrivals",
   },
 ];
 
@@ -84,13 +84,6 @@ const CATEGORIES = [
   { href: "/search?q=Workstation", label: "Workstation", icon: Package,       color: "#F97316", bg: "#F973161A" },
 ];
 
-const TESTIMONIALS = [
-  { name: "Aman Verma",   role: "Engineering Student",  text: "Super Computer is my go-to store! Got my HP laptop at the best price with amazing after-sale support.", rating: 5, avatar: "/images/customers/c9.jpg" },
-  { name: "Rohit Sharma", role: "Graphic Designer",     text: "Genuine products, fast delivery. The team helped me pick the perfect laptop for my creative work.", rating: 5, avatar: "/images/customers/c1.jpg" },
-  { name: "Priya Singh",  role: "Business Owner",       text: "Best laptop store in the region. Very knowledgeable staff and unbeatable prices. Highly recommended!", rating: 5, avatar: "/images/customers/c6.jpg" },
-  { name: "Karan Mehta",  role: "Software Developer",   text: "Bought my Dell XPS from here. Excellent service, genuine product, and they set everything up for free!", rating: 5, avatar: "/images/customers/c4.jpg" },
-  { name: "Salfi Khan",   role: "Content Creator",      text: "Amazing experience! The team knows exactly what you need. Got the best gaming laptop at a great price.", rating: 5, avatar: "/images/customers/c5.jpg" },
-];
 
 const FAQS = [
   { q: "Do you provide genuine products with warranty?",        a: "Yes, 100% genuine products with manufacturer warranty. We are authorized resellers for HP, Dell, Lenovo, ASUS, and more." },
@@ -138,7 +131,7 @@ function SkeletonCard() {
 /* ─── Ticker ────────────────────────────────────────────────── */
 function AnnouncementTicker({ items }: { items: any[] }) {
   if (!items.length) return null;
-  const text = items.map(i => `📢 ${i.title}: ${i.message}`).join("   ·   ");
+  const text = items.map(i => `${i.title}: ${i.message}`).join("   ·   ");
   return (
     <div className="overflow-hidden flex items-center border-b" style={{ background: "rgba(34,197,94,0.08)", borderColor: "rgba(34,197,94,0.15)" }}>
       <div className="shrink-0 px-3 flex items-center gap-1.5 py-1.5 font-bold text-xs" style={{ color: "#22C55E" }}>
@@ -557,55 +550,49 @@ function TrustSection() {
   );
 }
 
-/* ─── Testimonials ──────────────────────────────────────────── */
-function Testimonials() {
-  const [active, setActive] = useState(0);
-  const total = TESTIMONIALS.length;
+/* ─── Happy Customers (admin-managed photos) ────────────────── */
+function HappyCustomers() {
+  const [photos, setPhotos] = useState<any[]>([]);
   useEffect(() => {
-    const t = setInterval(() => setActive(a => (a + 1) % total), 5000);
-    return () => clearInterval(t);
-  }, [total]);
+    const unsub = onValue(ref(db, "customerPhotos"), snap => {
+      if (!snap.exists()) { setPhotos([]); return; }
+      const list = Object.entries(snap.val())
+        .map(([id, v]: any) => ({ id, ...v }))
+        .filter((p: any) => p.isActive !== false)
+        .sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+      setPhotos(list);
+    });
+    return () => unsub();
+  }, []);
+
+  if (!photos.length) return null;
 
   return (
-    <section className="py-12 border-t overflow-hidden" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+    <section className="py-10 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
       <div className="container mx-auto px-4">
-        <motion.div initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }} className="text-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-black text-white">
+        <motion.div initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }} className="mb-6">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Our Community</p>
+          <h2 className="text-xl font-black text-white">
             Happy <span style={{ color: "#22C55E" }}>Customers</span>
           </h2>
-          <p className="text-slate-400 mt-2 text-sm">Real reviews from real people</p>
         </motion.div>
-
-        {/* Card grid — 3 visible on desktop, 1 on mobile */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {TESTIMONIALS.slice(0, 3).map((t, i) => (
-            <motion.div key={t.name}
-              initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }} transition={{ delay: i * 0.1, duration: 0.5 }}
-              whileHover={{ y: -4 }}
-              className="p-5 rounded-2xl flex flex-col gap-3"
-              style={{ background: "#1E293B", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <div className="flex items-center gap-1">
-                {[...Array(t.rating)].map((_, j) => <Star key={j} size={13} className="fill-yellow-400 text-yellow-400" />)}
-              </div>
-              <p className="text-slate-300 text-sm leading-relaxed">"{t.text}"</p>
-              <div className="flex items-center gap-3 mt-auto">
-                <img src={t.avatar} alt={t.name} className="h-10 w-10 rounded-full object-cover" />
-                <div>
-                  <p className="text-white font-bold text-sm">{t.name}</p>
-                  <p className="text-xs" style={{ color: "#22C55E" }}>{t.role}</p>
+        <div className="grid grid-cols-2 gap-3">
+          {photos.slice(0, 6).map((photo, i) => (
+            <motion.div key={photo.id}
+              initial={{ opacity: 0, scale: 0.94 }} whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }} transition={{ delay: i * 0.07 }}
+              className="rounded-2xl overflow-hidden relative"
+              style={{ background: "#1F2937", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <img src={photo.imageUrl} alt={photo.customerName || "Customer"}
+                className="w-full object-cover" style={{ aspectRatio: "4/3" }} />
+              {(photo.customerName || photo.laptop) && (
+                <div className="absolute bottom-0 left-0 right-0 p-2.5"
+                  style={{ background: "linear-gradient(transparent,rgba(0,0,0,0.75))" }}>
+                  {photo.customerName && <p className="text-white text-xs font-bold leading-none">{photo.customerName}</p>}
+                  {photo.laptop && <p className="text-slate-300 text-[10px] mt-0.5 leading-none truncate">{photo.laptop}</p>}
                 </div>
-              </div>
+              )}
             </motion.div>
-          ))}
-        </div>
-
-        {/* Dots */}
-        <div className="flex justify-center gap-2 mt-6">
-          {TESTIMONIALS.map((_, i) => (
-            <motion.button key={i} onClick={() => setActive(i)}
-              animate={{ width: i === active ? 20 : 7, background: i === active ? "#22C55E" : "rgba(255,255,255,0.2)" }}
-              style={{ height: 7, borderRadius: 4 }} transition={{ duration: 0.3 }} />
           ))}
         </div>
       </div>
@@ -653,67 +640,13 @@ function FAQ() {
   );
 }
 
-/* ─── Newsletter ────────────────────────────────────────────── */
-function Newsletter() {
-  const [email, setEmail] = useState("");
-  const [done, setDone] = useState(false);
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email.trim()) { setDone(true); setEmail(""); }
-  };
-  return (
-    <section className="py-12 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-      <div className="container mx-auto px-4">
-        <motion.div initial="hidden" whileInView="show" variants={scaleIn} viewport={{ once: true }}
-          className="relative rounded-3xl overflow-hidden p-8 md:p-12 text-center"
-          style={{ background: "linear-gradient(135deg,#0f2318 0%,#1a3a24 50%,#0f2318 100%)", border: "1px solid rgba(34,197,94,0.2)" }}>
-          {/* BG glow */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-48 rounded-full blur-3xl" style={{ background: "rgba(34,197,94,0.1)" }} />
-          </div>
-
-          <div className="relative">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold mb-4" style={{ background: "rgba(34,197,94,0.15)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.3)" }}>
-              <Mail size={12} /> Stay Updated
-            </div>
-            <h2 className="text-2xl md:text-4xl font-black text-white mb-2">
-              Get <span style={{ color: "#22C55E" }}>Exclusive Deals</span>
-            </h2>
-            <p className="text-slate-400 mb-6 max-w-md mx-auto text-sm">Subscribe for early access to flash sales, new arrivals, and tech tips.</p>
-
-            {done ? (
-              <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold"
-                style={{ background: "rgba(34,197,94,0.15)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.3)" }}>
-                <CheckCircle size={18} /> You're subscribed! Thank you.
-              </motion.div>
-            ) : (
-              <form onSubmit={handleSubmit} className="flex gap-2 max-w-md mx-auto">
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  placeholder="Enter your email..."
-                  className="flex-1 h-11 px-4 rounded-2xl text-sm font-medium text-white placeholder-slate-500 outline-none"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }} required />
-                <motion.button type="submit" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                  className="h-11 px-6 rounded-2xl font-bold text-sm ripple"
-                  style={{ background: "#22C55E", color: "#000" }}>
-                  Subscribe
-                </motion.button>
-              </form>
-            )}
-          </div>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
 /* ─── Still Looking ─────────────────────────────────────────── */
 function StillLooking({ products }: { products: any[] }) {
   if (!products.length) return null;
   return (
     <section className="py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.05)", background: "#151A24" }}>
       <div className="px-4">
-        <p className="text-white font-black text-sm mb-3">🔍 Still looking for these?</p>
+        <p className="text-white font-black text-sm mb-3">Recently Viewed</p>
         <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
           {products.map(p => (
             <Link key={p.id} href={`/products/${p.id}`}>
@@ -750,7 +683,8 @@ export default function Home() {
         const list = Object.entries(snap.val()).map(([id, v]: any) => ({ id, ...v })).filter((p: any) => p.status === "active");
         setFeatured(list.filter((p: any) => p.isFeatured).slice(0, 8));
         setArrivals(list.filter((p: any) => p.isNewArrival).slice(0, 8));
-        setDeals(list.filter((p: any) => p.discountPrice && p.discountPrice < p.price).slice(0, 4));
+        const topDeals = list.filter((p: any) => p.isTopDeal || p.isBestSeller || (p.discountPrice && p.discountPrice < p.price));
+        setDeals(topDeals.slice(0, 8));
       } else { setFeatured([]); setArrivals([]); setDeals([]); }
     });
     const unsubB = onValue(ref(db, "banners"), snap => {
@@ -783,14 +717,14 @@ export default function Home() {
       <BrandCarousel />
       <CategoriesSection />
 
-      <ProductSection title="Featured" accent="Products" badge="🏆 Editor's Pick" products={featured} />
-      <ProductSection title="New" accent="Arrivals"  badge="✨ Just In"        products={arrivals} />
+      <ProductSection title="Featured" accent="Products" badge="Editor's Pick" products={featured} />
+      <ProductSection title="New" accent="Arrivals"  badge="Just In"        products={arrivals} />
       {deals && deals.length > 0 && (
-        <ProductSection title="Today's" accent="Deals" badge="⚡ Flash Sale"  products={deals} />
+        <ProductSection title="Today's" accent="Deals" badge="Top Deals"  products={deals} />
       )}
 
       <TrustSection />
-      <Testimonials />
+      <HappyCustomers />
       <FAQ />
     </Layout>
   );

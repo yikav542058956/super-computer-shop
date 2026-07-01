@@ -13,6 +13,8 @@ import {
   BarChart,
   Megaphone,
   Ticket,
+  Camera,
+  Wallet,
 } from "lucide-react";
 
 export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
@@ -34,6 +36,8 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     { label: "Coupons",        href: "/admin/coupons",         icon: Ticket },
     { label: "Reviews",        href: "/admin/reviews",         icon: MessageSquare },
     { label: "Reports",        href: "/admin/reports",         icon: BarChart },
+    { label: "Customer Photos",href: "/admin/customer-photos", icon: Camera },
+    { label: "Wallet",         href: "/admin/wallet",          icon: Wallet },
     { label: "Settings",       href: "/admin/settings",        icon: Settings },
   ];
 

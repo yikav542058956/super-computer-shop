@@ -30,6 +30,10 @@ const EMPTY_FORM = {
   images: [] as string[],
   isFeatured: false,
   isNewArrival: false,
+  isTopDeal: false,
+  isBestSeller: false,
+  isStudentPick: false,
+  isGamingDeal: false,
   status: "active" as "active" | "inactive",
 };
 
@@ -353,15 +357,20 @@ export default function AdminProducts() {
             </div>
 
             {/* Toggles */}
-            <div className="flex gap-6">
-              <div className="flex items-center gap-2">
-                <Switch checked={form.isFeatured} onCheckedChange={(v) => setForm((f) => ({ ...f, isFeatured: v }))} />
-                <Label className="cursor-pointer flex items-center gap-1"><Star className="h-3.5 w-3.5 text-amber-500" />Featured</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={form.isNewArrival} onCheckedChange={(v) => setForm((f) => ({ ...f, isNewArrival: v }))} />
-                <Label className="cursor-pointer">New Arrival</Label>
-              </div>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { key: "isFeatured",    label: "Featured",      color: "text-amber-500" },
+                { key: "isNewArrival",  label: "New Arrival",   color: "text-blue-500" },
+                { key: "isTopDeal",     label: "Top Deal",      color: "text-red-500" },
+                { key: "isBestSeller",  label: "Best Seller",   color: "text-green-500" },
+                { key: "isStudentPick", label: "Student Pick",  color: "text-purple-500" },
+                { key: "isGamingDeal",  label: "Gaming Deal",   color: "text-orange-500" },
+              ].map(({ key, label, color }) => (
+                <div key={key} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200">
+                  <Switch checked={(form as any)[key]} onCheckedChange={(v) => setForm((f) => ({ ...f, [key]: v }))} />
+                  <Label className={`cursor-pointer text-sm font-semibold ${color}`}>{label}</Label>
+                </div>
+              ))}
             </div>
 
             {/* Description */}

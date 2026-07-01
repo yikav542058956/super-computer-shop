@@ -25,6 +25,8 @@ import About from "@/pages/About";
 import Contact from "@/pages/Contact";
 import Play from "@/pages/Play";
 import Search from "@/pages/Search";
+import Orders from "@/pages/Orders";
+import Wallet from "@/pages/Wallet";
 
 // Admin Pages
 import AdminLogin from "@/pages/admin/AdminLogin";
@@ -39,6 +41,8 @@ import AdminReviews from "@/pages/admin/AdminReviews";
 import AdminReports from "@/pages/admin/AdminReports";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminAnnouncements from "@/pages/admin/AdminAnnouncements";
+import AdminCustomerPhotos from "@/pages/admin/AdminCustomerPhotos";
+import AdminWallet from "@/pages/admin/AdminWallet";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 
 const queryClient = new QueryClient();
@@ -64,6 +68,16 @@ function Router() {
       <Route path="/profile">
         <ProtectedRoute>
           <Profile />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/orders">
+        <ProtectedRoute>
+          <Orders />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/wallet">
+        <ProtectedRoute>
+          <Wallet />
         </ProtectedRoute>
       </Route>
       <Route path="/about" component={About} />
@@ -135,6 +149,18 @@ function Router() {
       <Route path="/admin/announcements">
         <AdminRoute>
           <AdminAnnouncements />
+        </AdminRoute>
+      </Route>
+
+      <Route path="/admin/customer-photos">
+        <AdminRoute>
+          <AdminCustomerPhotos />
+        </AdminRoute>
+      </Route>
+
+      <Route path="/admin/wallet">
+        <AdminRoute>
+          <AdminWallet />
         </AdminRoute>
       </Route>
 
