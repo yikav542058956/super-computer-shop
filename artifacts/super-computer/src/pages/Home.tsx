@@ -296,24 +296,51 @@ function HeroBanner({ banners }: { banners: any[] }) {
   );
 }
 
-/* ─── Brand Marquee ─────────────────────────────────────────── */
+/* ─── Brand Carousel ─────────────────────────────────────────── */
 function BrandCarousel() {
   return (
     <motion.section initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }}
-      className="py-8 border-y" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-      <div className="container mx-auto px-4 mb-5 text-center">
-        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Authorized Reseller</p>
-        <h3 className="text-slate-300 font-semibold mt-1">Top Brands in Our Store</h3>
+      className="py-6 border-y" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      <div className="container mx-auto px-4 mb-4 flex items-center justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Authorized Reseller</p>
+          <h3 className="text-slate-200 font-bold text-sm mt-0.5">Top Brands</h3>
+        </div>
+        <Link href="/products"><span className="text-xs font-semibold" style={{ color: "#22C55E" }}>View All →</span></Link>
       </div>
-      <Marquee speed={45} gradient gradientColor="#0B0F19" gradientWidth={80} pauseOnHover>
-        {BRANDS.map(brand => (
-          <div key={brand.name}
-            className="mx-6 flex items-center justify-center px-6 py-3 rounded-2xl cursor-pointer transition-all hover:scale-105"
-            style={{ background: "#151A24", border: "1px solid rgba(255,255,255,0.08)", minWidth: 120 }}>
-            <span className="font-black text-lg" style={{ color: "rgba(255,255,255,0.6)" }}>{brand.name}</span>
-          </div>
-        ))}
-      </Marquee>
+      <div className="overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-3 px-4 w-max">
+          {BRANDS.map(brand => (
+            <Link key={brand.name} href={`/products?brand=${brand.name}`}>
+              <motion.div
+                whileHover={{ scale: 1.06, y: -2 }} whileTap={{ scale: 0.94 }}
+                className="flex flex-col items-center gap-2 p-3 rounded-2xl cursor-pointer flex-shrink-0 transition-all"
+                style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", width: 72 }}>
+                <div className="h-10 w-10 flex items-center justify-center">
+                  <img
+                    src={brand.logo}
+                    alt={brand.name}
+                    className="max-h-full max-w-full object-contain"
+                    onError={e => {
+                      const t = e.target as HTMLImageElement;
+                      t.style.display = "none";
+                      const parent = t.parentElement;
+                      if (parent) {
+                        const span = document.createElement("span");
+                        span.className = "font-black text-xs";
+                        span.style.color = brand.color;
+                        span.textContent = brand.name;
+                        parent.appendChild(span);
+                      }
+                    }}
+                  />
+                </div>
+                <p className="text-[10px] font-bold text-slate-600 leading-none">{brand.name}</p>
+              </motion.div>
+            </Link>
+          ))}
+        </div>
+      </div>
     </motion.section>
   );
 }
@@ -779,7 +806,6 @@ export default function Home() {
       <TrustSection />
       <Testimonials />
       <FAQ />
-      <Newsletter />
     </Layout>
   );
 }
