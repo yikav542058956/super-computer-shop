@@ -75,6 +75,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "firebase": "^12.15.0"
+    "firebase": "^12.15.0",
+    "react-fast-marquee": "^1.6.5"
   }
 }

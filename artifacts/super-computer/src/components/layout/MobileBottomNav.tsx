@@ -2,10 +2,8 @@ import { useLocation } from "wouter";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLoginDialog } from "@/contexts/LoginDialogContext";
-import {
-  MdHome, MdPlayCircle, MdLocalOffer, MdPerson, MdShoppingCart,
-  MdHomeFilled, MdPlayCircleFilled, MdLocalOfferOutlined,
-} from "react-icons/md";
+import { Home, Play, Tag, User, ShoppingCart } from "lucide-react";
+import { motion } from "framer-motion";
 
 export function MobileBottomNav() {
   const [location, setLocation] = useLocation();
@@ -20,151 +18,87 @@ export function MobileBottomNav() {
 
   const handleAccount = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isLoggedIn) {
-      setLocation("/profile");
-    } else {
-      openLoginDialog();
-    }
+    if (isLoggedIn) setLocation("/profile");
+    else openLoginDialog();
   };
 
   const tabs = [
-    {
-      label: "Home",
-      path: "/",
-      active: location === "/",
-      onClick: () => setLocation("/"),
-      icon: (active: boolean) =>
-        active ? (
-          <MdHomeFilled className="h-6 w-6" />
-        ) : (
-          <MdHome className="h-6 w-6" />
-        ),
-    },
-    {
-      label: "Play",
-      path: "/play",
-      active: isActive("/play"),
-      onClick: () => setLocation("/play"),
-      icon: (active: boolean) =>
-        active ? (
-          <MdPlayCircleFilled className="h-6 w-6" />
-        ) : (
-          <MdPlayCircle className="h-6 w-6" />
-        ),
-    },
-    {
-      label: "Top Deals",
-      path: "/products?deals=true",
-      active: isActive("/products") && location.includes("deals=true"),
-      onClick: () => setLocation("/products?deals=true"),
-      icon: (active: boolean) => <MdLocalOffer className="h-6 w-6" />,
-    },
-    {
-      label: "Account",
-      path: "/profile",
-      active: isActive("/profile"),
-      onClick: handleAccount,
-      icon: (active: boolean) => <MdPerson className="h-6 w-6" />,
-    },
+    { label: "Home",      icon: Home,         path: "/",          active: location === "/",                                    onClick: () => setLocation("/") },
+    { label: "Play",      icon: Play,         path: "/play",      active: isActive("/play"),                                   onClick: () => setLocation("/play") },
+    { label: "Deals",     icon: Tag,          path: "/products",  active: isActive("/products") && location.includes("deals"), onClick: () => setLocation("/products?deals=true") },
+    { label: "Account",   icon: User,         path: "/profile",   active: isActive("/profile"),                                onClick: handleAccount },
   ];
 
   return (
     <nav
       className="md:hidden"
       style={{
-        position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        background: "#FFFFFF",
-        boxShadow: "0 -4px 24px rgba(95, 53, 245, 0.12), 0 -1px 0 rgba(0,0,0,0.06)",
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 9999,
+        background: "#0F1723",
+        borderTop: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "0 -8px 32px rgba(0,0,0,0.4)",
       }}
     >
-      <div className="flex items-center justify-around" style={{ height: "64px" }}>
-
-        {tabs.map(({ label, active, onClick, icon }) => (
+      <div className="flex items-center justify-around" style={{ height: 60 }}>
+        {tabs.map(({ label, icon: Icon, active, onClick }) => (
           <button
             key={label}
             onClick={onClick}
-            className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative ripple-container"
-            style={{ minWidth: 0 }}
+            className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative ripple"
           >
-            {/* Active indicator pill */}
-            {active && (
-              <span
-                className="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] rounded-b-full transition-all animate-fade-in"
-                style={{ width: "32px", background: "#5F35F5" }}
-              />
-            )}
-
-            <div
-              className={`transition-all duration-200 ${active ? "animate-bounce-in" : ""}`}
-              style={{ color: active ? "#5F35F5" : "#9E9E9E" }}
+            <motion.span
+              className="absolute top-0 left-1/2 -translate-x-1/2 h-[2px] rounded-b-full"
+              animate={{ width: active ? 32 : 0, opacity: active ? 1 : 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ background: "#22C55E" }}
+            />
+            <motion.div
+              animate={{ scale: active ? 1.15 : 1, color: active ? "#22C55E" : "#64748B" }}
+              transition={{ type: "spring", stiffness: 400, damping: 20 }}
             >
-              {icon(active)}
-            </div>
-
-            <span
-              className="text-[10px] font-semibold leading-none transition-all"
-              style={{
-                color: active ? "#5F35F5" : "#9E9E9E",
-                fontWeight: active ? 700 : 500,
-              }}
-            >
+              <Icon size={22} />
+            </motion.div>
+            <span className="text-[10px] font-semibold leading-none"
+              style={{ color: active ? "#22C55E" : "#64748B" }}>
               {label}
             </span>
           </button>
         ))}
 
-        {/* Cart tab */}
+        {/* Cart */}
         <button
           onClick={() => setLocation("/cart")}
-          className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative ripple-container"
-          style={{ minWidth: 0 }}
+          className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative ripple"
         >
-          {isActive("/cart") && (
-            <span
-              className="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] rounded-b-full animate-fade-in"
-              style={{ width: "32px", background: "#5F35F5" }}
-            />
-          )}
-
-          <div
-            className={`relative transition-all duration-200 ${isActive("/cart") ? "animate-bounce-in" : ""}`}
-            style={{ color: isActive("/cart") ? "#5F35F5" : "#9E9E9E" }}
+          <motion.span
+            className="absolute top-0 left-1/2 -translate-x-1/2 h-[2px] rounded-b-full"
+            animate={{ width: isActive("/cart") ? 32 : 0, opacity: isActive("/cart") ? 1 : 0 }}
+            transition={{ duration: 0.2 }}
+            style={{ background: "#22C55E" }}
+          />
+          <motion.div
+            animate={{ scale: isActive("/cart") ? 1.15 : 1 }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            className="relative"
           >
-            <MdShoppingCart className="h-6 w-6" />
+            <ShoppingCart size={22} style={{ color: isActive("/cart") ? "#22C55E" : "#64748B" }} />
             {cartCount > 0 && (
-              <span
-                className="absolute -top-2 -right-2 rounded-full text-[9px] font-black text-white flex items-center justify-center animate-bounce-in"
-                style={{
-                  height: "16px",
-                  minWidth: "16px",
-                  padding: "0 3px",
-                  background: "#EF4444",
-                  boxShadow: "0 1px 4px rgba(239,68,68,0.5)",
-                }}
+              <motion.span
+                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                className="absolute -top-2 -right-2 rounded-full text-[9px] font-black text-white flex items-center justify-center"
+                style={{ height: 16, minWidth: 16, padding: "0 3px", background: "#EF4444" }}
               >
                 {cartCount > 9 ? "9+" : cartCount}
-              </span>
+              </motion.span>
             )}
-          </div>
-
-          <span
-            className="text-[10px] leading-none transition-all"
-            style={{
-              color: isActive("/cart") ? "#5F35F5" : "#9E9E9E",
-              fontWeight: isActive("/cart") ? 700 : 500,
-            }}
-          >
+          </motion.div>
+          <span className="text-[10px] font-semibold leading-none"
+            style={{ color: isActive("/cart") ? "#22C55E" : "#64748B" }}>
             Cart
           </span>
         </button>
       </div>
-
-      {/* Safe area for iOS */}
-      <div style={{ height: "env(safe-area-inset-bottom, 0px)", background: "#FFFFFF" }} />
+      <div style={{ height: "env(safe-area-inset-bottom,0px)", background: "#0F1723" }} />
     </nav>
   );
 }

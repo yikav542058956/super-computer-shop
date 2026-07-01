@@ -82,10 +82,10 @@ export const Footer = () => {
             </div>
             <div className="flex gap-3">
               {[
-                { Icon: Instagram, href: "#", color: "hover:text-pink-400" },
-                { Icon: Youtube,   href: "#", color: "hover:text-red-400" },
-              ].map(({ Icon, href, color }) => (
-                <a key={href} href={href}
+                { Icon: Instagram, href: "#", color: "hover:text-pink-400",  name: "instagram" },
+                { Icon: Youtube,   href: "#", color: "hover:text-red-400",   name: "youtube" },
+              ].map(({ Icon, href, color, name }) => (
+                <a key={name} href={href}
                   className={`h-9 w-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 ${color} transition-all hover:border-white/20`}>
                   <Icon className="h-4 w-4" />
                 </a>
