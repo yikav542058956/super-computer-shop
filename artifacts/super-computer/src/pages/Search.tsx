@@ -325,7 +325,7 @@ export default function SearchPage() {
         {/* Search row */}
         <div className="flex items-center gap-2 px-3 py-2.5">
           <button
-            onClick={() => setLocation(-1 as any)}
+            onClick={() => window.history.back()}
             className="h-9 w-9 flex items-center justify-center rounded-xl flex-shrink-0"
             style={{ background: "#F5F7FB" }}
           >
