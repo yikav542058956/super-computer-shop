@@ -558,6 +558,16 @@ export default function ProductDetail() {
                     {product.stock <= 0 ? "Out of Stock" : "Add to Cart"}
                   </Button>
 
+                  <Button
+                    size="lg"
+                    className="flex-1 min-w-[140px] h-13 bg-orange-500 hover:bg-orange-400 text-white font-black text-base rounded-2xl shadow-lg shadow-orange-500/25 transition-all hover:scale-[1.02] gap-2 disabled:opacity-50 disabled:hover:scale-100"
+                    onClick={() => { handleAddToCart(); setTimeout(() => navigate("/checkout"), 300); }}
+                    disabled={product.stock <= 0}
+                  >
+                    <Zap className="h-5 w-5" />
+                    Buy Now
+                  </Button>
+
                   <button
                     onClick={handleToggleWishlist}
                     className={`h-13 w-13 p-3.5 rounded-2xl border transition-all hover:scale-105 ${
@@ -656,15 +666,7 @@ export default function ProductDetail() {
 
             {/* Write Review */}
             <div className="px-6 py-5 border-b border-gray-100">
-              {!hasOrdered ? (
-                <div className="flex items-center gap-3 py-3 px-4 bg-amber-50 rounded-2xl border border-amber-100">
-                  <Package className="h-6 w-6 text-amber-500 shrink-0" />
-                  <div>
-                    <p className="text-gray-800 text-sm font-semibold">Sirf buyers review likh sakte hain</p>
-                    <p className="text-slate-500 text-xs mt-0.5">Ye product order karo, phir apna review share karo</p>
-                  </div>
-                </div>
-              ) : alreadyReviewed ? (
+              {alreadyReviewed ? (
                 <div className="flex items-center gap-3 py-3 px-4 bg-green-50 rounded-2xl border border-green-100">
                   <Star className="h-5 w-5 text-green-500 fill-green-500 shrink-0" />
                   <p className="text-green-700 text-sm font-semibold">✓ Aapne is product ka review de diya hai. Shukriya!</p>

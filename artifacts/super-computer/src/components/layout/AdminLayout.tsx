@@ -16,6 +16,7 @@ import {
   Ticket,
   Camera,
   Wallet,
+  BookOpen,
 } from "lucide-react";
 
 export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
@@ -41,6 +42,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     { label: "Reports",        href: "/admin/reports",         icon: BarChart },
     { label: "Customer Photos",href: "/admin/customer-photos", icon: Camera },
     { label: "Wallet",         href: "/admin/wallet",          icon: Wallet },
+    { label: "Accounting",     href: "/admin/accounting",      icon: BookOpen },
     { label: "Settings",       href: "/admin/settings",        icon: Settings },
   ];
 
