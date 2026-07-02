@@ -6,11 +6,11 @@ export default function About() {
   return (
     <Layout>
       {/* Hero */}
-      <section className="bg-slate-900 py-24 relative overflow-hidden">
+      <section className="bg-gradient-to-br from-green-700 to-green-900 py-24 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[url('https://images.unsplash.com/photo-1518770660439-4636190af475?w=1600')] bg-cover bg-center"></div>
         <div className="container mx-auto px-4 relative z-10 text-center text-white">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Empowering Your Digital World</h1>
-          <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+          <p className="text-xl text-white/80 max-w-2xl mx-auto">
             Super Computer is the leading destination for premium laptops, gaming rigs, and professional workstations.
           </p>
         </div>

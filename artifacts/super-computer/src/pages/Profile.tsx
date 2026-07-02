@@ -52,32 +52,32 @@ function EditProfileSheet({ open, onClose, userData, currentUser }: any) {
   return (
     <AnimatePresence>
       {open && (
-        <motion.div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "#0B0F19" }}
+        <motion.div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "#f8fafc" }}
           initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
           transition={{ type: "spring", stiffness: 320, damping: 32 }}>
-          <div className="flex items-center gap-4 px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-            <button onClick={onClose} className="h-9 w-9 flex items-center justify-center rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-              <ChevronLeft size={20} className="text-white" />
+          <div className="flex items-center gap-4 px-4 py-3 border-b" style={{ borderColor: "#e2e8f0" }}>
+            <button onClick={onClose} className="h-9 w-9 flex items-center justify-center rounded-full" style={{ background: "rgba(0,0,0,0.05)" }}>
+              <ChevronLeft size={20} className="text-gray-700" />
             </button>
-            <h1 className="text-base font-bold text-white flex-1">Edit Profile</h1>
+            <h1 className="text-base font-bold text-gray-900 flex-1">Edit Profile</h1>
           </div>
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
             <div>
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block">Full Name</label>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2 block">Full Name</label>
               <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 placeholder="Your full name"
-                className="w-full h-12 px-4 rounded-2xl text-white text-sm outline-none"
-                style={{ background: "#1F2937", border: "1px solid #374151" }} />
+                className="w-full h-12 px-4 rounded-2xl text-gray-900 text-sm outline-none"
+                style={{ background: "#f1f5f9", border: "1px solid #e2e8f0" }} />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block">Phone Number</label>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2 block">Phone Number</label>
               <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
                 placeholder="10-digit phone number" type="tel"
-                className="w-full h-12 px-4 rounded-2xl text-white text-sm outline-none"
-                style={{ background: "#1F2937", border: "1px solid #374151" }} />
+                className="w-full h-12 px-4 rounded-2xl text-gray-900 text-sm outline-none"
+                style={{ background: "#f1f5f9", border: "1px solid #e2e8f0" }} />
             </div>
           </div>
-          <div className="p-5 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+          <div className="p-5 border-t" style={{ borderColor: "#e2e8f0" }}>
             <button onClick={save} disabled={saving}
               className="w-full h-12 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
               style={{ background: "#22C55E", color: "#000" }}>
@@ -95,16 +95,16 @@ function EditProfileSheet({ open, onClose, userData, currentUser }: any) {
 function MenuRow({ icon: Icon, label, sub, color = "#94A3B8", onClick }: any) {
   return (
     <button onClick={onClick}
-      className="w-full flex items-center gap-4 px-5 py-4 active:bg-white/[0.03] transition-colors text-left">
+      className="w-full flex items-center gap-4 px-5 py-4 active:bg-gray-50 transition-colors text-left">
       <div className="h-10 w-10 rounded-2xl flex items-center justify-center flex-shrink-0"
         style={{ background: `${color}18` }}>
         <Icon size={20} style={{ color }} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-white leading-none">{label}</p>
+        <p className="text-sm font-semibold text-gray-900 leading-none">{label}</p>
         {sub && <p className="text-xs text-slate-500 mt-0.5 leading-none">{sub}</p>}
       </div>
-      <ChevronRight size={16} className="text-slate-600 flex-shrink-0" />
+      <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
     </button>
   );
 }
@@ -157,19 +157,19 @@ export default function Profile() {
   const recentOrder = orders[0];
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#0B0F19" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "#f8fafc" }}>
 
       {/* Header */}
       <div className="sticky top-0 z-50 flex items-center gap-3 px-4 py-3 border-b"
-        style={{ background: "#0B0F19", borderColor: "rgba(255,255,255,0.06)" }}>
+        style={{ background: "#f8fafc", borderColor: "#e2e8f0" }}>
         <button onClick={() => window.history.back()}
-          className="h-9 w-9 flex items-center justify-center rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <ChevronLeft size={20} className="text-white" />
+          className="h-9 w-9 flex items-center justify-center rounded-full" style={{ background: "rgba(0,0,0,0.05)" }}>
+          <ChevronLeft size={20} className="text-gray-700" />
         </button>
-        <h1 className="text-base font-bold text-white flex-1">My Account</h1>
+        <h1 className="text-base font-bold text-gray-900 flex-1">My Account</h1>
         <button onClick={() => setEditOpen(true)}
-          className="h-9 w-9 flex items-center justify-center rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <Edit3 size={16} className="text-slate-400" />
+          className="h-9 w-9 flex items-center justify-center rounded-full" style={{ background: "rgba(0,0,0,0.05)" }}>
+          <Edit3 size={16} className="text-gray-500" />
         </button>
       </div>
 
@@ -177,7 +177,7 @@ export default function Profile() {
 
         {/* Profile Card */}
         <div className="mx-4 mt-4 p-5 rounded-3xl relative overflow-hidden"
-          style={{ background: "linear-gradient(135deg,#0f2318 0%,#162B1E 100%)", border: "1px solid rgba(34,197,94,0.15)" }}>
+          style={{ background: "linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)", border: "1px solid rgba(22,163,74,0.2)" }}>
           <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl pointer-events-none"
             style={{ background: "rgba(34,197,94,0.08)" }} />
           <div className="flex items-center gap-4 relative">
@@ -186,17 +186,17 @@ export default function Profile() {
               {initial}
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-black text-white leading-tight">{displayName}</h2>
+              <h2 className="text-lg font-black text-green-900 leading-tight">{displayName}</h2>
               {displayPhone && (
                 <div className="flex items-center gap-1.5 mt-1">
-                  <Phone size={12} className="text-slate-400" />
-                  <p className="text-xs text-slate-400">{displayPhone}</p>
+                  <Phone size={12} className="text-green-700" />
+                  <p className="text-xs text-green-800">{displayPhone}</p>
                 </div>
               )}
               {displayEmail && (
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <Mail size={12} className="text-slate-500" />
-                  <p className="text-xs text-slate-500 truncate">{displayEmail}</p>
+                  <Mail size={12} className="text-green-700" />
+                  <p className="text-xs text-green-800 truncate">{displayEmail}</p>
                 </div>
               )}
             </div>
@@ -210,9 +210,9 @@ export default function Profile() {
               { label: "Wallet", value: `₹${walletBalance.toLocaleString("en-IN")}`, icon: Wallet, color: "#22C55E" },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="flex flex-col items-center gap-1 p-3 rounded-2xl"
-                style={{ background: "rgba(0,0,0,0.25)" }}>
+                style={{ background: "rgba(0,0,0,0.05)" }}>
                 <Icon size={18} style={{ color }} />
-                <p className="text-sm font-black text-white">{value}</p>
+                <p className="text-sm font-black text-gray-900">{value}</p>
                 <p className="text-[10px] text-slate-500 font-semibold">{label}</p>
               </div>
             ))}
@@ -224,13 +224,13 @@ export default function Profile() {
           <motion.button initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             onClick={() => setLocation("/orders")}
             className="mx-4 mt-3 w-[calc(100%-32px)] flex items-center gap-3 p-4 rounded-2xl text-left"
-            style={{ background: "#1F2937", border: "1px solid rgba(34,197,94,0.2)" }}>
+            style={{ background: "#f1f5f9", border: "1px solid rgba(22,163,74,0.25)" }}>
             <div className="h-10 w-10 rounded-xl overflow-hidden flex-shrink-0" style={{ background: "#F8FAFC" }}>
               <img src={recentOrder.items?.[0]?.image} alt="" className="h-full w-full object-contain p-1" onError={e => { (e.target as HTMLImageElement).style.display="none"; }} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Active Order</p>
-              <p className="text-sm font-semibold text-white truncate mt-0.5">{recentOrder.items?.[0]?.name}</p>
+              <p className="text-sm font-semibold text-gray-900 truncate mt-0.5">{recentOrder.items?.[0]?.name}</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{
@@ -245,27 +245,27 @@ export default function Profile() {
         )}
 
         {/* Menu */}
-        <div className="mt-4" style={{ background: "#111827", borderRadius: "0 0 0 0" }}>
+        <div className="mt-4" style={{ background: "#ffffff", borderRadius: "0 0 0 0" }}>
           <MenuDivider label="Shopping" />
-          <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+          <div className="divide-y" style={{ borderColor: "#f1f5f9" }}>
             <MenuRow icon={Package} label="My Orders" sub={`${orders.length} total orders`} color="#3B82F6" onClick={() => setLocation("/orders")} />
             <MenuRow icon={Heart} label="Wishlist" sub={`${wishlistCount} saved items`} color="#EF4444" onClick={() => setLocation("/wishlist")} />
           </div>
 
           <MenuDivider label="Finance" />
-          <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+          <div className="divide-y" style={{ borderColor: "#f1f5f9" }}>
             <MenuRow icon={Wallet} label="My Wallet" sub={`Balance: ${formatINR(walletBalance)}`} color="#22C55E" onClick={() => setLocation("/wallet")} />
             <MenuRow icon={Tag} label="Coupons & Offers" sub="View available coupons" color="#F59E0B" onClick={() => toast.info("No coupons available right now")} />
           </div>
 
           <MenuDivider label="Account" />
-          <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+          <div className="divide-y" style={{ borderColor: "#f1f5f9" }}>
             <MenuRow icon={MapPin} label="Saved Addresses" sub="Manage delivery addresses" color="#8B5CF6" onClick={() => toast.info("Coming soon")} />
             <MenuRow icon={User} label="Edit Profile" sub="Update name, phone" color="#64748B" onClick={() => setEditOpen(true)} />
           </div>
 
           <MenuDivider label="Support" />
-          <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+          <div className="divide-y" style={{ borderColor: "#f1f5f9" }}>
             <MenuRow icon={Shield} label="Warranty Claims" sub="Track your warranty" color="#10B981" onClick={() => toast.info("Contact us on WhatsApp for warranty")} />
             <MenuRow icon={HelpCircle} label="Help Center" sub="FAQs & guides" color="#6366F1" onClick={() => setLocation("/about")} />
             <MenuRow icon={MessageCircle} label="Contact Support" sub="Chat, call, or WhatsApp" color="#F97316" onClick={() => setLocation("/contact")} />

@@ -15,10 +15,10 @@ export default function Contact() {
 
   return (
     <Layout>
-      <div className="bg-slate-900 py-16 text-center">
+      <div className="bg-gradient-to-br from-green-700 to-green-900 py-16 text-center">
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-bold text-white mb-4">Contact Us</h1>
-          <p className="text-slate-400">Have a question? We're here to help.</p>
+          <p className="text-green-100/80">Have a question? We're here to help.</p>
         </div>
       </div>
 

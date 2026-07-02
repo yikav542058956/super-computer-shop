@@ -220,7 +220,7 @@ function Reel({ video, isActive }: { video: typeof VIDEOS[0]; isActive: boolean 
             style={{ background: "#22C55E" }}>S</div>
           <div className="flex-1">
             <p className="text-white font-bold text-sm leading-none">{video.seller}</p>
-            <p className="text-white/60 text-[10px] mt-0.5">{video.location}</p>
+            <p className="text-white/80 text-[10px] mt-0.5">{video.location}</p>
           </div>
           <button className="px-3 py-1 rounded-full text-[11px] font-bold border border-white/40 text-white">
             Follow
@@ -253,12 +253,12 @@ function Reel({ video, isActive }: { video: typeof VIDEOS[0]; isActive: boolean 
               <span className="flex items-center gap-0.5 bg-[#16A34A] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">
                 <Star size={7} className="fill-white" /> {video.product.rating}
               </span>
-              <span className="text-white/50 text-[10px]">({video.product.reviews})</span>
+              <span className="text-white/70 text-[10px]">({video.product.reviews})</span>
               <BadgeCheck size={11} className="text-[#3B82F6]" />
             </div>
             <div className="flex items-baseline gap-1.5 mt-1">
               <span className="text-white font-black text-[14px]">{formatINR(video.product.price)}</span>
-              <span className="text-white/40 line-through text-[10px]">{formatINR(video.product.oldPrice)}</span>
+              <span className="text-white/60 line-through text-[10px]">{formatINR(video.product.oldPrice)}</span>
               <span className="text-[#22C55E] text-[10px] font-bold">{disc}% off</span>
             </div>
           </div>

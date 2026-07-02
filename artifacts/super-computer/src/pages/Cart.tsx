@@ -74,7 +74,7 @@ export default function Cart() {
   if (cart.length === 0) {
     return (
       <Layout>
-        <div className="min-h-[70vh] flex items-center justify-center px-4">
+        <div className="min-h-[70vh] flex items-center justify-center px-4 bg-[#0B0F19]">
           <motion.div
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -103,6 +103,7 @@ export default function Cart() {
 
   return (
     <Layout>
+      <div className="bg-[#0B0F19] min-h-screen">
       <div className="max-w-2xl mx-auto px-4 py-6 pb-32 space-y-4">
 
         {/* Title */}
@@ -295,8 +296,10 @@ export default function Cart() {
         </div>
       </div>
 
+      </div>{/* end bg wrapper */}
+
       {/* Sticky bottom bar */}
-      <div className="fixed bottom-0 inset-x-0 z-50 p-4 pb-safe"
+      <div className="fixed bottom-0 inset-x-0 z-[10000] p-4 pb-safe"
         style={{ background: "#0B0F19", borderTop: "1px solid rgba(255,255,255,0.08)", paddingBottom: "calc(1rem + env(safe-area-inset-bottom,0px))" }}>
         <div className="max-w-2xl mx-auto flex gap-3">
           {/* WhatsApp order */}

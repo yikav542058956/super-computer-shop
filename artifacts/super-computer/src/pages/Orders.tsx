@@ -90,14 +90,14 @@ function OrderTracking({ order }: { order: any }) {
               <div className={`h-9 w-9 rounded-full border-2 flex items-center justify-center transition-all ${
                 active ? "border-green-500 bg-green-500 text-black shadow-lg shadow-green-500/30" :
                 done ? "border-green-500/50 bg-green-500/15 text-green-400" :
-                "border-white/10 bg-white/[0.03] text-slate-700"
+                "border-gray-100 bg-gray-50 text-slate-700"
               }`}>
                 <Icon size={16} />
               </div>
-              {!last && <div className={`w-0.5 h-8 mt-1 ${done && currentIdx > idx ? "bg-green-500/40" : "bg-white/08"}`} />}
+              {!last && <div className={`w-0.5 h-8 mt-1 ${done && currentIdx > idx ? "bg-green-500/40" : "bg-gray-200"}`} />}
             </div>
             <div className={`pb-3 pt-1.5 flex-1 ${!done ? "opacity-40" : ""}`}>
-              <p className={`text-sm font-bold ${active ? "text-green-400" : done ? "text-white" : "text-slate-600"}`}>{step.label}</p>
+              <p className={`text-sm font-bold ${active ? "text-green-400" : done ? "text-green-800" : "text-gray-400"}`}>{step.label}</p>
               {ts && <p className="text-xs text-slate-500 mt-0.5">{formatDateTime(ts)}</p>}
             </div>
           </div>
@@ -112,17 +112,17 @@ function OrderDetail({ order, onClose }: { order: any; onClose: () => void }) {
   const sc = STATUS_CONFIG[order.orderStatus] || STATUS_CONFIG.pending;
   const StatusIcon = sc.icon;
   return (
-    <motion.div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "#0B0F19" }}
+    <motion.div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "#f8fafc" }}
       initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
       transition={{ type: "spring", stiffness: 320, damping: 32 }}>
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b flex-shrink-0"
-        style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+        style={{ borderColor: "#e2e8f0" }}>
         <button onClick={onClose} className="h-9 w-9 flex items-center justify-center rounded-full"
-          style={{ background: "rgba(255,255,255,0.06)" }}>
-          <ChevronLeft size={20} className="text-white" />
+          style={{ background: "rgba(0,0,0,0.05)" }}>
+          <ChevronLeft size={20} className="text-gray-700" />
         </button>
-        <h1 className="text-base font-bold text-white flex-1">Order #{order.id?.slice(-6).toUpperCase()}</h1>
+        <h1 className="text-base font-bold text-gray-900 flex-1">Order #{order.id?.slice(-6).toUpperCase()}</h1>
         <span className="text-xs font-bold px-3 py-1.5 rounded-xl" style={{ color: sc.color, background: sc.bg }}>
           {sc.label}
         </span>
@@ -133,12 +133,12 @@ function OrderDetail({ order, onClose }: { order: any; onClose: () => void }) {
         <div className="p-4 space-y-3">
           {(order.items || []).map((item: any, idx: number) => (
             <Link key={idx} href={`/products/${item.productId || item.id}`}>
-              <div className="flex items-center gap-3 p-3 rounded-2xl" style={{ background: "#1F2937", border: "1px solid #374151" }}>
+              <div className="flex items-center gap-3 p-3 rounded-2xl" style={{ background: "#f1f5f9", border: "1px solid #e2e8f0" }}>
                 <div className="h-16 w-16 rounded-xl overflow-hidden flex-shrink-0" style={{ background: "#F8FAFC" }}>
                   <img src={item.image} alt={item.name} className="h-full w-full object-contain p-1" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white leading-tight line-clamp-2">{item.name}</p>
+                  <p className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2">{item.name}</p>
                   <p className="text-xs text-slate-500 mt-0.5">Qty: {item.quantity}</p>
                   <p className="text-sm font-bold mt-1" style={{ color: "#22C55E" }}>{formatINR(item.price * item.quantity)}</p>
                 </div>
@@ -149,16 +149,16 @@ function OrderDetail({ order, onClose }: { order: any; onClose: () => void }) {
         </div>
 
         {/* Tracking */}
-        <div className="mx-4 mb-4 p-4 rounded-2xl" style={{ background: "#111827", border: "1px solid #374151" }}>
-          <h3 className="text-sm font-bold text-white mb-4">Order Tracking</h3>
+        <div className="mx-4 mb-4 p-4 rounded-2xl" style={{ background: "#ffffff", border: "1px solid #e2e8f0" }}>
+          <h3 className="text-sm font-bold text-gray-900 mb-4">Order Tracking</h3>
           <OrderTracking order={order} />
         </div>
 
         {/* Delivery Address */}
         {order.deliveryAddress && (
-          <div className="mx-4 mb-4 p-4 rounded-2xl" style={{ background: "#111827", border: "1px solid #374151" }}>
-            <h3 className="text-sm font-bold text-white mb-3">Delivery Address</h3>
-            <p className="text-sm font-semibold text-white">{order.deliveryAddress.name}</p>
+          <div className="mx-4 mb-4 p-4 rounded-2xl" style={{ background: "#ffffff", border: "1px solid #e2e8f0" }}>
+            <h3 className="text-sm font-bold text-gray-900 mb-3">Delivery Address</h3>
+            <p className="text-sm font-semibold text-gray-800">{order.deliveryAddress.name}</p>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
               {order.deliveryAddress.address}, {order.deliveryAddress.city}, {order.deliveryAddress.state} – {order.deliveryAddress.pincode}
             </p>
@@ -167,14 +167,14 @@ function OrderDetail({ order, onClose }: { order: any; onClose: () => void }) {
         )}
 
         {/* Price Details */}
-        <div className="mx-4 mb-4 p-4 rounded-2xl" style={{ background: "#111827", border: "1px solid #374151" }}>
-          <h3 className="text-sm font-bold text-white mb-3">Price Details</h3>
+        <div className="mx-4 mb-4 p-4 rounded-2xl" style={{ background: "#ffffff", border: "1px solid #e2e8f0" }}>
+          <h3 className="text-sm font-bold text-gray-900 mb-3">Price Details</h3>
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-slate-400">Subtotal</span><span className="text-white">{formatINR(order.subtotal || order.total)}</span></div>
+            <div className="flex justify-between"><span className="text-slate-400">Subtotal</span><span className="text-gray-900">{formatINR(order.subtotal || order.total)}</span></div>
             {order.discount > 0 && <div className="flex justify-between"><span className="text-slate-400">Discount</span><span style={{ color: "#22C55E" }}>-{formatINR(order.discount)}</span></div>}
-            {order.deliveryCharge > 0 && <div className="flex justify-between"><span className="text-slate-400">Delivery</span><span className="text-white">{formatINR(order.deliveryCharge)}</span></div>}
-            <div className="flex justify-between font-bold pt-2 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-              <span className="text-white">Total Paid</span>
+            {order.deliveryCharge > 0 && <div className="flex justify-between"><span className="text-slate-400">Delivery</span><span className="text-gray-900">{formatINR(order.deliveryCharge)}</span></div>}
+            <div className="flex justify-between font-bold pt-2 border-t" style={{ borderColor: "#e2e8f0" }}>
+              <span className="text-gray-900">Total Paid</span>
               <span style={{ color: "#22C55E" }}>{formatINR(order.total)}</span>
             </div>
           </div>
@@ -201,8 +201,8 @@ function OrderCard({ order, onClick }: { order: any; onClick: () => void }) {
   const StatusIcon = sc.icon;
   return (
     <motion.button onClick={onClick} whileTap={{ scale: 0.98 }}
-      className="w-full flex items-start gap-3 p-4 rounded-2xl text-left active:bg-white/[0.02] transition-colors"
-      style={{ background: "#111827", border: "1px solid #374151" }}>
+      className="w-full flex items-start gap-3 p-4 rounded-2xl text-left active:bg-gray-50 transition-colors"
+      style={{ background: "#ffffff", border: "1px solid #e2e8f0" }}>
       <div className="h-16 w-16 rounded-xl overflow-hidden flex-shrink-0" style={{ background: "#F8FAFC" }}>
         {item?.image ? (
           <img src={item.image} alt="" className="h-full w-full object-contain p-1" />
@@ -214,7 +214,7 @@ function OrderCard({ order, onClick }: { order: any; onClick: () => void }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-semibold text-white leading-tight line-clamp-2 flex-1">{item?.name || "Order"}</p>
+          <p className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2 flex-1">{item?.name || "Order"}</p>
           <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg flex-shrink-0 flex items-center gap-1"
             style={{ color: sc.color, background: sc.bg }}>
             <StatusIcon size={10} />
@@ -273,9 +273,9 @@ export default function Orders() {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "#0B0F19" }}>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "#f8fafc" }}>
         <Package size={48} className="text-slate-600" />
-        <p className="text-white font-bold">Login to view orders</p>
+        <p className="text-gray-900 font-bold">Login to view orders</p>
         <button onClick={() => setLocation("/")} className="h-12 px-8 rounded-2xl font-bold text-sm"
           style={{ background: "#22C55E", color: "#000" }}>Go Home</button>
       </div>
@@ -283,16 +283,16 @@ export default function Orders() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#0B0F19" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "#f8fafc" }}>
 
       {/* Header */}
-      <div className="sticky top-0 z-50 border-b" style={{ background: "#0B0F19", borderColor: "rgba(255,255,255,0.06)" }}>
+      <div className="sticky top-0 z-50 border-b" style={{ background: "#f8fafc", borderColor: "#e2e8f0" }}>
         <div className="flex items-center gap-3 px-4 py-3">
           <button onClick={() => window.history.back()}
-            className="h-9 w-9 flex items-center justify-center rounded-full flex-shrink-0" style={{ background: "rgba(255,255,255,0.06)" }}>
-            <ChevronLeft size={20} className="text-white" />
+            className="h-9 w-9 flex items-center justify-center rounded-full flex-shrink-0" style={{ background: "rgba(0,0,0,0.05)" }}>
+            <ChevronLeft size={20} className="text-gray-700" />
           </button>
-          <h1 className="text-base font-bold text-white flex-1">My Orders</h1>
+          <h1 className="text-base font-bold text-gray-900 flex-1">My Orders</h1>
         </div>
         {/* Search */}
         <div className="px-4 pb-3">
@@ -300,8 +300,8 @@ export default function Orders() {
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search by product or order ID..."
-              className="w-full h-10 rounded-xl text-sm text-white placeholder-slate-500 outline-none"
-              style={{ background: "#1F2937", paddingLeft: 38, paddingRight: search ? 36 : 12, border: "1px solid #374151" }} />
+              className="w-full h-10 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none"
+              style={{ background: "#f1f5f9", paddingLeft: 38, paddingRight: search ? 36 : 12, border: "1px solid #e2e8f0" }} />
             {search && <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
               <X size={14} className="text-slate-500" />
             </button>}
@@ -314,7 +314,7 @@ export default function Orders() {
               className="h-8 px-4 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all"
               style={filter === f.key
                 ? { background: "#22C55E", color: "#000" }
-                : { background: "#1F2937", color: "#94A3B8", border: "1px solid #374151" }}>
+                : { background: "#f1f5f9", color: "#64748B", border: "1px solid #e2e8f0" }}>
               {f.label}
             </button>
           ))}
@@ -325,7 +325,7 @@ export default function Orders() {
       <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-28">
         {loading ? (
           [...Array(3)].map((_, i) => (
-            <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ background: "#1F2937" }} />
+            <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ background: "#f1f5f9" }} />
           ))
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 py-24">

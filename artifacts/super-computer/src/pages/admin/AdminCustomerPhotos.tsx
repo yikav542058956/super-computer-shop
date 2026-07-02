@@ -59,7 +59,7 @@ export default function AdminCustomerPhotos() {
       <div className="p-6 max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-black text-white">Happy Customers</h1>
+            <h1 className="text-2xl font-black text-gray-900">Happy Customers</h1>
             <p className="text-sm text-slate-400 mt-1">Upload real customer purchase photos to show on home page</p>
           </div>
           <button onClick={() => setAddOpen(true)}
@@ -71,7 +71,7 @@ export default function AdminCustomerPhotos() {
 
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => <div key={i} className="aspect-video rounded-2xl animate-pulse" style={{ background: "#1F2937" }} />)}
+            {[...Array(6)].map((_, i) => <div key={i} className="aspect-video rounded-2xl animate-pulse" style={{ background: "#f1f5f9" }} />)}
           </div>
         ) : photos.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-24">
@@ -83,7 +83,7 @@ export default function AdminCustomerPhotos() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {photos.map(photo => (
               <div key={photo.id} className="rounded-2xl overflow-hidden relative group"
-                style={{ background: "#1F2937", border: "1px solid #374151" }}>
+                style={{ background: "#f1f5f9", border: "1px solid #e2e8f0" }}>
                 <img src={photo.imageUrl} alt="" className="w-full object-cover" style={{ aspectRatio: "4/3" }} />
                 {!photo.isActive && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
@@ -92,16 +92,16 @@ export default function AdminCustomerPhotos() {
                 )}
                 <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                   <button onClick={() => toggleActive(photo.id, photo.isActive)}
-                    className="h-9 w-9 rounded-full flex items-center justify-center" style={{ background: "#1F2937" }}>
+                    className="h-9 w-9 rounded-full flex items-center justify-center" style={{ background: "#f1f5f9" }}>
                     {photo.isActive ? <EyeOff size={15} className="text-slate-400" /> : <Eye size={15} style={{ color: "#22C55E" }} />}
                   </button>
                   <button onClick={() => deletePhoto(photo.id)}
-                    className="h-9 w-9 rounded-full flex items-center justify-center" style={{ background: "#1F2937" }}>
+                    className="h-9 w-9 rounded-full flex items-center justify-center" style={{ background: "#f1f5f9" }}>
                     <Trash2 size={15} className="text-red-400" />
                   </button>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 p-2" style={{ background: "linear-gradient(transparent,rgba(0,0,0,0.7))" }}>
-                  {photo.customerName && <p className="text-white text-xs font-bold leading-none">{photo.customerName}</p>}
+                  {photo.customerName && <p className="text-gray-900 text-xs font-bold leading-none">{photo.customerName}</p>}
                   {photo.laptop && <p className="text-slate-300 text-[10px] mt-0.5 leading-none truncate">{photo.laptop}</p>}
                   <p className="text-[9px] text-slate-500 mt-0.5">{formatDate(photo.createdAt)}</p>
                 </div>
@@ -117,11 +117,11 @@ export default function AdminCustomerPhotos() {
           <motion.div className="fixed inset-0 z-50 flex items-end justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ background: "rgba(0,0,0,0.7)" }} onClick={() => setAddOpen(false)}>
             <motion.div className="w-full max-w-lg rounded-t-3xl p-6 space-y-4"
-              style={{ background: "#111827", border: "1px solid #374151" }}
+              style={{ background: "#ffffff", border: "1px solid #e2e8f0" }}
               initial={{ y: 60 }} animate={{ y: 0 }} exit={{ y: 60 }}
               onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-lg font-bold text-white">Add Customer Photo</h2>
+                <h2 className="text-lg font-bold text-gray-900">Add Customer Photo</h2>
                 <button onClick={() => setAddOpen(false)}><X size={18} className="text-slate-400" /></button>
               </div>
               {[
@@ -133,8 +133,8 @@ export default function AdminCustomerPhotos() {
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5 block">{f.label}</label>
                   <input type={f.type} value={(form as any)[f.key]} placeholder={f.placeholder}
                     onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                    className="w-full h-11 px-4 rounded-xl text-sm text-white placeholder-slate-500 outline-none"
-                    style={{ background: "#1F2937", border: "1px solid #374151" }} />
+                    className="w-full h-11 px-4 rounded-xl text-sm text-gray-900 placeholder-slate-500 outline-none"
+                    style={{ background: "#f1f5f9", border: "1px solid #e2e8f0" }} />
                 </div>
               ))}
               {form.imageUrl && (
