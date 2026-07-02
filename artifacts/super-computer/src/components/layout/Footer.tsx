@@ -3,7 +3,7 @@ import { Phone, Mail, MapPin, Instagram, Youtube } from "lucide-react";
 
 export const Footer = () => {
   return (
-    <footer className="bg-[#0A0E13] border-t border-white/8 text-slate-400">
+    <footer className="bg-gray-50 border-t border-gray-200 text-slate-500">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           {/* Brand */}
@@ -13,8 +13,8 @@ export const Footer = () => {
                 <span className="text-black font-black text-sm">S</span>
               </div>
               <div>
-                <span className="text-white font-black text-base">SUPER </span>
-                <span className="text-green-400 font-black text-base">COMPUTER</span>
+                <span className="text-gray-900 font-black text-base">SUPER </span>
+                <span className="font-black text-base" style={{ color: "#16a34a" }}>COMPUTER</span>
               </div>
             </div>
             <p className="text-sm text-slate-500 mb-5 leading-relaxed">
@@ -36,7 +36,7 @@ export const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-bold text-white mb-5 text-sm uppercase tracking-wider">Quick Links</h4>
+            <h4 className="font-bold text-gray-800 mb-5 text-sm uppercase tracking-wider">Quick Links</h4>
             <ul className="space-y-2.5 text-sm">
               {[
                 { href: "/about",   label: "About Us" },
@@ -55,7 +55,7 @@ export const Footer = () => {
 
           {/* Categories */}
           <div>
-            <h4 className="font-bold text-white mb-5 text-sm uppercase tracking-wider">Categories</h4>
+            <h4 className="font-bold text-gray-800 mb-5 text-sm uppercase tracking-wider">Categories</h4>
             <ul className="space-y-2.5 text-sm">
               {[
                 { href: "/products?category=cat-1", label: "Laptops" },
@@ -74,7 +74,7 @@ export const Footer = () => {
 
           {/* Contact + Social */}
           <div>
-            <h4 className="font-bold text-white mb-5 text-sm uppercase tracking-wider">Contact Us</h4>
+            <h4 className="font-bold text-gray-800 mb-5 text-sm uppercase tracking-wider">Contact Us</h4>
             <div className="space-y-2 text-sm mb-6">
               <p className="text-slate-400">📞 +91 9761809960</p>
               <p className="text-slate-400">📧 info@supercomputer.in</p>
@@ -86,14 +86,14 @@ export const Footer = () => {
                 { Icon: Youtube,   href: "#", color: "hover:text-red-400",   name: "youtube" },
               ].map(({ Icon, href, color, name }) => (
                 <a key={name} href={href}
-                  className={`h-9 w-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 ${color} transition-all hover:border-white/20`}>
+                  className={`h-9 w-9 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-slate-500 ${color} transition-all hover:border-gray-300`}>
                   <Icon className="h-4 w-4" />
                 </a>
               ))}
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
               {["VISA", "Mastercard", "UPI", "Paytm"].map(p => (
-                <span key={p} className="text-[10px] font-bold bg-white/5 border border-white/10 text-slate-400 px-2 py-1 rounded">
+                <span key={p} className="text-[10px] font-bold bg-gray-100 border border-gray-200 text-slate-600 px-2 py-1 rounded">
                   {p}
                 </span>
               ))}
@@ -102,8 +102,8 @@ export const Footer = () => {
         </div>
       </div>
 
-      <div className="border-t border-white/8 py-5 text-center">
-        <p className="text-xs text-slate-600">
+      <div className="border-t border-gray-200 py-5 text-center">
+        <p className="text-xs text-slate-400">
           © {new Date().getFullYear()} Super Computer. All rights reserved. | Mirehachi, Kasganj Road, Distt. Etah
         </p>
       </div>

@@ -51,16 +51,52 @@
   --radius-2xl: calc(var(--radius) + 8px);
 }
 
-:root, .dark {
-  --background:   218 47% 7%;   /* #0B0F19 */
+:root {
+  --background:   0 0% 100%;        /* white */
+  --foreground:   220 15% 15%;      /* near-black text */
+  --card:         0 0% 98%;         /* very light card */
+  --card-foreground: 220 15% 15%;
+  --border:       210 20% 88%;
+  --input:        210 20% 92%;
+  --primary:      142 71% 38%;      /* #16a34a — green */
+  --primary-foreground: 0 0% 100%;
+  --secondary:    142 30% 93%;      /* light green tint */
+  --secondary-foreground: 142 60% 25%;
+  --muted:        210 20% 95%;
+  --muted-foreground: 215 15% 48%;
+  --accent:       142 40% 92%;
+  --accent-foreground: 142 60% 25%;
+  --destructive:  0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --ring:         142 71% 38%;
+  --popover:      0 0% 100%;
+  --popover-foreground: 220 15% 15%;
+  --sidebar:      0 0% 97%;
+  --sidebar-foreground: 220 15% 20%;
+  --sidebar-border: 210 20% 88%;
+  --sidebar-primary: 142 71% 38%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 142 40% 92%;
+  --sidebar-accent-foreground: 142 60% 25%;
+  --sidebar-ring: 142 71% 38%;
+  --chart-1: 142 71% 38%;
+  --chart-2: 162 60% 42%;
+  --chart-3: 38 92% 50%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background:   218 47% 7%;
   --foreground:   210 40% 98%;
-  --card:         218 30% 16%;  /* #1E293B */
+  --card:         218 30% 16%;
   --card-foreground: 210 40% 98%;
   --border:       218 25% 16%;
   --input:        218 25% 18%;
-  --primary:      142 71% 45%;  /* #22C55E emerald */
+  --primary:      142 71% 45%;
   --primary-foreground: 0 0% 0%;
-  --secondary:    217 91% 60%;  /* #3B82F6 blue */
+  --secondary:    217 91% 60%;
   --secondary-foreground: 0 0% 100%;
   --muted:        218 25% 13%;
   --muted-foreground: 215 20% 55%;
@@ -90,8 +126,7 @@
 @layer base {
   * { @apply border-border; }
   body {
-    @apply font-sans antialiased text-foreground;
-    background: #0B0F19;
+    @apply font-sans antialiased text-foreground bg-background;
     min-height: 100vh;
     overflow-x: hidden;
   }

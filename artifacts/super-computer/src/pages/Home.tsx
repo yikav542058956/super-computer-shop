@@ -79,7 +79,7 @@ const CATEGORIES = [
   { href: "/search?q=Student",     label: "Student",     icon: GraduationCap, color: "#8B5CF6", bg: "#8B5CF61A" },
   { href: "/search?q=Creator",     label: "Creator",     icon: Palette,       color: "#F59E0B", bg: "#F59E0B1A" },
   { href: "/search?q=Accessories", label: "Accessories", icon: Cpu,           color: "#10B981", bg: "#10B9811A" },
-  { href: "/search",               label: "All Laptops", icon: Laptop,        color: "#22C55E", bg: "#22C55E1A" },
+  { href: "/search",               label: "All Laptops", icon: Laptop,        color: "#16a34a", bg: "#16a34a1A" },
   { href: "/search?q=Refurbished", label: "Refurbished", icon: MonitorCheck,  color: "#64748B", bg: "#64748B1A" },
   { href: "/search?q=Workstation", label: "Workstation", icon: Package,       color: "#F97316", bg: "#F973161A" },
 ];
@@ -95,7 +95,7 @@ const FAQS = [
 ];
 
 const TRUST_ITEMS = [
-  { icon: Users,      stat: "12,000+", label: "Happy Customers",  color: "#22C55E", bg: "#22C55E15" },
+  { icon: Users,      stat: "12,000+", label: "Happy Customers",  color: "#16a34a", bg: "#16a34a15" },
   { icon: Truck,      stat: "Free",    label: "Delivery Available",color: "#3B82F6", bg: "#3B82F615" },
   { icon: Shield,     stat: "100%",    label: "Genuine Products",  color: "#F59E0B", bg: "#F59E0B15" },
   { icon: Award,      stat: "5+ Yrs",  label: "of Excellence",     color: "#8B5CF6", bg: "#8B5CF615" },
@@ -112,7 +112,7 @@ const TYPE_STYLE: Record<string, { bar: string; icon: any }> = {
 /* ─── Skeleton ──────────────────────────────────────────────── */
 function SkeletonCard() {
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: "#151A24", border: "1px solid rgba(255,255,255,0.06)" }}>
+    <div className="rounded-2xl overflow-hidden" style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.07)" }}>
       <div className="skeleton" style={{ height: 180 }} />
       <div className="p-4 space-y-2.5">
         <div className="skeleton h-3 w-1/3 rounded-full" />
@@ -133,12 +133,12 @@ function AnnouncementTicker({ items }: { items: any[] }) {
   if (!items.length) return null;
   const text = items.map(i => `${i.title}: ${i.message}`).join("   ·   ");
   return (
-    <div className="overflow-hidden flex items-center border-b" style={{ background: "rgba(34,197,94,0.08)", borderColor: "rgba(34,197,94,0.15)" }}>
-      <div className="shrink-0 px-3 flex items-center gap-1.5 py-1.5 font-bold text-xs" style={{ color: "#22C55E" }}>
+    <div className="overflow-hidden flex items-center border-b" style={{ background: "rgba(22,163,74,0.07)", borderColor: "rgba(22,163,74,0.18)" }}>
+      <div className="shrink-0 px-3 flex items-center gap-1.5 py-1.5 font-bold text-xs" style={{ color: "#16a34a" }}>
         <Megaphone size={13} />LIVE
       </div>
       <div className="overflow-hidden flex-1 py-1.5">
-        <div className="whitespace-nowrap text-sm font-medium text-slate-300 animate-[ticker_28s_linear_infinite]" style={{ display: "inline-block" }}>
+        <div className="whitespace-nowrap text-sm font-medium text-gray-700 animate-[ticker_28s_linear_infinite]" style={{ display: "inline-block" }}>
           {text}&nbsp;&nbsp;&nbsp;&nbsp;{text}
         </div>
       </div>
@@ -167,17 +167,17 @@ function AnnouncementPopup({ items }: { items: any[] }) {
         <motion.div initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.85, opacity: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
           className="max-w-sm w-full rounded-3xl overflow-hidden shadow-2xl"
-          style={{ background: "#151A24", border: "1px solid rgba(255,255,255,0.1)" }}
+          style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.1)" }}
           onClick={e => e.stopPropagation()}>
           <div className={`${style.bar} px-5 py-4 flex items-center gap-3`}>
             <Icon className="h-6 w-6 text-white" /><h3 className="text-white font-bold flex-1">{item.title}</h3>
             <button onClick={close} className="text-white/70 hover:text-white"><X size={18} /></button>
           </div>
           <div className="p-5">
-            <p className="text-slate-300 text-sm leading-relaxed mb-4">{item.message}</p>
+            <p className="text-gray-600 text-sm leading-relaxed mb-4">{item.message}</p>
             <div className="flex gap-2">
-              {item.link && <Link href={item.link}><button onClick={close} className="h-9 px-4 rounded-xl text-sm font-bold flex-1 ripple" style={{ background: "#22C55E", color: "#000" }}>View Now</button></Link>}
-              <button onClick={close} className="h-9 px-4 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition-colors">Close</button>
+              {item.link && <Link href={item.link}><button onClick={close} className="h-9 px-4 rounded-xl text-sm font-bold flex-1 ripple" style={{ background: "#16a34a", color: "#fff" }}>View Now</button></Link>}
+              <button onClick={close} className="h-9 px-4 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors">Close</button>
             </div>
           </div>
         </motion.div>
@@ -222,29 +222,29 @@ function HeroBanner({ banners }: { banners: any[] }) {
               {b.img && <img src={b.img} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.18, mixBlendMode: "luminosity" }} />}
               <div className="absolute inset-0" style={{ background: "linear-gradient(90deg,rgba(0,0,0,0.7) 0%,rgba(0,0,0,0.3) 55%,transparent 100%)" }} />
               {/* glow */}
-              <div className="absolute bottom-0 right-1/4 w-64 h-64 rounded-full blur-3xl pointer-events-none" style={{ background: "rgba(34,197,94,0.08)" }} />
+              <div className="absolute bottom-0 right-1/4 w-64 h-64 rounded-full blur-3xl pointer-events-none" style={{ background: "rgba(22,163,74,0.08)" }} />
 
               <div className="absolute inset-0 flex items-center px-6 sm:px-12">
                 <motion.div initial="hidden" animate="show" variants={staggerContainer} className="max-w-lg">
                   <motion.div variants={fadeUp}
                     className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold mb-4"
-                    style={{ background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", color: "#22C55E" }}>
+                    style={{ background: "rgba(22,163,74,0.15)", border: "1px solid rgba(22,163,74,0.3)", color: "#16a34a" }}>
                     {b.badge || "🔥 Hot Deals"}
                   </motion.div>
                   <motion.h1 variants={fadeUp}
                     className="font-black text-white leading-[1.1] mb-3"
                     style={{ fontSize: "clamp(22px,4.5vw,56px)", textShadow: "0 2px 20px rgba(0,0,0,0.4)" }}>
                     {b.title}<br />
-                    <span style={{ color: "#22C55E" }}>{b.accent || b.titleGreen}</span>
+                    <span style={{ color: "#16a34a" }}>{b.accent || b.titleGreen}</span>
                   </motion.h1>
                   <motion.p variants={fadeUp} className="text-slate-400 mb-6 leading-relaxed hidden sm:block" style={{ fontSize: "clamp(13px,1.8vw,17px)" }}>
                     {b.sub || b.subtitle}
                   </motion.p>
                   <motion.div variants={fadeUp} className="flex gap-3 flex-wrap">
                     <Link href={b.link || b.buttonLink || "/products"}>
-                      <motion.button whileHover={{ scale: 1.04, boxShadow: "0 8px 24px rgba(34,197,94,0.35)" }} whileTap={{ scale: 0.96 }}
+                      <motion.button whileHover={{ scale: 1.04, boxShadow: "0 8px 24px rgba(22,163,74,0.35)" }} whileTap={{ scale: 0.96 }}
                         className="h-11 px-6 rounded-2xl font-bold text-sm flex items-center gap-2 ripple"
-                        style={{ background: "#22C55E", color: "#000", boxShadow: "0 4px 16px rgba(34,197,94,0.25)" }}>
+                        style={{ background: "#16a34a", color: "#000", boxShadow: "0 4px 16px rgba(22,163,74,0.25)" }}>
                         <ShoppingCart size={16} />{b.btn || b.buttonText || "Shop Now"}
                       </motion.button>
                     </Link>
@@ -268,7 +268,7 @@ function HeroBanner({ banners }: { banners: any[] }) {
         {slides.map((_, i) => (
           <motion.button key={i} onClick={() => goTo(i)} animate={{ width: i === sel ? 24 : 7 }}
             transition={{ duration: 0.3 }}
-            style={{ height: 7, borderRadius: 4, background: i === sel ? "#22C55E" : "rgba(255,255,255,0.2)" }} />
+            style={{ height: 7, borderRadius: 4, background: i === sel ? "#16a34a" : "rgba(255,255,255,0.2)" }} />
         ))}
       </div>
     </div>
@@ -279,13 +279,13 @@ function HeroBanner({ banners }: { banners: any[] }) {
 function BrandCarousel() {
   return (
     <motion.section initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }}
-      className="py-6 border-y" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      className="py-6 border-y" style={{ borderColor: "rgba(0,0,0,0.07)" }}>
       <div className="container mx-auto px-4 mb-4 flex items-center justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Authorized Reseller</p>
-          <h3 className="text-slate-200 font-bold text-sm mt-0.5">Top Brands</h3>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Authorized Reseller</p>
+          <h3 className="text-gray-800 font-bold text-sm mt-0.5">Top Brands</h3>
         </div>
-        <Link href="/search"><span className="text-xs font-semibold" style={{ color: "#22C55E" }}>View All →</span></Link>
+        <Link href="/search"><span className="text-xs font-semibold" style={{ color: "#16a34a" }}>View All →</span></Link>
       </div>
       <div className="overflow-x-auto scrollbar-none">
         <div className="flex items-center gap-3 px-4 w-max">
@@ -330,8 +330,8 @@ function CategoriesSection() {
     <section className="py-10">
       <div className="container mx-auto px-4">
         <motion.div initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }} className="mb-6">
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "#22C55E" }}>Explore</p>
-          <h2 className="text-2xl md:text-3xl font-black text-white">Shop by <span style={{ color: "#22C55E" }}>Category</span></h2>
+          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "#16a34a" }}>Explore</p>
+          <h2 className="text-2xl md:text-3xl font-black text-gray-900">Shop by <span style={{ color: "#16a34a" }}>Category</span></h2>
         </motion.div>
         <motion.div initial="hidden" whileInView="show" variants={staggerContainer} viewport={{ once: true }}
           className="grid grid-cols-4 sm:grid-cols-8 gap-2 sm:gap-3">
@@ -340,12 +340,12 @@ function CategoriesSection() {
               <Link href={href}>
                 <motion.div whileHover={{ scale: 1.06, y: -4 }} whileTap={{ scale: 0.94 }}
                   className="flex flex-col items-center text-center py-4 px-2 rounded-2xl cursor-pointer transition-all"
-                  style={{ background: bg, border: `1px solid ${color}25` }}>
+                  style={{ background: bg, border: `1px solid ${color}20` }}>
                   <div className="h-11 w-11 rounded-2xl flex items-center justify-center mb-2"
-                    style={{ background: `${color}20` }}>
+                    style={{ background: `${color}18` }}>
                     <Icon size={20} style={{ color }} />
                   </div>
-                  <p className="text-white font-semibold text-[11px] leading-tight">{label}</p>
+                  <p className="text-gray-800 font-semibold text-[11px] leading-tight">{label}</p>
                 </motion.div>
               </Link>
             </motion.div>
@@ -371,7 +371,7 @@ function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
     <motion.div variants={scaleIn} whileHover={{ y: -6 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
       <Link href={`/products/${product.id}`}>
         <div className="group rounded-2xl overflow-hidden cursor-pointer flex flex-col h-full transition-all hover-glow"
-          style={{ background: "#1E293B", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 2px 16px rgba(0,0,0,0.25)" }}>
+          style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
 
           {/* Image */}
           <div className="relative overflow-hidden" style={{ background: "#F8FAFC", height: 186, padding: 16 }}>
@@ -386,7 +386,7 @@ function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
                 </span>
               )}
               {product.isNewArrival && (
-                <span className="text-[10px] font-black text-white px-2 py-0.5 rounded-lg" style={{ background: "#22C55E", color: "#000" }}>
+                <span className="text-[10px] font-black text-white px-2 py-0.5 rounded-lg" style={{ background: "#16a34a", color: "#000" }}>
                   NEW
                 </span>
               )}
@@ -395,7 +395,7 @@ function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
             {/* Free Delivery badge */}
             {finalPrice >= 20000 && (
               <div className="absolute bottom-2 left-2 right-2 flex justify-center">
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(34,197,94,0.12)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.3)" }}>
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(22,163,74,0.12)", color: "#16a34a", border: "1px solid rgba(22,163,74,0.3)" }}>
                   <Truck size={8} className="inline mr-1" />Free Delivery
                 </span>
               </div>
@@ -428,22 +428,22 @@ function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
           {/* Info */}
           <div className="p-3.5 flex flex-col flex-1">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#22C55E" }}>{product.brand}</span>
+              <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#16a34a" }}>{product.brand}</span>
               <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold text-white" style={{ background: "#059669" }}>
                 {(product.rating || 4.2).toFixed(1)} <Star size={9} className="fill-white ml-0.5" />
               </div>
             </div>
 
-            <h3 className="text-white font-semibold text-sm line-clamp-2 leading-snug mb-1 flex-1 group-hover:text-emerald-400 transition-colors">
+            <h3 className="text-gray-900 font-semibold text-sm line-clamp-2 leading-snug mb-1 flex-1 group-hover:text-green-700 transition-colors">
               {product.name}
             </h3>
-            <p className="text-[10px] text-slate-500 mb-3">({product.reviewsCount || 0} reviews)</p>
+            <p className="text-[10px] text-slate-400 mb-3">({product.reviewsCount || 0} reviews)</p>
 
             {/* Price */}
             <div className="mb-3">
               <div className="flex items-baseline gap-2">
-                <span className="font-black text-white text-lg">{formatINR(finalPrice)}</span>
-                {hasDiscount && <span className="text-xs text-slate-500 line-through">{formatINR(product.price)}</span>}
+                <span className="font-black text-gray-900 text-lg">{formatINR(finalPrice)}</span>
+                {hasDiscount && <span className="text-xs text-slate-400 line-through">{formatINR(product.price)}</span>}
               </div>
               {finalPrice >= 5000 && (
                 <p className="text-[10px] text-slate-400 mt-0.5">EMI from <span style={{ color: "#3B82F6" }} className="font-bold">₹{emi.toLocaleString("en-IN")}/mo</span></p>
@@ -456,9 +456,9 @@ function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
                 whileTap={{ scale: 0.95 }}
                 onClick={e => { e.preventDefault(); e.stopPropagation(); addToCart({ productId: product.id, name: product.name, price: product.discountPrice || product.price, qty: 1, image: product.images?.[0], brand: product.brand }); }}
                 className="flex-1 h-9 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 ripple transition-all"
-                style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", color: "#22C55E" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#22C55E"; (e.currentTarget as HTMLButtonElement).style.color = "#000"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#22C55E"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(34,197,94,0.12)"; (e.currentTarget as HTMLButtonElement).style.color = "#22C55E"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(34,197,94,0.25)"; }}>
+                style={{ background: "rgba(22,163,74,0.12)", border: "1px solid rgba(22,163,74,0.25)", color: "#16a34a" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#16a34a"; (e.currentTarget as HTMLButtonElement).style.color = "#000"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#16a34a"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(22,163,74,0.12)"; (e.currentTarget as HTMLButtonElement).style.color = "#16a34a"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(22,163,74,0.25)"; }}>
                 <ShoppingCart size={13} /><span className="hidden sm:inline">Add to Cart</span><span className="sm:hidden">Add</span>
               </motion.button>
               <motion.button whileTap={{ scale: 0.95 }}
@@ -482,19 +482,19 @@ function ProductSection({ title, accent, badge, products, loading }: {
   title: string; accent: string; badge: string; products: any[] | null; loading?: boolean;
 }) {
   return (
-    <section className="py-10 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+    <section className="py-10 border-t" style={{ borderColor: "rgba(0,0,0,0.07)" }}>
       <div className="container mx-auto px-4">
         <motion.div initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }}
           className="flex justify-between items-end mb-6">
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full" style={{ background: "rgba(34,197,94,0.1)", color: "#22C55E" }}>
+            <span className="text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full" style={{ background: "rgba(22,163,74,0.1)", color: "#16a34a" }}>
               {badge}
             </span>
-            <h2 className="text-2xl md:text-3xl font-black text-white mt-2">
-              {title} <span style={{ color: "#22C55E" }}>{accent}</span>
+            <h2 className="text-2xl md:text-3xl font-black text-gray-900 mt-2">
+              {title} <span style={{ color: "#16a34a" }}>{accent}</span>
             </h2>
           </div>
-          <Link href="/products" className="flex items-center gap-1 text-sm font-semibold" style={{ color: "#22C55E" }}>
+          <Link href="/products" className="flex items-center gap-1 text-sm font-semibold" style={{ color: "#16a34a" }}>
             View All <ArrowRight size={15} />
           </Link>
         </motion.div>
@@ -521,27 +521,27 @@ function TrustSection() {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true });
   return (
-    <section ref={ref} className="py-12 border-t" style={{ borderColor: "rgba(255,255,255,0.05)", background: "#151A24" }}>
+    <section ref={ref} className="py-12 border-t" style={{ borderColor: "rgba(0,0,0,0.07)", background: "#f8fafc" }}>
       <div className="container mx-auto px-4">
         <motion.div initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }} className="text-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-black text-white">
-            Why <span style={{ color: "#22C55E" }}>Super Computer</span>?
+          <h2 className="text-2xl md:text-3xl font-black text-gray-900">
+            Why <span style={{ color: "#16a34a" }}>Super Computer</span>?
           </h2>
-          <p className="text-slate-400 mt-2 text-sm">Serving Kasganj Road since 5+ years</p>
+          <p className="text-gray-500 mt-2 text-sm">Serving Kasganj Road since 5+ years</p>
         </motion.div>
         <motion.div initial="hidden" whileInView="show" variants={staggerContainer} viewport={{ once: true }}
           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {TRUST_ITEMS.map(({ icon: Icon, stat, label, color, bg }) => (
             <motion.div key={label} variants={scaleIn}
               whileHover={{ scale: 1.05, y: -4 }}
-              className="flex flex-col items-center text-center p-4 rounded-2xl"
-              style={{ background: bg, border: `1px solid ${color}20` }}>
+              className="flex flex-col items-center text-center p-4 rounded-2xl bg-white"
+              style={{ border: `1px solid ${color}20` }}>
               <div className="h-12 w-12 rounded-2xl flex items-center justify-center mb-3"
-                style={{ background: `${color}20` }}>
+                style={{ background: `${color}15` }}>
                 <Icon size={22} style={{ color }} />
               </div>
-              <p className="font-black text-white text-lg leading-none">{stat}</p>
-              <p className="text-slate-400 text-xs mt-1 leading-tight">{label}</p>
+              <p className="font-black text-gray-900 text-lg leading-none">{stat}</p>
+              <p className="text-gray-500 text-xs mt-1 leading-tight">{label}</p>
             </motion.div>
           ))}
         </motion.div>
@@ -568,12 +568,12 @@ function HappyCustomers() {
   if (!photos.length) return null;
 
   return (
-    <section className="py-10 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+    <section className="py-10 border-t" style={{ borderColor: "rgba(0,0,0,0.07)" }}>
       <div className="container mx-auto px-4">
         <motion.div initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }} className="mb-6">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Our Community</p>
-          <h2 className="text-xl font-black text-white">
-            Happy <span style={{ color: "#22C55E" }}>Customers</span>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Our Community</p>
+          <h2 className="text-xl font-black text-gray-900">
+            Happy <span style={{ color: "#16a34a" }}>Customers</span>
           </h2>
         </motion.div>
         <div className="grid grid-cols-2 gap-3">
@@ -582,7 +582,7 @@ function HappyCustomers() {
               initial={{ opacity: 0, scale: 0.94 }} whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }} transition={{ delay: i * 0.07 }}
               className="rounded-2xl overflow-hidden relative"
-              style={{ background: "#1F2937", border: "1px solid rgba(255,255,255,0.06)" }}>
+              style={{ background: "#e5e7eb", border: "1px solid rgba(0,0,0,0.07)" }}>
               <img src={photo.imageUrl} alt={photo.customerName || "Customer"}
                 className="w-full object-cover" style={{ aspectRatio: "4/3" }} />
               {(photo.customerName || photo.laptop) && (
@@ -604,11 +604,11 @@ function HappyCustomers() {
 function FAQ() {
   const [open, setOpen] = useState<number | null>(null);
   return (
-    <section className="py-12 border-t" style={{ borderColor: "rgba(255,255,255,0.05)", background: "#151A24" }}>
+    <section className="py-12 border-t" style={{ borderColor: "rgba(0,0,0,0.07)", background: "#f8fafc" }}>
       <div className="container mx-auto px-4 max-w-3xl">
         <motion.div initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }} className="text-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-black text-white">
-            Frequently Asked <span style={{ color: "#22C55E" }}>Questions</span>
+          <h2 className="text-2xl md:text-3xl font-black text-gray-900">
+            Frequently Asked <span style={{ color: "#16a34a" }}>Questions</span>
           </h2>
         </motion.div>
         <div className="space-y-2.5">
@@ -616,19 +616,19 @@ function FAQ() {
             <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }} transition={{ delay: i * 0.06 }}
               className="rounded-2xl overflow-hidden"
-              style={{ background: "#1E293B", border: "1px solid rgba(255,255,255,0.07)" }}>
+              style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)" }}>
               <button className="w-full flex items-center justify-between px-5 py-4 text-left"
                 onClick={() => setOpen(open === i ? null : i)}>
-                <span className="font-semibold text-white text-sm pr-4">{faq.q}</span>
+                <span className="font-semibold text-gray-900 text-sm pr-4">{faq.q}</span>
                 <motion.div animate={{ rotate: open === i ? 180 : 0 }} transition={{ duration: 0.25 }} className="shrink-0">
-                  <ChevronDown size={18} style={{ color: "#22C55E" }} />
+                  <ChevronDown size={18} style={{ color: "#16a34a" }} />
                 </motion.div>
               </button>
               <AnimatePresence>
                 {open === i && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}>
-                    <p className="px-5 pb-4 text-sm text-slate-400 leading-relaxed">{faq.a}</p>
+                    <p className="px-5 pb-4 text-sm text-gray-600 leading-relaxed">{faq.a}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -644,20 +644,20 @@ function FAQ() {
 function StillLooking({ products }: { products: any[] }) {
   if (!products.length) return null;
   return (
-    <section className="py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.05)", background: "#151A24" }}>
+    <section className="py-4 border-b" style={{ borderColor: "rgba(0,0,0,0.07)", background: "#f1f5f9" }}>
       <div className="px-4">
-        <p className="text-white font-black text-sm mb-3">Recently Viewed</p>
+        <p className="text-gray-900 font-black text-sm mb-3">Recently Viewed</p>
         <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
           {products.map(p => (
             <Link key={p.id} href={`/products/${p.id}`}>
               <motion.div whileHover={{ scale: 1.04 }} className="flex-shrink-0 w-28 rounded-xl overflow-hidden cursor-pointer"
-                style={{ background: "#1E293B", border: "1px solid rgba(255,255,255,0.07)" }}>
+                style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)" }}>
                 <div className="h-20 flex items-center justify-center p-2" style={{ background: "#F8FAFC" }}>
                   <img src={p.images?.[0] || "/images/laptops/macbook-pro.png"} alt={p.name} className="h-full w-full object-contain" />
                 </div>
                 <div className="p-2">
-                  <p className="text-white text-[10px] font-semibold line-clamp-2 leading-tight mb-1">{p.name}</p>
-                  <p className="text-[10px] font-bold" style={{ color: "#22C55E" }}>₹{Number(p.discountPrice || p.price).toLocaleString("en-IN")}</p>
+                  <p className="text-gray-900 text-[10px] font-semibold line-clamp-2 leading-tight mb-1">{p.name}</p>
+                  <p className="text-[10px] font-bold" style={{ color: "#16a34a" }}>₹{Number(p.discountPrice || p.price).toLocaleString("en-IN")}</p>
                 </div>
               </motion.div>
             </Link>
