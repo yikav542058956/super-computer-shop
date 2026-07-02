@@ -100,7 +100,7 @@ function ProductCard({ product, index, onNavigate }: { product: any; index: numb
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleWishlist({ productId: product.id, name: product.name, price: price, image: product.images?.[0] || "", addedAt: Date.now() });
+    toggleWishlist({ productId: product.id, name: product.name, price: price, image: product.images?.[0] || "", brand: product.brand || "", addedAt: Date.now() });
   };
 
   const handleWhatsApp = (e: React.MouseEvent) => {

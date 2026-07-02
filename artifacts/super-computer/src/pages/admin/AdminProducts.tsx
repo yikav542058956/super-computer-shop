@@ -107,6 +107,10 @@ export default function AdminProducts() {
       images: Array.isArray(product.images) ? product.images : product.images ? Object.values(product.images) : [],
       isFeatured: product.isFeatured || false,
       isNewArrival: product.isNewArrival || false,
+      isTopDeal: product.isTopDeal || false,
+      isBestSeller: product.isBestSeller || false,
+      isStudentPick: product.isStudentPick || false,
+      isGamingDeal: product.isGamingDeal || false,
       status: product.status || "active",
     });
     setShowDialog(true);

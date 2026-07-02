@@ -18,9 +18,10 @@ import { useWishlist } from "@/contexts/WishlistContext";
 import { useCart } from "@/contexts/CartContext";
 
 /* ─── Animation Variants ────────────────────────────────────── */
+const EASE = [0.22, 1, 0.36, 1] as const;
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE } },
 };
 const staggerContainer = {
   hidden: {},
@@ -28,7 +29,7 @@ const staggerContainer = {
 };
 const scaleIn = {
   hidden: { opacity: 0, scale: 0.92 },
-  show: { opacity: 1, scale: 1, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, scale: 1, transition: { duration: 0.45, ease: EASE } },
 };
 
 /* ─── Data ──────────────────────────────────────────────────── */
@@ -153,7 +154,11 @@ function AnnouncementPopup({ items }: { items: any[] }) {
   useEffect(() => {
     if (!items.length) return;
     const seen = sessionStorage.getItem("sc_popup_seen");
-    if (!seen) { const t = setTimeout(() => setVisible(true), 2000); return () => clearTimeout(t); }
+    if (!seen) {
+      const t = setTimeout(() => setVisible(true), 2000);
+      return () => clearTimeout(t);
+    }
+    return undefined;
   }, [items.length]);
   if (!visible || !items.length) return null;
   const item = items[current];
@@ -377,7 +382,7 @@ function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
                 e.preventDefault(); e.stopPropagation();
                 inWishlist
                   ? removeFromWishlist(product.id)
-                  : addToWishlist({ productId: product.id, name: product.name, price: product.discountPrice || product.price, image: product.images?.[0], brand: product.brand });
+                  : addToWishlist({ productId: product.id, name: product.name, price: product.discountPrice || product.price, image: product.images?.[0], brand: product.brand, addedAt: Date.now() });
               }}
               className="absolute top-2.5 right-2.5 h-8 w-8 rounded-full flex items-center justify-center ripple"
               style={{ background: "rgba(255,255,255,0.9)", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
@@ -423,7 +428,7 @@ function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
             <div className="flex gap-2 mt-auto">
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={e => { e.preventDefault(); e.stopPropagation(); addToCart({ productId: product.id, name: product.name, price: product.discountPrice || product.price, qty: 1, image: product.images?.[0], brand: product.brand }); }}
+                onClick={e => { e.preventDefault(); e.stopPropagation(); addToCart({ productId: product.id, name: product.name, price: product.discountPrice || product.price, qty: 1, image: product.images?.[0] }); }}
                 className="flex-1 h-9 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 ripple transition-all"
                 style={{ background: "rgba(22,163,74,0.12)", border: "1px solid rgba(22,163,74,0.25)", color: "#16a34a" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#16a34a"; (e.currentTarget as HTMLButtonElement).style.color = "#000"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#16a34a"; }}
