@@ -33,35 +33,6 @@ const scaleIn = {
 };
 
 /* ─── Data ──────────────────────────────────────────────────── */
-const DEFAULT_BANNERS = [
-  {
-    id: "d1",
-    title: "Power Your World",
-    accent: "with Premium Tech",
-    sub: "High-performance laptops & custom PCs at Kasganj Road",
-    btn: "Shop Now", link: "/search",
-    img: "/images/store/s4.jpeg",
-    from: "#0B0F19", via: "#0f1f2f", badge: "Best Sellers",
-  },
-  {
-    id: "d2",
-    title: "Built to Dominate",
-    accent: "Game Everything",
-    sub: "RTX-powered gaming laptops with in-store demos available",
-    btn: "Explore Gaming", link: "/search?q=Gaming",
-    img: "/images/store/s7.jpeg",
-    from: "#0d0f1a", via: "#1a0d2e", badge: "Gaming",
-  },
-  {
-    id: "d3",
-    title: "Free Delivery &",
-    accent: "Expert Support",
-    sub: "Every purchase includes doorstep delivery + free setup",
-    btn: "View Deals", link: "/search",
-    img: "/images/store/s2.jpeg",
-    from: "#0a1a12", via: "#0f2318", badge: "New Arrivals",
-  },
-];
 
 const BRANDS = [
   { name: "HP",      logo: "/images/brands/hp.png",      color: "#0096D6" },
@@ -193,7 +164,7 @@ function AnnouncementPopup({ items }: { items: any[] }) {
 
 /* ─── Hero Banner ────────────────────────────────────────────── */
 function HeroBanner({ banners }: { banners: any[] }) {
-  const slides = banners.length > 0 ? banners : DEFAULT_BANNERS;
+  const slides = banners;
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [sel, setSel] = useState(0);
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
