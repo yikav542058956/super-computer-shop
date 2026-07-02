@@ -378,7 +378,7 @@ export default function ProductDetail() {
     : 0;
   const avgRating = reviews.length
     ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
-    : product?.rating || 0;
+    : null;
 
   const alreadyReviewed = reviews.some((r) => r.userId === currentUser?.uid);
 
