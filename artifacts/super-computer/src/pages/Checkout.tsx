@@ -6,13 +6,14 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ref, push, set, get } from "firebase/database";
+import { ref, push, set, get, update } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import {
   CheckCircle2, Banknote, MapPin, Package,
   ShoppingBag, ChevronRight, Loader2, Truck, Shield,
   Smartphone, CreditCard, Copy, AlertCircle, Info,
+  Zap,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 
@@ -68,6 +69,7 @@ export default function Checkout() {
   const [, setLocation] = useLocation();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [cfLoading, setCfLoading] = useState(false);
   const [orderId, setOrderId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "online">("cod");
   const [storeUpi, setStoreUpi] = useState("supercomputer@upi");
@@ -100,41 +102,47 @@ export default function Checkout() {
   const finalAmount = afterDiscount + gstAmount + deliveryCharge;
   const advanceAmount = Math.round(finalAmount * 0.5);
 
-  const placeOrder = async () => {
-    if (!currentUser) return;
+  const createFirebaseOrder = async (paymentStatus = "pending") => {
+    const orderRef = push(ref(db, "orders"));
+    await set(orderRef, {
+      userId: currentUser?.uid || "guest",
+      userName: address.name,
+      userPhone: address.phone,
+      items: cart,
+      subtotal,
+      discountAmount: discountAmt,
+      couponCode: coupon?.code || null,
+      gstAmount,
+      gstRate: GST_RATE,
+      deliveryCharge,
+      finalAmount,
+      advanceAmount: paymentMethod === "cod" ? advanceAmount : finalAmount,
+      paidAmount: 0,
+      remainingAmount: finalAmount,
+      address,
+      paymentMethod,
+      paymentStatus,
+      advanceReceived: false,
+      orderStatus: paymentMethod === "online" ? "payment_pending" : "pending",
+      statusHistory: [{
+        status: paymentMethod === "online" ? "payment_pending" : "pending",
+        timestamp: Date.now(),
+        note: paymentMethod === "online" ? "Online payment initiated via Cashfree" : "COD order placed — advance payment pending",
+      }],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      notes: "",
+    });
+    return orderRef.key as string;
+  };
+
+  /* ── Place COD Order ── */
+  const placeCodOrder = async () => {
+    if (!currentUser) { toast.error("Please login to place an order"); return; }
     setLoading(true);
     try {
-      const orderRef = push(ref(db, "orders"));
-      await set(orderRef, {
-        userId: currentUser.uid,
-        userName: address.name,
-        userPhone: address.phone,
-        items: cart,
-        subtotal,
-        discountAmount: discountAmt,
-        couponCode: coupon?.code || null,
-        gstAmount,
-        gstRate: GST_RATE,
-        deliveryCharge,
-        finalAmount,
-        advanceAmount: paymentMethod === "cod" ? advanceAmount : finalAmount,
-        paidAmount: paymentMethod === "online" ? 0 : 0,
-        remainingAmount: finalAmount,
-        address,
-        paymentMethod,
-        paymentStatus: "pending",
-        advanceReceived: false,
-        orderStatus: paymentMethod === "online" ? "payment_pending" : "pending",
-        statusHistory: [{
-          status: paymentMethod === "online" ? "payment_pending" : "pending",
-          timestamp: Date.now(),
-          note: paymentMethod === "online" ? "Online payment pending verification" : "COD order placed — advance payment pending",
-        }],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        notes: "",
-      });
-      setOrderId(orderRef.key as string);
+      const newOrderId = await createFirebaseOrder("pending");
+      setOrderId(newOrderId);
       clearCart();
       setStep(4);
     } catch {
@@ -144,13 +152,58 @@ export default function Checkout() {
     }
   };
 
+  /* ── Launch Cashfree Payment ── */
+  const launchCashfree = async () => {
+    if (!currentUser) { toast.error("Please login to place an order"); return; }
+    setCfLoading(true);
+    try {
+      const newOrderId = await createFirebaseOrder("payment_pending");
+      setOrderId(newOrderId);
+
+      const baseUrl = window.location.origin;
+      const res = await fetch("/api/cashfree/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firebaseOrderId: newOrderId,
+          amount: finalAmount,
+          customerName: address.name,
+          customerPhone: address.phone,
+          customerEmail: currentUser.email || "customer@supercomputer.in",
+          returnUrl: `${baseUrl}/checkout/done?firebase_order=${newOrderId}`,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.paymentSessionId) {
+        toast.error(data.error || "Payment initiate nahi ho saka");
+        setCfLoading(false);
+        return;
+      }
+
+      const { load } = await import("@cashfreepayments/cashfree-js");
+      const cashfree = await load({ mode: "production" });
+
+      cashfree.checkout({
+        paymentSessionId: data.paymentSessionId,
+        redirectTarget: "_self",
+      });
+
+      clearCart();
+    } catch (err) {
+      toast.error("Payment error. Please try again.");
+      setCfLoading(false);
+    }
+  };
+
   const isAddressValid = address.name && address.phone && address.street && address.city && address.pincode;
 
   const copyUpi = () => {
     navigator.clipboard.writeText(storeUpi).then(() => toast.success("UPI ID copy ho gaya!"));
   };
 
-  /* ── Step 4: Success ── */
+  /* ── Step 4: Success (COD) ── */
   if (step === 4 && orderId) {
     return (
       <Layout>
@@ -167,61 +220,31 @@ export default function Checkout() {
             <p className="text-xs text-slate-400 mb-6 font-mono">Order ID: {orderId.slice(-8).toUpperCase()}</p>
 
             <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-6 text-left space-y-4">
-              {paymentMethod === "cod" ? (
-                <>
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-bold text-gray-900 text-sm">Advance Payment Required</p>
-                      <p className="text-slate-500 text-xs mt-0.5">50% advance — {formatINR(advanceAmount)} — abhi bhejni hogi</p>
-                    </div>
-                  </div>
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                    <p className="text-xs text-slate-500 mb-1">UPI ID pe bhejo</p>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-black text-gray-900 text-lg">{storeUpi}</p>
-                      <button onClick={copyUpi} className="p-2 rounded-lg bg-white border border-amber-200 hover:bg-amber-100 transition-colors">
-                        <Copy className="h-4 w-4 text-amber-600" />
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-2">Amount: <span className="font-bold text-amber-700">{formatINR(advanceAmount)}</span></p>
-                    <p className="text-xs text-slate-500">Remaining on delivery: <span className="font-bold">{formatINR(finalAmount - advanceAmount)}</span></p>
-                  </div>
-                  <p className="text-xs text-slate-400 flex items-center gap-1">
-                    <Info className="h-3.5 w-3.5" />
-                    Payment screenshot WhatsApp karo — order jaldi confirm hoga
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-bold text-gray-900 text-sm">Full Payment Pending</p>
-                      <p className="text-slate-500 text-xs mt-0.5">Total — {formatINR(finalAmount)} — online bhejni hogi</p>
-                    </div>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                    <p className="text-xs text-slate-500 mb-1">UPI ID pe full payment bhejo</p>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-black text-gray-900 text-lg">{storeUpi}</p>
-                      <button onClick={copyUpi} className="p-2 rounded-lg bg-white border border-blue-200 hover:bg-blue-100 transition-colors">
-                        <Copy className="h-4 w-4 text-blue-600" />
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-2">Total: <span className="font-bold text-blue-700">{formatINR(finalAmount)}</span></p>
-                  </div>
-                  <p className="text-xs text-slate-400 flex items-center gap-1">
-                    <Info className="h-3.5 w-3.5" />
-                    Payment screenshot WhatsApp karo — order confirm hoga
-                  </p>
-                </>
-              )}
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-gray-900 text-sm">Advance Payment Required</p>
+                  <p className="text-slate-500 text-xs mt-0.5">50% advance — {formatINR(advanceAmount)} — abhi bhejni hogi</p>
+                </div>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <p className="text-xs text-slate-500 mb-1">UPI ID pe bhejo</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-black text-gray-900 text-lg">{storeUpi}</p>
+                  <button onClick={copyUpi} className="p-2 rounded-lg bg-white border border-amber-200 hover:bg-amber-100 transition-colors">
+                    <Copy className="h-4 w-4 text-amber-600" />
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">Amount: <span className="font-bold text-amber-700">{formatINR(advanceAmount)}</span></p>
+                <p className="text-xs text-slate-500">Remaining on delivery: <span className="font-bold">{formatINR(finalAmount - advanceAmount)}</span></p>
+              </div>
+              <p className="text-xs text-slate-400 flex items-center gap-1">
+                <Info className="h-3.5 w-3.5" />
+                Payment screenshot WhatsApp karo — order jaldi confirm hoga
+              </p>
               <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
                 <Truck className="h-5 w-5 text-blue-400" />
-                <div>
-                  <p className="font-semibold text-gray-900 text-sm">Estimated Delivery: 3–5 business days</p>
-                </div>
+                <p className="font-semibold text-gray-900 text-sm">Estimated Delivery: 3–5 business days</p>
               </div>
             </div>
 
@@ -242,7 +265,7 @@ export default function Checkout() {
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
           <div className="flex items-center gap-2 text-sm text-slate-500 mb-6">
             <ShoppingBag className="h-4 w-4" />
             <span>Cart</span>
@@ -320,7 +343,7 @@ export default function Checkout() {
                       </div>
                     </button>
 
-                    {/* Online Option */}
+                    {/* Online / Cashfree Option */}
                     <button
                       onClick={() => setPaymentMethod("online")}
                       className={`w-full flex items-start gap-4 p-4 rounded-2xl border-2 transition-all text-left ${
@@ -331,17 +354,20 @@ export default function Checkout() {
                         {paymentMethod === "online" && <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />}
                       </div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Smartphone className="h-5 w-5 text-blue-500" />
-                          <p className="font-black text-gray-900">Online Payment (UPI / Bank Transfer)</p>
-                          <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Full Prepaid</span>
+                          <p className="font-black text-gray-900">Pay Online</p>
+                          <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">UPI / Cards / NetBanking</span>
+                          <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <Zap className="h-2.5 w-2.5" />Instant Confirm
+                          </span>
                         </div>
-                        <p className="text-slate-500 text-sm mt-1">UPI se full payment karein — order jaldi confirm</p>
+                        <p className="text-slate-500 text-sm mt-1">Secure payment via Cashfree — UPI, Cards, NetBanking</p>
                         {paymentMethod === "online" && (
-                          <div className="mt-3 bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-1">
-                            <p className="text-xs font-bold text-blue-800">Full payment (abhi bhejni hogi):</p>
+                          <div className="mt-3 bg-blue-50 border border-blue-200 rounded-xl p-3">
+                            <p className="text-xs font-bold text-blue-800">Full payment (one-time):</p>
                             <p className="text-xl font-black text-blue-700">{formatINR(finalAmount)}</p>
-                            <p className="text-xs text-blue-700 font-semibold mt-2">UPI: {storeUpi}</p>
+                            <p className="text-xs text-slate-500 mt-1">Order instantly confirmed on payment</p>
                           </div>
                         )}
                       </div>
@@ -387,18 +413,33 @@ export default function Checkout() {
                     <div className={`flex items-center gap-3 rounded-xl p-3 ${paymentMethod === "cod" ? "bg-green-50 border border-green-200" : "bg-blue-50 border border-blue-200"}`}>
                       {paymentMethod === "cod" ? <Banknote className="h-5 w-5 text-green-600" /> : <Smartphone className="h-5 w-5 text-blue-600" />}
                       <div>
-                        <p className="font-bold text-gray-900 text-sm">{paymentMethod === "cod" ? "Cash on Delivery (50% Advance)" : "Online Payment (Full Prepaid)"}</p>
-                        <p className="text-xs text-slate-500">{paymentMethod === "cod" ? `Advance: ${formatINR(advanceAmount)} • On delivery: ${formatINR(finalAmount - advanceAmount)}` : `Pay ${formatINR(finalAmount)} via UPI: ${storeUpi}`}</p>
+                        <p className="font-bold text-gray-900 text-sm">{paymentMethod === "cod" ? "Cash on Delivery (50% Advance)" : "Pay Online via Cashfree"}</p>
+                        <p className="text-xs text-slate-500">
+                          {paymentMethod === "cod"
+                            ? `Advance: ${formatINR(advanceAmount)} • On delivery: ${formatINR(finalAmount - advanceAmount)}`
+                            : `Total ${formatINR(finalAmount)} — UPI / Cards / NetBanking`}
+                        </p>
                       </div>
                     </div>
                   </GlassCard>
 
                   <div className="flex gap-3">
                     <Button variant="outline" onClick={() => setStep(2)} className="border-gray-200 rounded-xl h-11">Back</Button>
-                    <Button onClick={placeOrder} disabled={loading}
-                      className="flex-1 bg-green-500 hover:bg-green-400 text-black font-black rounded-xl h-11 gap-2 shadow-lg shadow-green-500/25">
-                      {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Placing...</> : <><CheckCircle2 className="h-4 w-4" />Place Order — {formatINR(finalAmount)}</>}
-                    </Button>
+
+                    {paymentMethod === "cod" ? (
+                      <Button onClick={placeCodOrder} disabled={loading}
+                        className="flex-1 bg-green-500 hover:bg-green-400 text-black font-black rounded-xl h-11 gap-2 shadow-lg shadow-green-500/25">
+                        {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Placing...</> : <><CheckCircle2 className="h-4 w-4" />Place Order — {formatINR(finalAmount)}</>}
+                      </Button>
+                    ) : (
+                      <Button onClick={launchCashfree} disabled={cfLoading}
+                        className="flex-1 text-white font-black rounded-xl h-11 gap-2 shadow-lg"
+                        style={{ background: cfLoading ? "#93c5fd" : "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)" }}>
+                        {cfLoading
+                          ? <><Loader2 className="h-4 w-4 animate-spin" />Opening Payment...</>
+                          : <><Zap className="h-4 w-4" />Pay Now — {formatINR(finalAmount)}</>}
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -414,7 +455,7 @@ export default function Checkout() {
                 <div className="space-y-3 max-h-48 overflow-y-auto pr-1 mb-4">
                   {cart.map((item: any) => (
                     <div key={item.productId} className="flex gap-3 items-center">
-                      <div className="h-12 w-12 bg-[#F0F2F5] rounded-xl shrink-0 flex items-center justify-center">
+                      <div className="h-12 w-12 bg-gray-50 rounded-xl shrink-0 flex items-center justify-center border border-gray-100">
                         <img src={item.image} alt={item.name} className="h-10 w-10 object-contain" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -459,6 +500,13 @@ export default function Checkout() {
                         <span>On Delivery</span>
                         <span>{formatINR(finalAmount - advanceAmount)}</span>
                       </div>
+                    </div>
+                  )}
+                  {paymentMethod === "online" && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                      <p className="text-xs font-bold text-blue-800 flex items-center gap-1">
+                        <Zap className="h-3 w-3" /> Instant confirmation on payment
+                      </p>
                     </div>
                   )}
                 </div>
