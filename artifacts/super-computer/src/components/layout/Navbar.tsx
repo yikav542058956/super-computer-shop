@@ -115,11 +115,14 @@ export const Navbar = () => {
             <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
               className="relative h-9 w-9 rounded-xl flex items-center justify-center transition-all ripple"
               style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.06)" }}>
-              <ShoppingCart size={19} style={{ color: "#64748B" }} />
+              <ShoppingCart size={19} style={{ color: cartCount > 0 ? "#16a34a" : "#64748B" }} />
               {cartCount > 0 && (
-                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 rounded-full text-[9px] font-black text-white flex items-center justify-center"
-                  style={{ background: "#16a34a" }}>
+                <motion.span
+                  key={cartCount}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full text-[10px] font-black text-white flex items-center justify-center shadow-sm"
+                  style={{ background: "#16a34a", border: "2px solid white" }}>
                   {cartCount > 9 ? "9+" : cartCount}
                 </motion.span>
               )}

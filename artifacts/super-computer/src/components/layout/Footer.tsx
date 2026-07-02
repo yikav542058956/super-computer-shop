@@ -91,13 +91,6 @@ export const Footer = () => {
                 </a>
               ))}
             </div>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {["VISA", "Mastercard", "UPI", "Paytm"].map(p => (
-                <span key={p} className="text-[10px] font-bold bg-gray-100 border border-gray-200 text-slate-600 px-2 py-1 rounded">
-                  {p}
-                </span>
-              ))}
-            </div>
           </div>
         </div>
       </div>
