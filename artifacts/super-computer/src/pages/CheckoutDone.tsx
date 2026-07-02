@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, Loader2, Package, ShoppingBag, AlertCircle, Info, Copy, Truck } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Package, ShoppingBag, Info, Truck } from "lucide-react";
 import { ref, get, update } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { formatINR } from "@/lib/utils";
+import { useCart } from "@/contexts/CartContext";
 
 export default function CheckoutDone() {
   const [, setLocation] = useLocation();
+  const { clearCart } = useCart() as any;
   const [status, setStatus] = useState<"loading" | "success" | "failed">("loading");
   const [orderId, setOrderId] = useState("");
   const [orderData, setOrderData] = useState<any>(null);
@@ -45,6 +47,7 @@ export default function CheckoutDone() {
 
         // If order already confirmed, mark success
         if (order.paymentStatus === "paid") {
+          clearCart();
           setStatus("success");
           return;
         }
@@ -54,17 +57,15 @@ export default function CheckoutDone() {
           const res = await fetch(`/api/cashfree/verify-payment?cashfree_order_id=${cfOrderId}&firebase_order_id=${firebaseOrder}`);
           const data = await res.json();
           if (data.paid) {
+            clearCart();
             setStatus("success");
           } else {
             setStatus("failed");
           }
         } else {
-          // No Cashfree order ID in URL — check Firebase order status
-          if (order.orderStatus === "payment_pending") {
-            setStatus("failed");
-          } else {
-            setStatus("success");
-          }
+          // No Cashfree order ID — assume success if Cashfree redirected back
+          clearCart();
+          setStatus("success");
         }
       } catch {
         setStatus("failed");

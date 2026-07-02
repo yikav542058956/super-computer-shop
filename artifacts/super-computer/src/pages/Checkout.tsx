@@ -281,8 +281,8 @@ export default function Checkout() {
         return;
       }
 
-      clearCart();
-      // Direct redirect — most reliable, no SDK required
+      // Redirect FIRST — clearCart() se pehle nahi, warna cart empty hote hi
+      // useEffect /cart pe bhej deta hai aur redirect kabhi nahi hota
       window.location.href = `https://payments.cashfree.com/order/#${data.paymentSessionId}`;
     } catch (err: any) {
       console.error("Cashfree error:", err);
