@@ -16,7 +16,6 @@ import { WhatsAppProductButton, WhatsAppFloat } from "@/components/WhatsAppButto
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatINR } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
-import { Navbar } from "@/components/layout/Navbar";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 
 /* ─── Image Carousel ─────────────────────────────────────────── */
@@ -341,7 +340,6 @@ export default function ProductDetail() {
   /* ── Wrappers for loading / not-found (still no footer) ── */
   const Shell = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Navbar />
       <main className="flex-1 pb-16 md:pb-0">{children}</main>
       <WhatsAppFloat />
       <MobileBottomNav />
