@@ -9,7 +9,7 @@ import {
   Truck, BadgeCheck, X, Clock, TrendingUp, SlidersHorizontal,
   ChevronRight, Package,
 } from "lucide-react";
-import { formatINR } from "@/lib/utils";
+import { formatINR, fakeRating, fakeReviewCount } from "@/lib/utils";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useCart as useCartBadge } from "@/contexts/CartContext";
@@ -149,15 +149,11 @@ function ProductCard({ product, index, onNavigate }: { product: any; index: numb
 
           {/* Rating + Badges */}
           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            {product.rating && (
-              <span className="flex items-center gap-0.5 bg-[#16A34A] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-none">
-                <Star size={8} className="fill-white" />
-                {product.rating}
-              </span>
-            )}
-            {product.reviewsCount && (
-              <span className="text-[10px] text-[#6B7280]">({product.reviewsCount})</span>
-            )}
+            <span className="flex items-center gap-0.5 bg-[#16A34A] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-none">
+              <Star size={8} className="fill-white" />
+              {fakeRating(product.id, product.rating).toFixed(1)}
+            </span>
+            <span className="text-[10px] text-[#6B7280]">({fakeReviewCount(product.id, product.reviewsCount)})</span>
             <span className="flex items-center gap-0.5 text-[10px] text-[#2563EB] font-semibold">
               <BadgeCheck size={11} />
               Verified

@@ -12,7 +12,7 @@ import {
   Briefcase, GraduationCap, Palette, Cpu, Laptop, MonitorCheck,
   Info, AlertTriangle, CheckCircle, Megaphone, X,
 } from "lucide-react";
-import { formatINR } from "@/lib/utils";
+import { formatINR, fakeRating, fakeReviewCount } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useCart } from "@/contexts/CartContext";
@@ -430,14 +430,14 @@ function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#16a34a" }}>{product.brand}</span>
               <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold text-white" style={{ background: "#059669" }}>
-                {(product.rating || 4.2).toFixed(1)} <Star size={9} className="fill-white ml-0.5" />
+                {fakeRating(product.id, product.rating).toFixed(1)} <Star size={9} className="fill-white ml-0.5" />
               </div>
             </div>
 
             <h3 className="text-gray-900 font-semibold text-sm line-clamp-2 leading-snug mb-1 flex-1 group-hover:text-green-700 transition-colors">
               {product.name}
             </h3>
-            <p className="text-[10px] text-slate-400 mb-3">({product.reviewsCount || 0} reviews)</p>
+            <p className="text-[10px] text-slate-400 mb-3">({fakeReviewCount(product.id, product.reviewsCount)} reviews)</p>
 
             {/* Price */}
             <div className="mb-3">
