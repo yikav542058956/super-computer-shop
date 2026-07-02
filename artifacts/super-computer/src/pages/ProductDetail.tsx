@@ -656,15 +656,7 @@ export default function ProductDetail() {
 
             {/* Write Review */}
             <div className="px-6 py-5 border-b border-gray-100">
-              {!currentUser ? (
-                <div className="flex items-center gap-3 py-3 px-4 bg-gray-50 rounded-2xl border border-gray-100">
-                  <User className="h-6 w-6 text-slate-400 shrink-0" />
-                  <div>
-                    <p className="text-gray-800 text-sm font-semibold">Review likhne ke liye login karo</p>
-                    <p className="text-slate-500 text-xs mt-0.5">Sirf registered users hi review likh sakte hain</p>
-                  </div>
-                </div>
-              ) : !hasOrdered ? (
+              {!hasOrdered ? (
                 <div className="flex items-center gap-3 py-3 px-4 bg-amber-50 rounded-2xl border border-amber-100">
                   <Package className="h-6 w-6 text-amber-500 shrink-0" />
                   <div>
