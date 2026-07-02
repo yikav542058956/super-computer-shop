@@ -27,6 +27,7 @@ import Play from "@/pages/Play";
 import Search from "@/pages/Search";
 import Orders from "@/pages/Orders";
 import Wallet from "@/pages/Wallet";
+import CheckoutDone from "@/pages/CheckoutDone";
 
 // Admin Pages
 import AdminLogin from "@/pages/admin/AdminLogin";
@@ -66,6 +67,7 @@ function Router() {
           <Checkout />
         </ProtectedRoute>
       </Route>
+      <Route path="/checkout/done" component={CheckoutDone} />
       <Route path="/profile">
         <ProtectedRoute>
           <Profile />

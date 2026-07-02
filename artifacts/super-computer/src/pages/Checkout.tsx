@@ -6,14 +6,14 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ref, push, set, get, update } from "firebase/database";
+import { ref, push, set, get } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import {
   CheckCircle2, Banknote, MapPin, Package,
   ShoppingBag, ChevronRight, Loader2, Truck, Shield,
   Smartphone, CreditCard, Copy, AlertCircle, Info,
-  Zap,
+  Zap, ArrowLeft,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 
@@ -237,7 +237,7 @@ export default function Checkout() {
   /* ── Step 4: Success (COD) ── */
   if (step === 4 && orderId) {
     return (
-      <Layout noFooter>
+      <Layout noNav>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
           <div className="max-w-md w-full text-center">
             <div className="relative mx-auto mb-6 w-24 h-24">
@@ -294,16 +294,30 @@ export default function Checkout() {
   }
 
   return (
-    <Layout noFooter>
+    <Layout noNav>
       <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
-          <div className="flex items-center gap-2 text-sm text-slate-500 mb-6">
-            <ShoppingBag className="h-4 w-4" />
-            <span>Cart</span>
-            <ChevronRight className="h-3.5 w-3.5" />
-            <span className="text-gray-900 font-semibold">Checkout</span>
+        {/* Minimal checkout header */}
+        <div className="bg-white border-b border-gray-100 sticky top-0 z-40">
+          <div className="container mx-auto px-4 max-w-6xl flex items-center gap-3 h-14">
+            <button
+              onClick={() => setLocation("/cart")}
+              className="flex items-center justify-center h-9 w-9 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4 text-gray-700" />
+            </button>
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <ShoppingBag className="h-4 w-4" />
+              <span>Cart</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+              <span className="text-gray-900 font-semibold">Checkout</span>
+            </div>
+            <div className="ml-auto">
+              <span className="font-black text-base tracking-tight text-gray-900">SUPER</span>
+              <span className="font-black text-base tracking-tight ml-1" style={{ color: "#16a34a" }}>COMPUTER</span>
+            </div>
           </div>
-          <h1 className="text-2xl font-black text-gray-900 mb-6">Checkout</h1>
+        </div>
+        <div className="container mx-auto px-4 py-6 max-w-6xl">
           <StepBar step={step} />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
