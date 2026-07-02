@@ -1,7 +1,8 @@
 import { useParams, useLocation, Link } from "wouter";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { ref, get, push, set, onValue } from "firebase/database";
-import { db } from "@/lib/firebase";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
@@ -133,24 +134,37 @@ function StarRatingInput({ value, onChange }: { value: number; onChange: (v: num
 /* ─── Review Card ────────────────────────────────────────────── */
 function ReviewCard({ review }: { review: any }) {
   return (
-    <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 backdrop-blur-sm">
+    <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4">
       <div className="flex items-start gap-3">
         <div className="h-10 w-10 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center shrink-0">
-          <span className="text-green-400 font-bold text-sm">{review.userName?.[0]?.toUpperCase() || "U"}</span>
+          <span className="text-green-600 font-bold text-sm">{review.userName?.[0]?.toUpperCase() || "U"}</span>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="font-semibold text-gray-800 text-sm">{review.userName || "Anonymous"}</p>
-            <p className="text-[10px] text-slate-500">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-gray-800 text-sm">{review.userName || "Anonymous"}</p>
+              <span className="text-[10px] font-semibold text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full">✓ Verified Purchase</span>
+            </div>
+            <p className="text-[10px] text-slate-400">
               {new Date(review.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
             </p>
           </div>
-          <div className="flex gap-0.5 mt-1 mb-2">
+          <div className="flex gap-0.5 mt-1.5 mb-2">
             {[1, 2, 3, 4, 5].map((s) => (
               <Star key={s} className={`h-3.5 w-3.5 ${s <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200 fill-transparent"}`} />
             ))}
           </div>
-          <p className="text-gray-600 text-sm leading-relaxed">{review.comment}</p>
+          <p className="text-gray-700 text-sm leading-relaxed">{review.comment}</p>
+          {review.imageUrl && (
+            <div className="mt-3">
+              <img
+                src={review.imageUrl}
+                alt="Review photo"
+                className="h-32 w-32 object-cover rounded-xl border border-gray-200 cursor-pointer hover:scale-105 transition-transform"
+                onClick={() => window.open(review.imageUrl, "_blank")}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -213,64 +227,6 @@ function SuggestedCard({ p }: { p: any }) {
   );
 }
 
-/* ─── Section Nav (Flipkart-style sticky anchor bar) ─────────── */
-function SectionNav({ reviews, product }: { reviews: any[]; product: any }) {
-  const [active, setActive] = useState("description");
-
-  const sections = [
-    { id: "sec-description", label: "Description" },
-    ...(product?.specs && Object.keys(product.specs).length > 0
-      ? [{ id: "sec-specs", label: "Specifications" }]
-      : []),
-    { id: "sec-reviews", label: `Ratings & Reviews (${reviews.length || product?.reviewsCount || 0})` },
-  ];
-
-  const scrollTo = (id: string) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const y = el.getBoundingClientRect().top + window.scrollY - 56;
-    window.scrollTo({ top: y, behavior: "smooth" });
-    setActive(id);
-  };
-
-  useEffect(() => {
-    const handler = () => {
-      for (const { id } of [...sections].reverse()) {
-        const el = document.getElementById(id);
-        if (el && el.getBoundingClientRect().top <= 80) {
-          setActive(id);
-          break;
-        }
-      }
-    };
-    window.addEventListener("scroll", handler, { passive: true });
-    return () => window.removeEventListener("scroll", handler);
-  }, [sections.length]);
-
-  return (
-    <div className="sticky top-0 z-30 bg-white border border-gray-100 rounded-2xl shadow-sm mb-4 overflow-x-auto">
-      <div className="flex items-center min-w-max">
-        {sections.map(({ id, label }, i) => (
-          <button
-            key={id}
-            onClick={() => scrollTo(id)}
-            className={`relative px-5 py-3.5 text-sm font-semibold whitespace-nowrap transition-colors ${
-              active === id
-                ? "text-green-600"
-                : "text-slate-500 hover:text-gray-800"
-            } ${i < sections.length - 1 ? "border-r border-gray-100" : ""}`}
-          >
-            {label}
-            {active === id && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-500 rounded-full" />
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /* ─── Main Page ──────────────────────────────────────────────── */
 export default function ProductDetail() {
   const { id } = useParams();
@@ -278,9 +234,10 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<any[]>([]);
-  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "", imageFile: null as File | null, imagePreview: "" });
   const [submittingReview, setSubmittingReview] = useState(false);
   const [suggested, setSuggested] = useState<any[]>([]);
+  const [hasOrdered, setHasOrdered] = useState(false);
 
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
@@ -314,6 +271,28 @@ export default function ProductDetail() {
     });
     return () => unsubscribe();
   }, [id]);
+
+  // Check if current user has ordered this product (reset on every id/user change)
+  useEffect(() => {
+    setHasOrdered(false);
+    if (!currentUser || !id) return;
+    let cancelled = false;
+    get(ref(db, "orders")).then((snap) => {
+      if (cancelled || !snap.exists()) return;
+      let found = false;
+      snap.forEach((child) => {
+        if (found) return;
+        const order = child.val();
+        if (order.userId !== currentUser.uid) return;
+        const items: any[] = Array.isArray(order.items) ? order.items : Object.values(order.items || {});
+        if (items.some((item: any) => item.productId === id || item.id === id)) {
+          found = true;
+        }
+      });
+      if (!cancelled) setHasOrdered(found);
+    });
+    return () => { cancelled = true; };
+  }, [currentUser, id]);
 
   // Fetch suggested products (same brand or category, excluding current)
   useEffect(() => {
@@ -364,18 +343,27 @@ export default function ProductDetail() {
 
   const handleSubmitReview = async () => {
     if (!currentUser) { toast.error("Please login to write a review"); return; }
+    if (!hasOrdered) { toast.error("Sirf wo log review likh sakte hain jinhoone ye product order kiya ho"); return; }
+    if (alreadyReviewed) { toast.error("Aap pehle hi review de chuke ho"); return; }
     if (!reviewForm.comment.trim()) { toast.error("Review likhna zaroori hai"); return; }
     setSubmittingReview(true);
     try {
+      let imageUrl = "";
+      if (reviewForm.imageFile) {
+        const imgRef = storageRef(storage, `reviewImages/${id}/${currentUser.uid}_${Date.now()}`);
+        const snap = await uploadBytes(imgRef, reviewForm.imageFile);
+        imageUrl = await getDownloadURL(snap.ref);
+      }
       const reviewRef = push(ref(db, `productReviews/${id}`));
       await set(reviewRef, {
         userId: currentUser.uid,
         userName: userData?.name || currentUser.email?.split("@")[0] || "User",
         rating: reviewForm.rating,
         comment: reviewForm.comment.trim(),
+        imageUrl: imageUrl || null,
         createdAt: Date.now(),
       });
-      setReviewForm({ rating: 5, comment: "" });
+      setReviewForm({ rating: 5, comment: "", imageFile: null, imagePreview: "" });
       toast.success("Review submit ho gaya! ⭐");
     } catch {
       toast.error("Review submit karne mein error aaya");
@@ -595,9 +583,6 @@ export default function ProductDetail() {
             </div>
           </div>
 
-          {/* ── Sticky Section Nav (Flipkart-style) ──────────────── */}
-          <SectionNav reviews={reviews} product={product} />
-
           {/* ── Description Section ───────────────────────────── */}
           <div id="sec-description" className="scroll-mt-16 bg-white border border-gray-100 rounded-2xl shadow-sm mb-4">
             <div className="px-6 py-4 border-b border-gray-100">
@@ -671,36 +656,98 @@ export default function ProductDetail() {
 
             {/* Write Review */}
             <div className="px-6 py-5 border-b border-gray-100">
-              {currentUser ? (
-                alreadyReviewed ? (
-                  <p className="text-green-600 text-sm font-semibold text-center py-2">✓ Aapne is product ka review de diya hai. Shukriya!</p>
-                ) : (
-                  <div className="space-y-3">
-                    <h4 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                      <Star className="h-4 w-4 text-yellow-400" /> Apna Review Likho
-                    </h4>
+              {!currentUser ? (
+                <div className="flex items-center gap-3 py-3 px-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <User className="h-6 w-6 text-slate-400 shrink-0" />
+                  <div>
+                    <p className="text-gray-800 text-sm font-semibold">Review likhne ke liye login karo</p>
+                    <p className="text-slate-500 text-xs mt-0.5">Sirf registered users hi review likh sakte hain</p>
+                  </div>
+                </div>
+              ) : !hasOrdered ? (
+                <div className="flex items-center gap-3 py-3 px-4 bg-amber-50 rounded-2xl border border-amber-100">
+                  <Package className="h-6 w-6 text-amber-500 shrink-0" />
+                  <div>
+                    <p className="text-gray-800 text-sm font-semibold">Sirf buyers review likh sakte hain</p>
+                    <p className="text-slate-500 text-xs mt-0.5">Ye product order karo, phir apna review share karo</p>
+                  </div>
+                </div>
+              ) : alreadyReviewed ? (
+                <div className="flex items-center gap-3 py-3 px-4 bg-green-50 rounded-2xl border border-green-100">
+                  <Star className="h-5 w-5 text-green-500 fill-green-500 shrink-0" />
+                  <p className="text-green-700 text-sm font-semibold">✓ Aapne is product ka review de diya hai. Shukriya!</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <h4 className="font-black text-gray-900 text-sm flex items-center gap-2">
+                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" /> Apna Review Likho
+                    <span className="text-[10px] font-semibold text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full">✓ Verified Buyer</span>
+                  </h4>
+
+                  {/* Star rating */}
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1.5">Rating do</p>
                     <StarRatingInput value={reviewForm.rating} onChange={(v) => setReviewForm((f) => ({ ...f, rating: v }))} />
+                  </div>
+
+                  {/* Text area */}
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1.5">Review likho</p>
                     <textarea
-                      rows={3}
-                      placeholder="Product ke baare mein apna experience share karo..."
+                      rows={4}
+                      placeholder="Product ke baare mein apna experience share karo — build quality, performance, delivery, sab kuch..."
                       value={reviewForm.comment}
                       onChange={(e) => setReviewForm((f) => ({ ...f, comment: e.target.value }))}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 text-sm placeholder-gray-400 outline-none focus:border-green-500 transition-all resize-none"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 text-sm placeholder-gray-400 outline-none focus:border-green-500 focus:bg-white transition-all resize-none"
                     />
-                    <Button
-                      onClick={handleSubmitReview}
-                      disabled={submittingReview || !reviewForm.comment.trim()}
-                      className="bg-green-500 hover:bg-green-400 text-black font-bold rounded-xl gap-2 text-sm"
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                      {submittingReview ? "Submit ho raha hai..." : "Review Submit Karo"}
-                    </Button>
                   </div>
-                )
-              ) : (
-                <div className="flex items-center gap-3 py-2">
-                  <User className="h-6 w-6 text-slate-400" />
-                  <p className="text-slate-600 text-sm">Review likhne ke liye <span className="text-green-600 font-semibold cursor-pointer">login karo</span></p>
+
+                  {/* Image upload */}
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1.5">Photo add karo (optional)</p>
+                    {reviewForm.imagePreview ? (
+                      <div className="relative inline-block">
+                        <img
+                          src={reviewForm.imagePreview}
+                          alt="Preview"
+                          className="h-28 w-28 object-cover rounded-xl border-2 border-green-300"
+                        />
+                        <button
+                          onClick={() => setReviewForm((f) => ({ ...f, imageFile: null, imagePreview: "" }))}
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-600 transition-colors font-bold shadow"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex items-center gap-2 w-fit cursor-pointer bg-gray-50 border-2 border-dashed border-gray-200 hover:border-green-400 hover:bg-green-50 rounded-xl px-4 py-3 transition-all group">
+                        <span className="text-2xl">📷</span>
+                        <span className="text-sm text-slate-500 group-hover:text-green-600 font-medium">Photo select karo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setReviewForm((f) => {
+                              if (f.imagePreview) URL.revokeObjectURL(f.imagePreview);
+                              return { ...f, imageFile: file, imagePreview: URL.createObjectURL(file) };
+                            });
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  <Button
+                    onClick={handleSubmitReview}
+                    disabled={submittingReview || !reviewForm.comment.trim()}
+                    className="bg-green-500 hover:bg-green-400 text-black font-bold rounded-xl gap-2 text-sm px-6"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    {submittingReview ? "Submit ho raha hai..." : "Review Submit Karo"}
+                  </Button>
                 </div>
               )}
             </div>
