@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Settings, MessageCircle, Store, Phone, Mail, Percent, Truck, Save, CheckCircle, ShieldCheck, Trash2, UserPlus } from "lucide-react";
+import { Settings, MessageCircle, Store, Phone, Mail, Percent, Truck, Save, CheckCircle, ShieldCheck, Trash2, UserPlus, MapPin } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 function WhatsAppIcon({ size = 20 }: { size?: number }) {
   return (
@@ -146,6 +147,11 @@ export default function AdminSettings() {
     freeDeliveryAbove: "50000",
   });
   const [whatsapp, setWhatsapp] = useState({ number: "" });
+  const [delivery, setDelivery] = useState({
+    localDistricts: "Kasganj, Etah, Kannauj, Aliganj, Soron, Patiyali, Ganj Dundwara",
+    localCharge: "0",
+    otherCharge: "499",
+  });
   const [saving, setSaving] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
 
@@ -155,8 +161,13 @@ export default function AdminSettings() {
       if (snap.exists()) {
         const d = snap.val();
         if (d.general) setGeneral(g => ({ ...g, ...d.general }));
-        if (d.business) setBusiness(b => ({ ...b, ...b, taxPercent: String(d.business.taxPercent || 18), freeDeliveryAbove: String(d.business.freeDeliveryAbove || 50000) }));
+        if (d.business) setBusiness(b => ({ ...b, taxPercent: String(d.business.taxPercent || 18), freeDeliveryAbove: String(d.business.freeDeliveryAbove || 50000) }));
         if (d.whatsappNumber) setWhatsapp({ number: d.whatsappNumber });
+        if (d.deliveryZones) setDelivery({
+          localDistricts: d.deliveryZones.localDistricts || delivery.localDistricts,
+          localCharge: String(d.deliveryZones.localCharge ?? 0),
+          otherCharge: String(d.deliveryZones.otherCharge ?? 499),
+        });
       }
     };
     load();
@@ -182,6 +193,17 @@ export default function AdminSettings() {
     });
     setSaving(null); flash("business");
     toast.success("Business settings saved!");
+  };
+
+  const saveDelivery = async () => {
+    setSaving("delivery");
+    await set(ref(db, "settings/deliveryZones"), {
+      localDistricts: delivery.localDistricts,
+      localCharge: Number(delivery.localCharge),
+      otherCharge: Number(delivery.otherCharge),
+    });
+    setSaving(null); flash("delivery");
+    toast.success("Delivery zones saved!");
   };
 
   const saveWhatsapp = async () => {
@@ -332,6 +354,84 @@ export default function AdminSettings() {
             </div>
             <Button onClick={saveBusiness} disabled={saving === "business"} className="gap-2 w-full">
               {saved === "business" ? <><CheckCircle className="h-4 w-4" />Saved!</> : saving === "business" ? "Saving..." : <><Save className="h-4 w-4" />Save Business</>}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Delivery Zones */}
+        <Card className="lg:col-span-2 border-2 border-orange-200 bg-orange-50/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-orange-800">
+              <MapPin className="h-5 w-5" /> Delivery Zones (District-wise)
+            </CardTitle>
+            <CardDescription className="text-orange-700">
+              Local districts mein free/kam delivery, baaki jagah standard charge. Checkout pe automatically calculate hoga.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label className="font-semibold flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-orange-600" />
+                  Local Districts (free/local delivery)
+                </Label>
+                <Textarea
+                  value={delivery.localDistricts}
+                  onChange={e => setDelivery(d => ({ ...d, localDistricts: e.target.value }))}
+                  placeholder="Kasganj, Etah, Soron, Patiyali..."
+                  className="bg-white min-h-[80px] resize-none"
+                  rows={3}
+                />
+                <p className="text-xs text-slate-500">Comma se alag karein — customer ki city in mein se kisi se match kare to local rate apply hoga</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-semibold flex items-center gap-1.5">
+                  <Truck className="h-3.5 w-3.5 text-green-600" />
+                  Local Delivery Charge (₹)
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={delivery.localCharge}
+                  onChange={e => setDelivery(d => ({ ...d, localCharge: e.target.value }))}
+                  className="bg-white"
+                  placeholder="0"
+                />
+                <p className="text-xs text-slate-500">0 = bilkul free delivery</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-semibold flex items-center gap-1.5">
+                  <Truck className="h-3.5 w-3.5 text-orange-600" />
+                  Other Districts Charge (₹)
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={delivery.otherCharge}
+                  onChange={e => setDelivery(d => ({ ...d, otherCharge: e.target.value }))}
+                  className="bg-white"
+                  placeholder="499"
+                />
+                <p className="text-xs text-slate-500">Dusre districts/states ke liye charge</p>
+              </div>
+            </div>
+
+            {/* Preview */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-green-700">₹{delivery.localCharge || 0}</p>
+                <p className="text-xs text-green-700 font-semibold mt-0.5">Local Districts</p>
+                <p className="text-[10px] text-slate-500">{delivery.localDistricts.split(",").slice(0, 3).map(s => s.trim()).join(", ")}{delivery.localDistricts.split(",").length > 3 ? "..." : ""}</p>
+              </div>
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-orange-700">₹{delivery.otherCharge || 499}</p>
+                <p className="text-xs text-orange-700 font-semibold mt-0.5">Other Districts</p>
+                <p className="text-[10px] text-slate-500">UP, Delhi, Rajasthan, etc.</p>
+              </div>
+            </div>
+
+            <Button onClick={saveDelivery} disabled={saving === "delivery"} className="gap-2 w-full bg-orange-600 hover:bg-orange-700">
+              {saved === "delivery" ? <><CheckCircle className="h-4 w-4" />Saved!</> : saving === "delivery" ? "Saving..." : <><Save className="h-4 w-4" />Save Delivery Zones</>}
             </Button>
           </CardContent>
         </Card>

@@ -73,6 +73,11 @@ export default function Checkout() {
   const [orderId, setOrderId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "online">("cod");
   const [storeUpi, setStoreUpi] = useState("supercomputer@upi");
+  const [deliveryZones, setDeliveryZones] = useState({
+    localDistricts: "Kasganj, Etah, Kannauj, Aliganj, Soron, Patiyali, Ganj Dundwara",
+    localCharge: 0,
+    otherCharge: 499,
+  });
 
   const [address, setAddress] = useState({
     name: "", phone: "", street: "", city: "", state: "", pincode: "",
@@ -81,6 +86,16 @@ export default function Checkout() {
   useEffect(() => {
     get(ref(db, "settings/storeUpi")).then((snap) => {
       if (snap.exists()) setStoreUpi(snap.val());
+    });
+    get(ref(db, "settings/deliveryZones")).then((snap) => {
+      if (snap.exists()) {
+        const z = snap.val();
+        setDeliveryZones({
+          localDistricts: z.localDistricts || deliveryZones.localDistricts,
+          localCharge: z.localCharge ?? 0,
+          otherCharge: z.otherCharge ?? 499,
+        });
+      }
     });
   }, []);
 
@@ -98,7 +113,23 @@ export default function Checkout() {
   const discountAmt = discount || 0;
   const afterDiscount = subtotal - discountAmt;
   const gstAmount = Math.round(afterDiscount * GST_RATE);
-  const deliveryCharge = afterDiscount >= 50000 ? 0 : 499;
+
+  const isLocalDistrict = (city: string): boolean => {
+    if (!city.trim()) return false;
+    const normalised = city.toLowerCase().trim();
+    return deliveryZones.localDistricts
+      .split(",")
+      .some(d => normalised.includes(d.toLowerCase().trim()) || d.toLowerCase().trim().includes(normalised));
+  };
+
+  const deliveryCharge = afterDiscount >= 50000
+    ? 0
+    : isLocalDistrict(address.city)
+      ? deliveryZones.localCharge
+      : address.city
+        ? deliveryZones.otherCharge
+        : deliveryZones.otherCharge;
+
   const finalAmount = afterDiscount + gstAmount + deliveryCharge;
   const advanceAmount = Math.round(finalAmount * 0.5);
 
@@ -206,7 +237,7 @@ export default function Checkout() {
   /* ── Step 4: Success (COD) ── */
   if (step === 4 && orderId) {
     return (
-      <Layout>
+      <Layout noFooter>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
           <div className="max-w-md w-full text-center">
             <div className="relative mx-auto mb-6 w-24 h-24">
@@ -263,7 +294,7 @@ export default function Checkout() {
   }
 
   return (
-    <Layout>
+    <Layout noFooter>
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8 max-w-6xl">
           <div className="flex items-center gap-2 text-sm text-slate-500 mb-6">
@@ -293,7 +324,36 @@ export default function Checkout() {
                     <div className="sm:col-span-2">
                       <DarkInput label="Street / Area / Mohalla" value={address.street} onChange={(e: any) => setAddress({ ...address, street: e.target.value })} placeholder="Gali number, landmark..." required />
                     </div>
-                    <DarkInput label="City" value={address.city} onChange={(e: any) => setAddress({ ...address, city: e.target.value })} required />
+                    <div className="space-y-1.5">
+                      <label className="text-slate-600 text-sm font-medium">City / District<span className="text-red-500 ml-0.5">*</span></label>
+                      <input
+                        value={address.city}
+                        onChange={(e: any) => setAddress({ ...address, city: e.target.value })}
+                        placeholder="Kasganj, Etah, Agra..."
+                        required
+                        className="w-full h-11 px-3 rounded-xl text-gray-900 text-sm outline-none bg-gray-50 border border-gray-200 focus:border-green-500/50"
+                      />
+                      {address.city && (
+                        <div className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-lg w-fit ${
+                          afterDiscount >= 50000
+                            ? "bg-green-50 text-green-700 border border-green-200"
+                            : isLocalDistrict(address.city)
+                              ? deliveryZones.localCharge === 0
+                                ? "bg-green-50 text-green-700 border border-green-200"
+                                : "bg-blue-50 text-blue-700 border border-blue-200"
+                              : "bg-orange-50 text-orange-700 border border-orange-200"
+                        }`}>
+                          <Truck className="h-3 w-3" />
+                          {afterDiscount >= 50000
+                            ? "Free Delivery (₹50k+)"
+                            : isLocalDistrict(address.city)
+                              ? deliveryZones.localCharge === 0
+                                ? "✓ Free Delivery (Local District)"
+                                : `₹${deliveryZones.localCharge} Local Delivery`
+                              : `₹${deliveryZones.otherCharge} Delivery Charge`}
+                        </div>
+                      )}
+                    </div>
                     <DarkInput label="State" value={address.state} onChange={(e: any) => setAddress({ ...address, state: e.target.value })} placeholder="Uttar Pradesh" />
                     <DarkInput label="Pincode" value={address.pincode} onChange={(e: any) => setAddress({ ...address, pincode: e.target.value })} placeholder="207001" required />
                   </div>
