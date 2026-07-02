@@ -5,7 +5,9 @@
   "framework": null,
   "installCommand": "pnpm install",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/api/cashfree/:path*", "destination": "/api/cashfree/:path*" },
+    { "source": "/api/proxy/:path*",    "destination": "/api/proxy/:path*" },
+    { "source": "/(.*)",                "destination": "/index.html" }
   ],
   "headers": [
     {
