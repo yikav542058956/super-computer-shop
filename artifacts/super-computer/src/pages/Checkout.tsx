@@ -158,7 +158,7 @@ function PricePanel({
 
 export default function Checkout() {
   const { cart, cartTotal, clearCart, coupon, discount } = useCart() as any;
-  const { currentUser, userData } = useAuth();
+  const { currentUser, userData, extUser, isLoggedIn } = useAuth();
   const [, setLocation] = useLocation();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -194,6 +194,14 @@ export default function Checkout() {
   }, [userData]);
 
   useEffect(() => {
+    if (extUser) setAddress((a) => ({
+      ...a,
+      name: a.name || extUser.name || "",
+      phone: a.phone || extUser.phone || "",
+    }));
+  }, [extUser]);
+
+  useEffect(() => {
     if (cart.length === 0 && step !== 4) setLocation("/cart");
   }, [cart, setLocation, step]);
 
@@ -222,7 +230,7 @@ export default function Checkout() {
   const createFirebaseOrder = async (paymentStatus = "pending") => {
     const orderRef = push(ref(db, "orders"));
     await set(orderRef, {
-      userId: currentUser?.uid || "guest",
+      userId: currentUser?.uid || extUser?.userid || "guest",
       userName: address.name, userPhone: address.phone,
       items: cart, subtotal, discountAmount: discountAmt,
       couponCode: coupon?.code || null, gstAmount, gstRate: GST_RATE,
@@ -243,23 +251,26 @@ export default function Checkout() {
 
   /* ── COD ── */
   const placeCodOrder = async () => {
-    if (!currentUser) { toast.error("Please login first"); return; }
+    if (!isLoggedIn) { toast.error("Please login first"); return; }
     setLoading(true);
     try {
       const id = await createFirebaseOrder("pending");
-      setOrderId(id); clearCart(); setStep(4);
+      setOrderId(id);
+      setStep(4);   // set step BEFORE clearCart so redirect guard sees step=4
+      clearCart();
     } catch { toast.error("Order place karne mein error aaya"); }
     finally { setLoading(false); }
   };
 
   /* ── Cashfree ── */
   const launchCashfree = async () => {
-    if (!currentUser) { toast.error("Please login first"); return; }
+    if (!isLoggedIn) { toast.error("Please login first"); return; }
     setCfLoading(true);
     try {
       const newOrderId = await createFirebaseOrder("payment_pending");
       setOrderId(newOrderId);
 
+      const customerEmail = currentUser?.email || extUser?.email || "customer@supercomputer.in";
       const baseUrl = window.location.origin;
       const res = await fetch("/api/cashfree/create-order", {
         method: "POST",
@@ -269,7 +280,7 @@ export default function Checkout() {
           amount: finalAmount,
           customerName: address.name,
           customerPhone: address.phone,
-          customerEmail: currentUser.email || "customer@supercomputer.in",
+          customerEmail,
           returnUrl: `${baseUrl}/checkout/done?firebase_order=${newOrderId}`,
         }),
       });
