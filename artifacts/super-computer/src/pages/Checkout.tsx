@@ -16,7 +16,6 @@ import {
   Zap, ArrowLeft,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
-import { load as loadCashfree } from "@cashfreepayments/cashfree-js";
 
 const GST_RATE = 0.18;
 const STEPS = ["Address", "Payment", "Review", "Done"];
@@ -214,22 +213,10 @@ export default function Checkout() {
         return;
       }
 
-      // Load Cashfree SDK (static import at top)
-      const cashfree = await loadCashfree({ mode: "production" });
-
-      if (!cashfree) {
-        toast.error("Payment gateway load nahi hua. Please try again.");
-        setCfLoading(false);
-        return;
-      }
-
       clearCart();
 
-      // Redirect to Cashfree payment page
-      await cashfree.checkout({
-        paymentSessionId: data.paymentSessionId,
-        redirectTarget: "_self",
-      });
+      // Direct redirect to Cashfree payment page (most reliable, no SDK needed)
+      window.location.href = `https://payments.cashfree.com/order/#${data.paymentSessionId}`;
 
     } catch (err: any) {
       console.error("Cashfree error:", err);
