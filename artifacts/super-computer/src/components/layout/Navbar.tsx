@@ -87,15 +87,14 @@ export const Navbar = () => {
         </Link>
 
         {/* Right icons */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-0.5 shrink-0">
           {/* Wishlist */}
           <Link href="/wishlist">
-            <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
-              className="relative h-9 w-9 rounded-xl flex items-center justify-center transition-all ripple"
-              style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.06)" }}>
-              <Heart size={19} style={{ color: wishlistCount > 0 ? "#EF4444" : "#64748B", fill: wishlistCount > 0 ? "#EF4444" : "none" }} />
+            <motion.button whileTap={{ scale: 0.88 }}
+              className="relative h-9 w-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+              <Heart size={20} style={{ color: wishlistCount > 0 ? "#EF4444" : "#374151", fill: wishlistCount > 0 ? "#EF4444" : "none" }} />
               {wishlistCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full text-[9px] font-black text-white flex items-center justify-center" style={{ background: "#EF4444" }}>
+                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full text-[9px] font-black text-white flex items-center justify-center" style={{ background: "#EF4444" }}>
                   {wishlistCount > 9 ? "9+" : wishlistCount}
                 </span>
               )}
@@ -103,25 +102,23 @@ export const Navbar = () => {
           </Link>
 
           {/* Notifications — desktop only */}
-          <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
-            className="hidden md:flex relative h-9 w-9 rounded-xl items-center justify-center transition-all ripple"
-            style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.06)" }}>
-            <Bell size={19} style={{ color: "#64748B" }} />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full" style={{ background: "#16a34a" }} />
+          <motion.button whileTap={{ scale: 0.88 }}
+            className="hidden md:flex relative h-9 w-9 rounded-full items-center justify-center hover:bg-gray-100 transition-colors">
+            <Bell size={20} style={{ color: "#374151" }} />
+            <span className="absolute top-2 right-2 h-2 w-2 rounded-full" style={{ background: "#16a34a" }} />
           </motion.button>
 
           {/* Cart */}
           <Link href="/cart">
-            <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
-              className="relative h-9 w-9 rounded-xl flex items-center justify-center transition-all ripple"
-              style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.06)" }}>
-              <ShoppingCart size={19} style={{ color: cartCount > 0 ? "#16a34a" : "#64748B" }} />
+            <motion.button whileTap={{ scale: 0.88 }}
+              className="relative h-9 w-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+              <ShoppingCart size={20} style={{ color: cartCount > 0 ? "#16a34a" : "#374151" }} />
               {cartCount > 0 && (
                 <motion.span
                   key={cartCount}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full text-[10px] font-black text-white flex items-center justify-center shadow-sm"
+                  className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full text-[10px] font-black text-white flex items-center justify-center"
                   style={{ background: "#16a34a", border: "2px solid white" }}>
                   {cartCount > 9 ? "9+" : cartCount}
                 </motion.span>
@@ -133,9 +130,9 @@ export const Navbar = () => {
           {isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                  className="h-9 w-9 rounded-xl flex items-center justify-center border-2 font-bold text-sm transition-all"
-                  style={{ background: "rgba(22,163,74,0.1)", borderColor: "rgba(22,163,74,0.3)", color: "#16a34a" }}>
+                <motion.button whileTap={{ scale: 0.92 }}
+                  className="h-8 w-8 rounded-full flex items-center justify-center font-black text-sm ml-0.5"
+                  style={{ background: "#16a34a", color: "#fff" }}>
                   {avatarLetter}
                 </motion.button>
               </DropdownMenuTrigger>

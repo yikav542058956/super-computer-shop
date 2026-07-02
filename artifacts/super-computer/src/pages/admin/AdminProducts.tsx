@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash, Upload, ImageIcon, Loader2, X, Search, Star } from "lucide-react";
+import { Plus, Edit, Trash, Upload, ImageIcon, Loader2, X, Search, Star, FlaskConical } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -202,6 +202,25 @@ export default function AdminProducts() {
     }
   };
 
+  /* ── Set all prices to ₹1 (testing) ── */
+  const [bulkPricing, setBulkPricing] = useState(false);
+  const setAllPricesOne = async () => {
+    if (!window.confirm(`Sabhi ${products.length} products ki price ₹1 ho jayegi. Continue?`)) return;
+    setBulkPricing(true);
+    try {
+      await Promise.all(
+        products.map((p) =>
+          update(ref(db, `products/${p.id}`), { price: 1, discountPrice: null })
+        )
+      );
+      toast.success(`✅ ${products.length} products ki price ₹1 set ho gayi!`);
+    } catch {
+      toast.error("Bulk update failed");
+    } finally {
+      setBulkPricing(false);
+    }
+  };
+
   const filtered = products.filter(
     (p) =>
       !search ||
@@ -214,11 +233,16 @@ export default function AdminProducts() {
     <AdminLayout>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Products</h1>
-        <div className="flex gap-3 w-full sm:w-auto">
-          <div className="relative flex-1 sm:flex-none sm:w-64">
+        <div className="flex gap-2 w-full sm:w-auto flex-wrap">
+          <div className="relative flex-1 sm:flex-none sm:w-56">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input placeholder="Search products..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
+          <Button variant="outline" onClick={setAllPricesOne} disabled={bulkPricing}
+            className="border-orange-300 text-orange-700 hover:bg-orange-50 gap-1.5 text-xs">
+            {bulkPricing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5" />}
+            Test: All ₹1
+          </Button>
           <Button onClick={openAdd}><Plus className="mr-2 h-4 w-4" /> Add Product</Button>
         </div>
       </div>
