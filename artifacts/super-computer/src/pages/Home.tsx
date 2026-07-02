@@ -434,9 +434,6 @@ function ExploreSection() {
         <motion.div initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }}
           className="flex items-end justify-between mb-6">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] mb-1" style={{ color: "#16a34a" }}>
-              ✦ Discover
-            </p>
             <h2 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight">
               Explore <span style={{ color: "#16a34a" }}>Your</span> World
             </h2>
