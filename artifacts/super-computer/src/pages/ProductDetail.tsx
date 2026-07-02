@@ -1,5 +1,5 @@
 import { useParams, useLocation, Link } from "wouter";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { ref, get, push, set, onValue } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import {
   ChevronLeft, Send, User, Package, Zap, Award, ArrowLeft,
 } from "lucide-react";
 import { WhatsAppFloat } from "@/components/WhatsAppButton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatINR } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -211,6 +210,64 @@ function SuggestedCard({ p }: { p: any }) {
         </div>
       </div>
     </Link>
+  );
+}
+
+/* ─── Section Nav (Flipkart-style sticky anchor bar) ─────────── */
+function SectionNav({ reviews, product }: { reviews: any[]; product: any }) {
+  const [active, setActive] = useState("description");
+
+  const sections = [
+    { id: "sec-description", label: "Description" },
+    ...(product?.specs && Object.keys(product.specs).length > 0
+      ? [{ id: "sec-specs", label: "Specifications" }]
+      : []),
+    { id: "sec-reviews", label: `Ratings & Reviews (${reviews.length || product?.reviewsCount || 0})` },
+  ];
+
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const y = el.getBoundingClientRect().top + window.scrollY - 56;
+    window.scrollTo({ top: y, behavior: "smooth" });
+    setActive(id);
+  };
+
+  useEffect(() => {
+    const handler = () => {
+      for (const { id } of [...sections].reverse()) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= 80) {
+          setActive(id);
+          break;
+        }
+      }
+    };
+    window.addEventListener("scroll", handler, { passive: true });
+    return () => window.removeEventListener("scroll", handler);
+  }, [sections.length]);
+
+  return (
+    <div className="sticky top-0 z-30 bg-white border border-gray-100 rounded-2xl shadow-sm mb-4 overflow-x-auto">
+      <div className="flex items-center min-w-max">
+        {sections.map(({ id, label }, i) => (
+          <button
+            key={id}
+            onClick={() => scrollTo(id)}
+            className={`relative px-5 py-3.5 text-sm font-semibold whitespace-nowrap transition-colors ${
+              active === id
+                ? "text-green-600"
+                : "text-slate-500 hover:text-gray-800"
+            } ${i < sections.length - 1 ? "border-r border-gray-100" : ""}`}
+          >
+            {label}
+            {active === id && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-500 rounded-full" />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -538,140 +595,131 @@ export default function ProductDetail() {
             </div>
           </div>
 
-          {/* Tabs — Overview, Specs, Reviews */}
-          <div className="bg-white backdrop-blur-sm border border-gray-100 rounded-3xl overflow-hidden shadow-xl mb-8">
-            <Tabs defaultValue="overview">
-              <TabsList className="w-full justify-start rounded-none h-auto p-0 bg-transparent border-b border-gray-100">
-                {[
-                  { value: "overview", label: "Overview" },
-                  { value: "specs",    label: "Full Specs" },
-                  { value: "reviews",  label: `Reviews (${reviews.length || product.reviewsCount || 0})` },
-                ].map(({ value, label }) => (
-                  <TabsTrigger
-                    key={value}
-                    value={value}
-                    className="rounded-none px-6 py-4 text-sm font-semibold text-slate-600 border-b-2 border-transparent data-[state=active]:border-green-500 data-[state=active]:text-green-600 data-[state=active]:bg-transparent hover:text-gray-900 transition-colors"
+          {/* ── Sticky Section Nav (Flipkart-style) ──────────────── */}
+          <SectionNav reviews={reviews} product={product} />
+
+          {/* ── Description Section ───────────────────────────── */}
+          <div id="sec-description" className="scroll-mt-16 bg-white border border-gray-100 rounded-2xl shadow-sm mb-4">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="text-base font-black text-gray-900">Description</h2>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-slate-600 leading-relaxed text-[15px]">{product.description || "No description available."}</p>
+            </div>
+          </div>
+
+          {/* ── Specifications Section ────────────────────────── */}
+          {product.specs && Object.keys(product.specs).length > 0 && (
+            <div id="sec-specs" className="scroll-mt-16 bg-white border border-gray-100 rounded-2xl shadow-sm mb-4">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h2 className="text-base font-black text-gray-900">Specifications</h2>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {Object.entries(product.specs).map(([key, val]: any, idx) => (
+                  <div
+                    key={key}
+                    className={`flex items-center gap-4 px-6 py-3.5 ${idx % 2 === 0 ? "bg-gray-50/60" : "bg-white"}`}
                   >
-                    {label}
-                  </TabsTrigger>
+                    <span className="w-2/5 flex items-center gap-2 text-sm text-slate-500 font-medium capitalize shrink-0">
+                      <SpecsIcon label={key} />
+                      {key}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900">{val}</span>
+                  </div>
                 ))}
-              </TabsList>
+              </div>
+            </div>
+          )}
 
-              {/* Overview Tab */}
-              <TabsContent value="overview" className="p-6 lg:p-8">
-                <h3 className="text-xl font-black text-gray-900 mb-4">Product Description</h3>
-                <p className="text-slate-600 leading-relaxed text-[15px]">{product.description || "No description available."}</p>
-              </TabsContent>
+          {/* ── Ratings & Reviews Section ─────────────────────── */}
+          <div id="sec-reviews" className="scroll-mt-16 bg-white border border-gray-100 rounded-2xl shadow-sm mb-8">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="text-base font-black text-gray-900">
+                Ratings &amp; Reviews
+                <span className="ml-2 text-sm font-normal text-slate-400">({reviews.length || product.reviewsCount || 0})</span>
+              </h2>
+            </div>
 
-              {/* Specs Tab */}
-              <TabsContent value="specs" className="p-6 lg:p-8">
-                <h3 className="text-xl font-black text-gray-900 mb-6">Technical Specifications</h3>
-                {product.specs && Object.keys(product.specs).length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-                    {Object.entries(product.specs).map(([key, val]: any, idx) => (
-                      <div
-                        key={key}
-                        className={`flex justify-between items-center py-3.5 px-4 gap-4 border-b border-gray-100 ${
-                          idx % 2 === 0 ? "bg-gray-50" : ""
-                        } hover:bg-green-50/40 transition-colors`}
-                      >
-                        <span className="text-slate-600 font-medium capitalize text-sm flex items-center gap-2">
-                          <SpecsIcon label={key} />
-                          {key}
-                        </span>
-                        <span className="text-gray-900 font-bold text-sm text-right pl-4">{val}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-slate-500">No specifications available.</p>
-                )}
-              </TabsContent>
-
-              {/* Reviews Tab */}
-              <TabsContent value="reviews" className="p-6 lg:p-8">
-                {/* Rating summary */}
-                <div className="flex items-center gap-6 mb-8 p-5 bg-gray-50 border border-gray-100 rounded-2xl">
-                  <div className="text-center">
-                    <p className="text-5xl font-black text-gray-900">{avgRating}</p>
-                    <div className="flex gap-0.5 justify-center mt-1">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} className={`h-4 w-4 ${s <= Math.round(Number(avgRating)) ? "fill-yellow-400 text-yellow-400" : "text-gray-300 fill-transparent"}`} />
-                      ))}
-                    </div>
-                    <p className="text-slate-500 text-xs mt-1">{reviews.length} Reviews</p>
-                  </div>
-                  <div className="flex-1 space-y-1.5">
-                    {[5, 4, 3, 2, 1].map((star) => {
-                      const count = reviews.filter((r) => r.rating === star).length;
-                      const pct = reviews.length ? (count / reviews.length) * 100 : 0;
-                      return (
-                        <div key={star} className="flex items-center gap-2">
-                          <span className="text-xs text-slate-600 w-3">{star}</span>
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />
-                          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-yellow-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className="text-[10px] text-slate-500 w-5">{count}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+            {/* Rating summary bar */}
+            <div className="flex items-center gap-6 px-6 py-5 border-b border-gray-100">
+              <div className="text-center shrink-0">
+                <p className="text-5xl font-black text-gray-900">{avgRating}</p>
+                <div className="flex gap-0.5 justify-center mt-1.5">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star key={s} className={`h-4 w-4 ${s <= Math.round(Number(avgRating)) ? "fill-yellow-400 text-yellow-400" : "text-gray-200 fill-transparent"}`} />
+                  ))}
                 </div>
-
-                {/* Add Review Form */}
-                {currentUser ? (
-                  alreadyReviewed ? (
-                    <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl text-center">
-                      <p className="text-green-600 text-sm font-semibold">✓ Aapne is product ka review de diya hai. Shukriya!</p>
-                    </div>
-                  ) : (
-                    <div className="mb-8 p-5 bg-gray-50 border border-gray-100 rounded-2xl">
-                      <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <Star className="h-5 w-5 text-yellow-400" />
-                        Apna Review Likho
-                      </h4>
-                      <div className="mb-4">
-                        <p className="text-slate-600 text-sm mb-2">Rating do:</p>
-                        <StarRatingInput value={reviewForm.rating} onChange={(v) => setReviewForm((f) => ({ ...f, rating: v }))} />
+                <p className="text-slate-500 text-xs mt-1">{reviews.length} Reviews</p>
+              </div>
+              <div className="flex-1 space-y-1.5">
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = reviews.filter((r) => r.rating === star).length;
+                  const pct = reviews.length ? (count / reviews.length) * 100 : 0;
+                  return (
+                    <div key={star} className="flex items-center gap-2">
+                      <span className="text-xs text-slate-600 w-3">{star}</span>
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />
+                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                       </div>
-                      <textarea
-                        rows={3}
-                        placeholder="Product ke baare mein apna experience share karo..."
-                        value={reviewForm.comment}
-                        onChange={(e) => setReviewForm((f) => ({ ...f, comment: e.target.value }))}
-                        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-800 text-sm placeholder-gray-400 outline-none focus:border-green-500/50 transition-all resize-none"
-                      />
-                      <Button
-                        onClick={handleSubmitReview}
-                        disabled={submittingReview || !reviewForm.comment.trim()}
-                        className="mt-3 bg-green-500 hover:bg-green-400 text-black font-bold rounded-xl gap-2"
-                      >
-                        <Send className="h-4 w-4" />
-                        {submittingReview ? "Submit ho raha hai..." : "Review Submit Karo"}
-                      </Button>
+                      <span className="text-[10px] text-slate-400 w-5 text-right">{count}</span>
                     </div>
-                  )
-                ) : (
-                  <div className="mb-6 p-4 bg-gray-50 border border-gray-100 rounded-2xl text-center">
-                    <User className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                    <p className="text-slate-600 text-sm">Review likhne ke liye <span className="text-green-600 font-semibold">login karo</span></p>
-                  </div>
-                )}
+                  );
+                })}
+              </div>
+            </div>
 
-                {/* Reviews List */}
-                <div className="space-y-3">
-                  {reviews.length === 0 ? (
-                    <div className="text-center py-10">
-                      <Star className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-                      <p className="text-slate-500">Abhi tak koi review nahi. Pehle review likhne wale bano!</p>
-                    </div>
-                  ) : (
-                    reviews.map((r) => <ReviewCard key={r.id} review={r} />)
-                  )}
+            {/* Write Review */}
+            <div className="px-6 py-5 border-b border-gray-100">
+              {currentUser ? (
+                alreadyReviewed ? (
+                  <p className="text-green-600 text-sm font-semibold text-center py-2">✓ Aapne is product ka review de diya hai. Shukriya!</p>
+                ) : (
+                  <div className="space-y-3">
+                    <h4 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                      <Star className="h-4 w-4 text-yellow-400" /> Apna Review Likho
+                    </h4>
+                    <StarRatingInput value={reviewForm.rating} onChange={(v) => setReviewForm((f) => ({ ...f, rating: v }))} />
+                    <textarea
+                      rows={3}
+                      placeholder="Product ke baare mein apna experience share karo..."
+                      value={reviewForm.comment}
+                      onChange={(e) => setReviewForm((f) => ({ ...f, comment: e.target.value }))}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 text-sm placeholder-gray-400 outline-none focus:border-green-500 transition-all resize-none"
+                    />
+                    <Button
+                      onClick={handleSubmitReview}
+                      disabled={submittingReview || !reviewForm.comment.trim()}
+                      className="bg-green-500 hover:bg-green-400 text-black font-bold rounded-xl gap-2 text-sm"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      {submittingReview ? "Submit ho raha hai..." : "Review Submit Karo"}
+                    </Button>
+                  </div>
+                )
+              ) : (
+                <div className="flex items-center gap-3 py-2">
+                  <User className="h-6 w-6 text-slate-400" />
+                  <p className="text-slate-600 text-sm">Review likhne ke liye <span className="text-green-600 font-semibold cursor-pointer">login karo</span></p>
                 </div>
-              </TabsContent>
-            </Tabs>
+              )}
+            </div>
+
+            {/* Reviews list */}
+            <div className="divide-y divide-gray-50">
+              {reviews.length === 0 ? (
+                <div className="text-center py-10">
+                  <Star className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+                  <p className="text-slate-500 text-sm">Abhi tak koi review nahi. Pehle review likhne wale bano!</p>
+                </div>
+              ) : (
+                reviews.map((r) => (
+                  <div key={r.id} className="px-6 py-4">
+                    <ReviewCard review={r} />
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           {/* ── Suggested Products ─────────────────────────────── */}
