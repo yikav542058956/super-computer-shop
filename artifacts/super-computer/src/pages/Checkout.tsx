@@ -16,6 +16,7 @@ import {
   Zap, ArrowLeft,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
+import { load as loadCashfree } from "@cashfreepayments/cashfree-js";
 
 const GST_RATE = 0.18;
 const STEPS = ["Address", "Payment", "Review", "Done"];
@@ -208,22 +209,31 @@ export default function Checkout() {
       const data = await res.json();
 
       if (!res.ok || !data.paymentSessionId) {
-        toast.error(data.error || "Payment initiate nahi ho saka");
+        toast.error(data.error || "Payment session create nahi ho saka");
         setCfLoading(false);
         return;
       }
 
-      const { load } = await import("@cashfreepayments/cashfree-js");
-      const cashfree = await load({ mode: "production" });
+      // Load Cashfree SDK (static import at top)
+      const cashfree = await loadCashfree({ mode: "production" });
 
-      cashfree.checkout({
+      if (!cashfree) {
+        toast.error("Payment gateway load nahi hua. Please try again.");
+        setCfLoading(false);
+        return;
+      }
+
+      clearCart();
+
+      // Redirect to Cashfree payment page
+      await cashfree.checkout({
         paymentSessionId: data.paymentSessionId,
         redirectTarget: "_self",
       });
 
-      clearCart();
-    } catch (err) {
-      toast.error("Payment error. Please try again.");
+    } catch (err: any) {
+      console.error("Cashfree error:", err);
+      toast.error(err?.message || "Payment error. Please try again.");
       setCfLoading(false);
     }
   };
