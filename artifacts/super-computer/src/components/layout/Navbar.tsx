@@ -30,7 +30,7 @@ declare global {
 export const Navbar = () => {
   const { cartCount } = useCart();
   const { wishlistCount } = useWishlist();
-  const { userData, extUser, currentUser, isLoggedIn, logout } = useAuth();
+  const { userData, extUser, currentUser, isLoggedIn, isAdmin, logout } = useAuth();
   const { openLoginDialog } = useLoginDialog();
   const [, setLocation] = useLocation();
   const [location] = useLocation();
@@ -148,7 +148,7 @@ export const Navbar = () => {
                 <DropdownMenuItem onClick={() => setLocation("/profile?tab=orders")} className="gap-2 cursor-pointer text-gray-700 focus:bg-gray-50 focus:text-gray-900 rounded-lg mx-1">
                   <Package size={15} className="text-slate-400" />My Orders
                 </DropdownMenuItem>
-                {userData?.role === "admin" && (
+                {isAdmin && (
                   <>
                     <DropdownMenuSeparator className="bg-gray-100" />
                     <DropdownMenuItem onClick={() => setLocation("/admin/dashboard")} className="gap-2 cursor-pointer focus:bg-emerald-50 rounded-lg mx-1" style={{ color: "#16a34a" }}>

@@ -50,6 +50,28 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+/** Normalize any phone format to 10 digits (strip leading 91 / +91) */
+function normalizePhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
+  if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1);
+  return digits;
+}
+
+/** Check if a phone number is in the adminPhones list */
+async function checkPhoneAdmin(phone: string): Promise<boolean> {
+  const normalized = normalizePhone(phone);
+  try {
+    const snap = await get(ref(db, `adminPhones/${normalized}`));
+    if (snap.exists()) return true;
+    // Also try the raw value in case stored differently
+    const snap2 = await get(ref(db, `adminPhones/${phone.replace(/\D/g, "")}`));
+    return snap2.exists();
+  } catch {
+    return false;
+  }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -62,44 +84,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   });
   const [extUserIsAdmin, setExtUserIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [firebaseAuthLoading, setFirebaseAuthLoading] = useState(true);
+  const [extAdminLoading, setExtAdminLoading] = useState(false);
 
-  // Check Firebase Auth users
+  // Firebase Auth users
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
         try {
-          const userRef = ref(db, `users/${user.uid}`);
-          const snapshot = await get(userRef);
-          if (snapshot.exists()) {
-            setUserData({ uid: user.uid, ...snapshot.val() } as UserData);
-          } else {
-            setUserData(null);
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
+          const snap = await get(ref(db, `users/${user.uid}`));
+          setUserData(snap.exists() ? { uid: user.uid, ...snap.val() } as UserData : null);
+        } catch {
           setUserData(null);
         }
       } else {
         setUserData(null);
       }
-      setLoading(false);
+      setFirebaseAuthLoading(false);
     });
-
     return unsubscribe;
   }, []);
 
-  // Check if extUser's phone is an admin
+  // Check if extUser phone is admin (runs on mount for already-stored extUser, and on change)
   useEffect(() => {
     if (!extUser?.phone) {
       setExtUserIsAdmin(false);
+      setExtAdminLoading(false);
       return;
     }
-    const phone = extUser.phone.replace(/\D/g, "");
-    get(ref(db, `adminPhones/${phone}`))
-      .then((snap) => setExtUserIsAdmin(snap.exists() && snap.val() === "true"))
-      .catch(() => setExtUserIsAdmin(false));
+    setExtAdminLoading(true);
+    checkPhoneAdmin(extUser.phone).then((result) => {
+      setExtUserIsAdmin(result);
+      setExtAdminLoading(false);
+    });
   }, [extUser?.phone]);
 
   const setExtUser = (u: ExtUser | null) => {
@@ -119,6 +137,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isLoggedIn = !!currentUser || !!extUser;
   const isAdmin = userData?.role === "admin" || extUserIsAdmin;
+
+  // Overall loading: wait for Firebase Auth AND extUser admin check (if extUser present)
+  const loading = firebaseAuthLoading || (!!extUser && extAdminLoading);
 
   return (
     <AuthContext.Provider
