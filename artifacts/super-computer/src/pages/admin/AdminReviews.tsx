@@ -1,6 +1,6 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useEffect, useState } from "react";
-import { ref, onValue, remove, update, get } from "firebase/database";
+import { ref, onValue, remove, update, get, push, set } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, Trash, CheckCircle, XCircle, MessageSquare, Loader2, Search, Image, Video } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Star, Trash, CheckCircle, XCircle, MessageSquare, Loader2, Search, Image, Video, PlusCircle } from "lucide-react";
 import { toast } from "sonner";
 
 function StarRating({ rating }: { rating: number }) {
@@ -21,6 +23,46 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
+function StarRatingInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hovered, setHovered] = useState(0);
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <button
+          key={s}
+          type="button"
+          onClick={() => onChange(s)}
+          onMouseEnter={() => setHovered(s)}
+          onMouseLeave={() => setHovered(0)}
+          className="p-0.5 transition-transform hover:scale-110"
+        >
+          <Star className={`h-6 w-6 ${s <= (hovered || value) ? "fill-amber-400 text-amber-400" : "text-slate-300"}`} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const FAKE_NAMES = [
+  "Rahul Sharma", "Priya Singh", "Amit Kumar", "Neha Gupta", "Vikas Yadav",
+  "Sunita Verma", "Rajesh Patel", "Pooja Joshi", "Deepak Nair", "Anjali Mehta",
+  "Suresh Reddy", "Kavita Iyer", "Manish Tiwari", "Rekha Bhatia", "Arjun Das",
+  "Nisha Pandey", "Sanjay Mishra", "Divya Kapoor", "Rohit Agarwal", "Anita Rao",
+];
+
+const FAKE_COMMENTS = [
+  "Bahut acha product hai! Bilkul waise hi jaise picture mein tha. Delivery bhi fast thi.",
+  "Excellent quality! Price ke hisaab se bahut hi badiya hai. Highly recommend karta hoon.",
+  "Super fast delivery aur product bilkul genuine hai. Very happy with this purchase.",
+  "Great product! Performance wise ekdum top notch. Paise vasool hai.",
+  "Mast product mila. Quality first class hai. Dono bhai ke liye liya, dono khush hain.",
+  "Awesome! Isse better deal kahin nahi milegi. Super Computer pe hi milta hai aisa.",
+  "Product exactly as described. No issues at all. Will buy again for sure.",
+  "Zabardast quality! Mere dost ne bhi same product liya. Both of us very satisfied.",
+  "Bahut fast delivery mili aur packaging bhi safe thi. Product bhi genuine nikla.",
+  "Best purchase of this year! Quality dekhke dil khush ho gaya.",
+];
+
 export default function AdminReviews() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [products, setProducts] = useState<Record<string, any>>({});
@@ -31,6 +73,17 @@ export default function AdminReviews() {
   const [replyText, setReplyText] = useState("");
   const [replying, setReplying] = useState(false);
   const [mediaDialog, setMediaDialog] = useState<{ open: boolean; items: string[]; type: "image" | "video" }>({ open: false, items: [], type: "image" });
+
+  const [fakeDialog, setFakeDialog] = useState(false);
+  const [fakeForm, setFakeForm] = useState({
+    productId: "",
+    userName: "",
+    rating: 5,
+    title: "",
+    body: "",
+    isApproved: true,
+  });
+  const [addingFake, setAddingFake] = useState(false);
 
   useEffect(() => {
     const reviewsRef = ref(db, "reviews");
@@ -96,6 +149,47 @@ export default function AdminReviews() {
     }
   };
 
+  const randomizeFakeForm = () => {
+    setFakeForm((f) => ({
+      ...f,
+      userName: FAKE_NAMES[Math.floor(Math.random() * FAKE_NAMES.length)],
+      body: FAKE_COMMENTS[Math.floor(Math.random() * FAKE_COMMENTS.length)],
+      rating: 4 + Math.round(Math.random()),
+    }));
+  };
+
+  const handleAddFake = async () => {
+    if (!fakeForm.productId) { toast.error("Product select karo"); return; }
+    if (!fakeForm.userName.trim()) { toast.error("Reviewer ka naam dalo"); return; }
+    if (!fakeForm.body.trim()) { toast.error("Review text likho"); return; }
+
+    setAddingFake(true);
+    try {
+      const reviewRef = push(ref(db, "reviews"));
+      const daysAgo = Math.floor(Math.random() * 30);
+      await set(reviewRef, {
+        productId: fakeForm.productId,
+        userName: fakeForm.userName.trim(),
+        rating: fakeForm.rating,
+        title: fakeForm.title.trim(),
+        body: fakeForm.body.trim(),
+        comment: fakeForm.body.trim(),
+        isApproved: fakeForm.isApproved,
+        isFake: true,
+        createdAt: Date.now() - daysAgo * 24 * 60 * 60 * 1000,
+        userId: `fake_${Date.now()}`,
+      });
+
+      toast.success("Fake review add ho gaya!");
+      setFakeDialog(false);
+      setFakeForm({ productId: "", userName: "", rating: 5, title: "", body: "", isApproved: true });
+    } catch (e) {
+      toast.error("Review add karne mein error aaya");
+    } finally {
+      setAddingFake(false);
+    }
+  };
+
   const filtered = reviews.filter((r) => {
     const matchesSearch =
       !search ||
@@ -107,12 +201,14 @@ export default function AdminReviews() {
     const matchesTab =
       tab === "all" ||
       (tab === "pending" && !r.isApproved) ||
-      (tab === "approved" && r.isApproved);
+      (tab === "approved" && r.isApproved) ||
+      (tab === "fake" && r.isFake);
 
     return matchesSearch && matchesTab;
   });
 
   const pendingCount = reviews.filter((r) => !r.isApproved).length;
+  const fakeCount = reviews.filter((r) => r.isFake).length;
 
   const isVideoUrl = (url: string) => /\.(mp4|mov|webm|avi)(\?|$)/i.test(url);
 
@@ -131,6 +227,8 @@ export default function AdminReviews() {
     return items;
   };
 
+  const productList = Object.entries(products).map(([id, p]: any) => ({ id, name: p.name }));
+
   return (
     <AdminLayout>
       <div className="flex justify-between items-center mb-6">
@@ -140,6 +238,10 @@ export default function AdminReviews() {
             <Badge variant="destructive" className="text-xs">{pendingCount} pending</Badge>
           )}
         </div>
+        <Button onClick={() => { setFakeDialog(true); randomizeFakeForm(); }} className="gap-2">
+          <PlusCircle className="h-4 w-4" />
+          Fake Review Add Karo
+        </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -157,6 +259,7 @@ export default function AdminReviews() {
             <TabsTrigger value="all">All ({reviews.length})</TabsTrigger>
             <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
             <TabsTrigger value="approved">Approved ({reviews.length - pendingCount})</TabsTrigger>
+            <TabsTrigger value="fake">Fake ({fakeCount})</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -175,7 +278,7 @@ export default function AdminReviews() {
             const media = getMediaItems(review);
 
             return (
-              <div key={review.id} className="bg-white rounded-xl border shadow-sm overflow-hidden">
+              <div key={review.id} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${review.isFake ? "border-l-4 border-l-amber-400" : ""}`}>
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
@@ -189,6 +292,9 @@ export default function AdminReviews() {
                           <Badge variant={review.isApproved ? "default" : "secondary"} className="text-xs">
                             {review.isApproved ? "Approved" : "Pending"}
                           </Badge>
+                          {review.isFake && (
+                            <Badge className="text-xs bg-amber-100 text-amber-700 border-amber-300">Fake</Badge>
+                          )}
                         </div>
                         {product && (
                           <p className="text-xs text-slate-500 mt-0.5">on <span className="font-medium text-slate-700">{product.name}</span></p>
@@ -285,6 +391,94 @@ export default function AdminReviews() {
               )
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={fakeDialog} onOpenChange={setFakeDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
+              Fake Review Add Karo
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Product *</Label>
+              <Select value={fakeForm.productId} onValueChange={(v) => setFakeForm((f) => ({ ...f, productId: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Product select karo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {productList.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label>Reviewer ka Naam *</Label>
+                <button
+                  type="button"
+                  onClick={randomizeFakeForm}
+                  className="text-xs text-primary hover:underline"
+                >
+                  🎲 Random karo
+                </button>
+              </div>
+              <Input
+                placeholder="Jaise: Rahul Sharma"
+                value={fakeForm.userName}
+                onChange={(e) => setFakeForm((f) => ({ ...f, userName: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Rating *</Label>
+              <div className="flex items-center gap-3">
+                <StarRatingInput value={fakeForm.rating} onChange={(v) => setFakeForm((f) => ({ ...f, rating: v }))} />
+                <span className="text-lg font-bold text-amber-500">{fakeForm.rating}.0 ⭐</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Review Title (Optional)</Label>
+              <Input
+                placeholder="Jaise: Best laptop under 50k!"
+                value={fakeForm.title}
+                onChange={(e) => setFakeForm((f) => ({ ...f, title: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Review Text *</Label>
+              <Textarea
+                rows={3}
+                placeholder="Review likho..."
+                value={fakeForm.body}
+                onChange={(e) => setFakeForm((f) => ({ ...f, body: e.target.value }))}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="auto-approve"
+                checked={fakeForm.isApproved}
+                onChange={(e) => setFakeForm((f) => ({ ...f, isApproved: e.target.checked }))}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="auto-approve" className="cursor-pointer">Auto-approve karo (immediately dikhega)</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFakeDialog(false)}>Cancel</Button>
+            <Button onClick={handleAddFake} disabled={addingFake}>
+              {addingFake ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Adding...</> : "Review Add Karo"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>
