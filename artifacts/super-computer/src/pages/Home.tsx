@@ -324,33 +324,220 @@ function BrandCarousel() {
   );
 }
 
-/* ─── Categories ────────────────────────────────────────────── */
-function CategoriesSection() {
+/* ─── Explore Slider ────────────────────────────────────────── */
+const EXPLORE_CARDS = [
+  {
+    href: "/search?q=Gaming",
+    label: "Gaming",
+    tag: "Dominate every match",
+    icon: Gamepad2,
+    gradient: "linear-gradient(135deg,#0d0017 0%,#3b0764 60%,#6d28d9 100%)",
+    glow: "#7c3aed",
+    accent: "#a78bfa",
+  },
+  {
+    href: "/search?q=Business",
+    label: "Business",
+    tag: "Built for boardrooms",
+    icon: Briefcase,
+    gradient: "linear-gradient(135deg,#010d1f 0%,#0c2a52 60%,#1e40af 100%)",
+    glow: "#2563eb",
+    accent: "#60a5fa",
+  },
+  {
+    href: "/search?q=Student",
+    label: "Student",
+    tag: "Study. Score. Succeed",
+    icon: GraduationCap,
+    gradient: "linear-gradient(135deg,#0d0022 0%,#2e1065 60%,#7c3aed 100%)",
+    glow: "#8b5cf6",
+    accent: "#c4b5fd",
+  },
+  {
+    href: "/search?q=Creator",
+    label: "Creator",
+    tag: "Make your vision real",
+    icon: Palette,
+    gradient: "linear-gradient(135deg,#1a0500 0%,#78350f 60%,#d97706 100%)",
+    glow: "#f59e0b",
+    accent: "#fcd34d",
+  },
+  {
+    href: "/search",
+    label: "All Laptops",
+    tag: "Every brand. Every budget",
+    icon: Laptop,
+    gradient: "linear-gradient(135deg,#001a0a 0%,#064e3b 60%,#16a34a 100%)",
+    glow: "#16a34a",
+    accent: "#4ade80",
+  },
+  {
+    href: "/search?q=Accessories",
+    label: "Accessories",
+    tag: "Power up your setup",
+    icon: Cpu,
+    gradient: "linear-gradient(135deg,#001410 0%,#064e3b 50%,#0d9488 100%)",
+    glow: "#0d9488",
+    accent: "#5eead4",
+  },
+  {
+    href: "/search?q=Refurbished",
+    label: "Refurbished",
+    tag: "Premium. Tested. Affordable",
+    icon: MonitorCheck,
+    gradient: "linear-gradient(135deg,#0a0a0a 0%,#1e293b 60%,#475569 100%)",
+    glow: "#64748b",
+    accent: "#94a3b8",
+  },
+  {
+    href: "/search?q=Workstation",
+    label: "Workstation",
+    tag: "Raw power. Zero limits",
+    icon: Package,
+    gradient: "linear-gradient(135deg,#1a0800 0%,#7c2d12 60%,#ea580c 100%)",
+    glow: "#f97316",
+    accent: "#fdba74",
+  },
+];
+
+function ExploreSection() {
+  const [exploreRef, exploreApi] = useEmblaCarousel({ loop: true, align: "start", dragFree: true });
+  const [selExplore, setSelExplore] = useState(0);
+  const exploreAutoRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startAuto = useCallback(() => {
+    if (!exploreApi) return;
+    if (exploreAutoRef.current) clearInterval(exploreAutoRef.current);
+    exploreAutoRef.current = setInterval(() => exploreApi.scrollNext(), 2800);
+  }, [exploreApi]);
+
+  const stopAuto = useCallback(() => {
+    if (exploreAutoRef.current) clearInterval(exploreAutoRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (!exploreApi) return;
+    const onSel = () => setSelExplore(exploreApi.selectedScrollSnap());
+    exploreApi.on("select", onSel); onSel();
+    return () => { exploreApi.off("select", onSel); };
+  }, [exploreApi]);
+
+  useEffect(() => {
+    startAuto();
+    return stopAuto;
+  }, [startAuto, stopAuto]);
+
   return (
-    <section className="py-10">
+    <section className="py-10 overflow-hidden">
       <div className="container mx-auto px-4">
-        <motion.div initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }} className="mb-6">
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "#16a34a" }}>Explore</p>
-          <h2 className="text-2xl md:text-3xl font-black text-gray-900">Shop by <span style={{ color: "#16a34a" }}>Category</span></h2>
+        {/* Header */}
+        <motion.div initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }}
+          className="flex items-end justify-between mb-6">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.2em] mb-1" style={{ color: "#16a34a" }}>
+              ✦ Discover
+            </p>
+            <h2 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight">
+              Explore <span style={{ color: "#16a34a" }}>Your</span> World
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { stopAuto(); exploreApi?.scrollPrev(); startAuto(); }}
+              className="h-9 w-9 rounded-full border border-gray-200 bg-white flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm">
+              <ChevronLeft size={16} className="text-gray-600" />
+            </button>
+            <button onClick={() => { stopAuto(); exploreApi?.scrollNext(); startAuto(); }}
+              className="h-9 w-9 rounded-full bg-gray-900 flex items-center justify-center hover:bg-gray-700 transition-all shadow-sm">
+              <ChevronRight size={16} className="text-white" />
+            </button>
+          </div>
         </motion.div>
-        <motion.div initial="hidden" whileInView="show" variants={staggerContainer} viewport={{ once: true }}
-          className="grid grid-cols-4 sm:grid-cols-8 gap-2 sm:gap-3">
-          {CATEGORIES.map(({ href, label, icon: Icon, color, bg }) => (
-            <motion.div key={label} variants={scaleIn}>
-              <Link href={href}>
-                <motion.div whileHover={{ scale: 1.06, y: -4 }} whileTap={{ scale: 0.94 }}
-                  className="flex flex-col items-center text-center py-4 px-2 rounded-2xl cursor-pointer transition-all"
-                  style={{ background: bg, border: `1px solid ${color}20` }}>
-                  <div className="h-11 w-11 rounded-2xl flex items-center justify-center mb-2"
-                    style={{ background: `${color}18` }}>
-                    <Icon size={20} style={{ color }} />
-                  </div>
-                  <p className="text-gray-800 font-semibold text-[11px] leading-tight">{label}</p>
-                </motion.div>
-              </Link>
-            </motion.div>
+
+        {/* Embla carousel */}
+        <div
+          ref={exploreRef}
+          className="-mx-4 px-4 overflow-hidden"
+          onMouseEnter={stopAuto}
+          onMouseLeave={startAuto}
+        >
+          <div className="flex gap-3">
+            {EXPLORE_CARDS.map(({ href, label, tag, icon: Icon, gradient, glow, accent }, i) => (
+              <div key={label} style={{ flex: "0 0 155px" }}>
+                <Link href={href}>
+                  <motion.div whileHover={{ scale: 1.04, y: -6 }} whileTap={{ scale: 0.96 }}
+                    className="relative cursor-pointer overflow-hidden"
+                    style={{
+                      width: 155,
+                      height: 195,
+                      borderRadius: 20,
+                      background: gradient,
+                      boxShadow: `0 4px 24px ${glow}30`,
+                    }}>
+
+                    {/* Glow orb */}
+                    <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full blur-2xl opacity-40"
+                      style={{ background: glow }} />
+
+                    {/* Grid texture */}
+                    <div className="absolute inset-0 opacity-[0.06]"
+                      style={{
+                        backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.5) 1px,transparent 1px)",
+                        backgroundSize: "20px 20px",
+                      }} />
+
+                    {/* Creative corner decoration — concentric rings */}
+                    <div className="absolute top-2.5 right-2.5">
+                      <div className="relative w-8 h-8 flex items-center justify-center">
+                        <div className="absolute inset-0 rounded-full opacity-20 border"
+                          style={{ borderColor: accent }} />
+                        <div className="absolute inset-1 rounded-full opacity-30 border"
+                          style={{ borderColor: accent }} />
+                        <div className="w-2 h-2 rounded-full opacity-70"
+                          style={{ background: accent }} />
+                      </div>
+                    </div>
+
+                    {/* Icon */}
+                    <div className="absolute top-4 left-4">
+                      <div className="h-12 w-12 rounded-2xl flex items-center justify-center"
+                        style={{ background: `${glow}30`, border: `1px solid ${glow}50` }}>
+                        <Icon size={22} style={{ color: accent }} />
+                      </div>
+                    </div>
+
+                    {/* Index number watermark */}
+                    <div className="absolute bottom-14 right-3 font-black text-[42px] leading-none select-none pointer-events-none"
+                      style={{ color: `${accent}10`, letterSpacing: "-2px" }}>
+                      {String(i + 1).padStart(2, "0")}
+                    </div>
+
+                    {/* Text */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4"
+                      style={{ background: "linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 100%)" }}>
+                      <p className="font-black text-white text-[15px] leading-tight mb-0.5">{label}</p>
+                      <p className="text-[10px] leading-tight" style={{ color: accent }}>{tag}</p>
+                    </div>
+
+                    {/* Bottom accent line */}
+                    <div className="absolute bottom-0 left-4 right-4 h-px opacity-40"
+                      style={{ background: `linear-gradient(90deg,transparent,${accent},transparent)` }} />
+                  </motion.div>
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Dot indicators */}
+        <div className="flex items-center justify-center gap-1.5 mt-4">
+          {EXPLORE_CARDS.map((_, i) => (
+            <motion.button key={i}
+              onClick={() => { stopAuto(); exploreApi?.scrollTo(i); startAuto(); }}
+              animate={{ width: i === selExplore ? 20 : 6 }}
+              transition={{ duration: 0.3 }}
+              style={{ height: 6, borderRadius: 3, background: i === selExplore ? "#16a34a" : "rgba(0,0,0,0.15)" }} />
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );
@@ -715,7 +902,7 @@ export default function Home() {
       <HeroBanner banners={banners} />
       <StillLooking products={recentlyViewed} />
       <BrandCarousel />
-      <CategoriesSection />
+      <ExploreSection />
 
       <ProductSection title="Featured" accent="Products" badge="Editor's Pick" products={featured} />
       <ProductSection title="New" accent="Arrivals"  badge="Just In"        products={arrivals} />
