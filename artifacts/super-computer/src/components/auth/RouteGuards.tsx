@@ -22,20 +22,22 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 export const AdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { currentUser, isAdmin, loading } = useAuth();
+  const { currentUser, extUser, isAdmin, loading } = useAuth();
   const [, setLocation] = useLocation();
+
+  const isLoggedInAny = !!currentUser || !!extUser;
 
   useEffect(() => {
     if (!loading) {
-      if (!currentUser || !isAdmin) {
+      if (!isLoggedInAny || !isAdmin) {
         setLocation("/admin/login");
       }
     }
-  }, [currentUser, isAdmin, loading, setLocation]);
+  }, [isLoggedInAny, isAdmin, loading, setLocation]);
 
   if (loading) {
     return <div className="h-screen w-full flex items-center justify-center"><Skeleton className="h-32 w-32 rounded-full" /></div>;
   }
 
-  return (currentUser && isAdmin) ? <>{children}</> : null;
+  return (isLoggedInAny && isAdmin) ? <>{children}</> : null;
 };

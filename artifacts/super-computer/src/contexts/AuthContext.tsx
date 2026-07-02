@@ -61,8 +61,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
   });
+  const [extUserIsAdmin, setExtUserIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Check Firebase Auth users
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
@@ -88,12 +90,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsubscribe;
   }, []);
 
+  // Check if extUser's phone is an admin
+  useEffect(() => {
+    if (!extUser?.phone) {
+      setExtUserIsAdmin(false);
+      return;
+    }
+    const phone = extUser.phone.replace(/\D/g, "");
+    get(ref(db, `adminPhones/${phone}`))
+      .then((snap) => setExtUserIsAdmin(snap.exists() && snap.val() === "true"))
+      .catch(() => setExtUserIsAdmin(false));
+  }, [extUser?.phone]);
+
   const setExtUser = (u: ExtUser | null) => {
     setExtUserState(u);
     if (u) {
       localStorage.setItem(EXT_USER_KEY, JSON.stringify(u));
     } else {
       localStorage.removeItem(EXT_USER_KEY);
+      setExtUserIsAdmin(false);
     }
   };
 
@@ -103,6 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isLoggedIn = !!currentUser || !!extUser;
+  const isAdmin = userData?.role === "admin" || extUserIsAdmin;
 
   return (
     <AuthContext.Provider
@@ -111,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         userData,
         extUser,
         loading,
-        isAdmin: userData?.role === "admin",
+        isAdmin,
         isLoggedIn,
         setExtUser,
         logout,

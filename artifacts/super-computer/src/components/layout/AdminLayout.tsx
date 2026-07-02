@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { auth } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard,
   Package,
@@ -19,9 +20,11 @@ import {
 
 export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const [location, setLocation] = useLocation();
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
-    await auth.signOut();
+    await logout();
+    await auth.signOut().catch(() => {});
     setLocation("/admin/login");
   };
 
