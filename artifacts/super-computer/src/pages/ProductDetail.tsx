@@ -12,7 +12,7 @@ import {
   Info, ChevronRight, Cpu, HardDrive, MemoryStick,
   ChevronLeft, Send, User, Package, Zap, Award, ArrowLeft,
 } from "lucide-react";
-import { WhatsAppProductButton, WhatsAppFloat } from "@/components/WhatsAppButton";
+import { WhatsAppFloat } from "@/components/WhatsAppButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatINR } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
@@ -483,20 +483,21 @@ export default function ProductDetail() {
                   <p className="text-slate-500 text-xs mt-1">Inclusive of all taxes • Free delivery</p>
                 </div>
 
-                {/* Quick Specs Grid */}
+                {/* Product Highlights */}
                 {product.specs && Object.keys(product.specs).length > 0 && (
-                  <div className="grid grid-cols-2 gap-2.5 mb-6">
-                    {Object.entries(product.specs).slice(0, 4).map(([key, val]: any) => (
-                      <div key={key} className="flex items-center gap-2.5 bg-gray-50 border border-gray-100 rounded-xl p-3 group hover:border-green-500/30 transition-colors">
-                        <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center shrink-0">
-                          <SpecsIcon label={key} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wide">{key}</p>
-                          <p className="text-xs font-bold text-gray-900 truncate">{val}</p>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="mb-6">
+                    <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Product Highlights</p>
+                    <ul className="space-y-2">
+                      {Object.entries(product.specs).slice(0, 6).map(([key, val]: any) => (
+                        <li key={key} className="flex items-start gap-2.5">
+                          <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
+                          <span className="text-sm text-gray-700">
+                            <span className="font-semibold text-gray-900 capitalize">{key}:</span>{" "}
+                            {val}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
 
@@ -511,11 +512,6 @@ export default function ProductDetail() {
                     <ShoppingCart className="h-5 w-5" />
                     {product.stock <= 0 ? "Out of Stock" : "Add to Cart"}
                   </Button>
-
-                  <WhatsAppProductButton
-                    productName={product.name}
-                    productPrice={product.discountPrice || product.price}
-                  />
 
                   <button
                     onClick={handleToggleWishlist}
