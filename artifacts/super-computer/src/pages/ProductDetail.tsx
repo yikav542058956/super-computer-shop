@@ -453,13 +453,37 @@ export default function ProductDetail() {
 
                 <h1 className="text-2xl lg:text-3xl font-black text-gray-900 leading-tight mb-4">{product.name}</h1>
 
-                {/* Rating row */}
-                <div className="flex items-center gap-3 mb-5 pb-5 border-b border-gray-100">
-                  <div className="flex items-center gap-1.5 bg-green-600 px-3 py-1.5 rounded-xl">
-                    <span className="text-white font-black text-sm">{avgRating}</span>
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                {/* ── Premium Trust Badges ── below product name ── */}
+                <div className="grid grid-cols-3 gap-2 mb-5">
+                  <div className="flex flex-col items-center gap-1.5 rounded-2xl py-3 px-2 text-center border border-green-100 bg-gradient-to-b from-green-50 to-emerald-50 shadow-sm">
+                    <div className="h-9 w-9 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center text-lg">🚚</div>
+                    <p className="text-[11px] font-black text-green-800 leading-tight">Cash on</p>
+                    <p className="text-[10px] font-bold text-green-600 -mt-1 leading-tight">Delivery</p>
                   </div>
-                  <span className="text-slate-500 text-sm">{reviews.length || product.reviewsCount || 0} Reviews</span>
+                  <div className="flex flex-col items-center gap-1.5 rounded-2xl py-3 px-2 text-center border border-blue-100 bg-gradient-to-b from-blue-50 to-indigo-50 shadow-sm">
+                    <div className="h-9 w-9 rounded-full bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-lg">💳</div>
+                    <p className="text-[11px] font-black text-blue-800 leading-tight">Easy</p>
+                    <p className="text-[10px] font-bold text-blue-600 -mt-1 leading-tight">EMI Available</p>
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5 rounded-2xl py-3 px-2 text-center border border-orange-100 bg-gradient-to-b from-orange-50 to-amber-50 shadow-sm">
+                    <div className="h-9 w-9 rounded-full bg-orange-500/15 border border-orange-500/25 flex items-center justify-center text-lg">🔄</div>
+                    <p className="text-[11px] font-black text-orange-800 leading-tight">7-Day</p>
+                    <p className="text-[10px] font-bold text-orange-600 -mt-1 leading-tight">Easy Returns</p>
+                  </div>
+                </div>
+
+                {/* Rating row — only shown when ratings exist */}
+                {(displayAvg || displayCount > 0) && (
+                <div className="flex items-center gap-3 mb-5 pb-5 border-b border-gray-100">
+                  {displayAvg && (
+                    <div className="flex items-center gap-1.5 bg-green-600 px-3 py-1.5 rounded-xl">
+                      <span className="text-white font-black text-sm">{displayAvg}</span>
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    </div>
+                  )}
+                  {displayCount > 0 && (
+                    <span className="text-slate-500 text-sm">{displayCount.toLocaleString("en-IN")} Reviews</span>
+                  )}
                   <span className="text-gray-300">|</span>
                   <span className={`text-sm font-semibold px-2.5 py-1 rounded-full ${
                     product.stock > 0
@@ -469,6 +493,19 @@ export default function ProductDetail() {
                     {product.stock > 0 ? `✓ In Stock (${product.stock})` : "✗ Out of Stock"}
                   </span>
                 </div>
+                )}
+                {/* Stock badge standalone when no ratings */}
+                {!displayAvg && displayCount === 0 && (
+                  <div className="mb-5 pb-5 border-b border-gray-100">
+                    <span className={`text-sm font-semibold px-2.5 py-1 rounded-full ${
+                      product.stock > 0
+                        ? "text-green-600 bg-green-500/10 border border-green-500/20"
+                        : "text-red-500 bg-red-500/10 border border-red-500/20"
+                    }`}>
+                      {product.stock > 0 ? `✓ In Stock (${product.stock})` : "✗ Out of Stock"}
+                    </span>
+                  </div>
+                )}
 
                 {/* Price */}
                 <div className="mb-6">
@@ -546,14 +583,6 @@ export default function ProductDetail() {
                   </button>
                 </div>
 
-                {/* EMI / COD info */}
-                <div className="flex flex-wrap gap-2">
-                  {["Cash on Delivery", "Easy EMI Available", "7-Day Returns"].map((tag) => (
-                    <span key={tag} className="flex items-center gap-1 text-[11px] text-slate-500 bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-full">
-                      <Zap className="h-3 w-3 text-green-500" />{tag}
-                    </span>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
