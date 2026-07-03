@@ -399,16 +399,12 @@ export default function ProductDetail() {
   const discountPct = hasDiscount
     ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
     : 0;
-  const avgRating = reviews.length
-    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+  // Only real reviews — no fake seeded data
+  const realReviews = reviews.filter((r: any) => !r.isSeeded);
+  const displayAvg = realReviews.length
+    ? (realReviews.reduce((s, r) => s + r.rating, 0) / realReviews.length).toFixed(1)
     : null;
-
-  // Use product-level seeded stats when available (Amazon-style realistic counts)
-  const displayAvg = product?.rating
-    ? product.rating.toFixed(1)
-    : avgRating;
-  const displayCount = product?.reviewsCount || reviews.length || 0;
-  const hasDist = product?.ratingDist && displayCount > 0;
+  const displayCount = realReviews.length;
 
   /* ── Wrappers for loading / not-found (still no footer) ── */
   const Shell = ({ children }: { children: React.ReactNode }) => (
@@ -742,11 +738,8 @@ export default function ProductDetail() {
               </div>
               <div className="flex-1 space-y-1.5">
                 {[5, 4, 3, 2, 1].map((star) => {
-                  const count = hasDist
-                    ? (product.ratingDist[star] ?? 0) + reviews.filter((r: any) => !r.isSeeded && r.rating === star).length
-                    : reviews.filter((r: any) => r.rating === star).length;
-                  const total = hasDist ? displayCount : reviews.length;
-                  const pct = total ? (count / total) * 100 : 0;
+                  const count = realReviews.filter((r: any) => r.rating === star).length;
+                  const pct = realReviews.length ? (count / realReviews.length) * 100 : 0;
                   return (
                     <div key={star} className="flex items-center gap-2">
                       <span className="text-xs text-slate-600 w-3">{star}</span>
@@ -762,15 +755,15 @@ export default function ProductDetail() {
             </div>
 
 
-            {/* Reviews list */}
+            {/* Reviews list — real reviews only */}
             <div className="divide-y divide-gray-50">
-              {reviews.length === 0 ? (
+              {realReviews.length === 0 ? (
                 <div className="text-center py-10">
                   <Star className="h-10 w-10 text-slate-200 mx-auto mb-3" />
                   <p className="text-slate-500 text-sm">No reviews yet. Be the first to write one!</p>
                 </div>
               ) : (
-                reviews.map((r) => (
+                realReviews.map((r) => (
                   <div key={r.id} className="px-6 py-4">
                     <ReviewCard review={r} />
                   </div>
