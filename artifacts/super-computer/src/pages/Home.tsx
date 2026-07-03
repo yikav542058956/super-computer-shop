@@ -7,8 +7,8 @@ import { motion, AnimatePresence, useInView } from "framer-motion";
 import Marquee from "react-fast-marquee";
 import {
   ShoppingCart, Star, ChevronLeft, ChevronRight, ArrowRight,
-  Heart, Eye, Zap, Shield, Truck, Headphones, RotateCcw, CreditCard,
-  Users, Package, Award, ChevronDown, Gamepad2,
+  Heart, Eye, Zap, Truck, Headphones,
+  Package, ChevronDown, Gamepad2,
   Briefcase, GraduationCap, Palette, Cpu, Laptop, MonitorCheck,
   Info, AlertTriangle, CheckCircle, Megaphone, X,
 } from "lucide-react";
@@ -67,12 +67,12 @@ const FAQS = [
 ];
 
 const TRUST_ITEMS = [
-  { icon: Users,      stat: "12,000+", label: "Happy Customers",  color: "#16a34a", bg: "#16a34a15" },
-  { icon: Truck,      stat: "Free",    label: "Delivery Available",color: "#3B82F6", bg: "#3B82F615" },
-  { icon: Shield,     stat: "100%",    label: "Genuine Products",  color: "#F59E0B", bg: "#F59E0B15" },
-  { icon: Award,      stat: "5+ Yrs",  label: "of Excellence",     color: "#8B5CF6", bg: "#8B5CF615" },
-  { icon: CreditCard, stat: "Safe",    label: "Secure Payments",   color: "#EF4444", bg: "#EF44441515" },
-  { icon: RotateCcw,  stat: "Easy",    label: "Returns & Support", color: "#10B981", bg: "#10B98115" },
+  { img: "/images/trust/happy-customers.png",  stat: "12,000+", label: "Happy Customers",  color: "#16a34a", bg: "#16a34a15" },
+  { img: "/images/trust/free-delivery.png",    stat: "Free",    label: "Delivery Available",color: "#3B82F6", bg: "#3B82F615" },
+  { img: "/images/trust/genuine-products.png", stat: "100%",    label: "Genuine Products",  color: "#F59E0B", bg: "#F59E0B15" },
+  { img: "/images/trust/excellence.png",       stat: "5+ Yrs",  label: "of Excellence",     color: "#8B5CF6", bg: "#8B5CF615" },
+  { img: "/images/trust/secure-payments.png",  stat: "Safe",    label: "Secure Payments",   color: "#EF4444", bg: "#EF444415" },
+  { img: "/images/trust/easy-returns.png",     stat: "Easy",    label: "Returns & Support", color: "#10B981", bg: "#10B98115" },
 ];
 
 const TYPE_STYLE: Record<string, { bar: string; icon: any }> = {
@@ -484,14 +484,14 @@ function TrustSection() {
         </motion.div>
         <motion.div initial="hidden" whileInView="show" variants={staggerContainer} viewport={{ once: true }}
           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {TRUST_ITEMS.map(({ icon: Icon, stat, label, color, bg }) => (
+          {TRUST_ITEMS.map(({ img, stat, label, color, bg }) => (
             <motion.div key={label} variants={scaleIn}
               whileHover={{ scale: 1.05, y: -4 }}
               className="flex flex-col items-center text-center p-4 rounded-2xl bg-white"
-              style={{ border: `1px solid ${color}20` }}>
-              <div className="h-12 w-12 rounded-2xl flex items-center justify-center mb-3"
-                style={{ background: `${color}15` }}>
-                <Icon size={22} style={{ color }} />
+              style={{ border: `1px solid ${color}30`, boxShadow: `0 2px 12px ${color}10` }}>
+              <div className="h-14 w-14 rounded-2xl flex items-center justify-center mb-3"
+                style={{ background: bg }}>
+                <img src={img} alt={label} className="h-10 w-10 object-contain drop-shadow-md" />
               </div>
               <p className="font-black text-gray-900 text-lg leading-none">{stat}</p>
               <p className="text-gray-500 text-xs mt-1 leading-tight">{label}</p>
