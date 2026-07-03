@@ -243,6 +243,42 @@ function DescriptionSection({ description }: { description?: string }) {
   );
 }
 
+/* ─── Stock Badge ────────────────────────────────────────────── */
+function StockBadge({ stock }: { stock: number }) {
+  if (stock <= 0) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600">
+        <span className="h-1.5 w-1.5 rounded-full bg-red-500 inline-block" />
+        Out of Stock
+      </span>
+    );
+  }
+  if (stock <= 5) {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 text-sm font-black px-3 py-1 rounded-full border animate-pulse"
+        style={{
+          background: "linear-gradient(135deg,#fff7ed,#ffedd5)",
+          borderColor: "#fb923c",
+          color: "#c2410c",
+        }}
+      >
+        {/* Fire icon */}
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 text-orange-500 shrink-0">
+          <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd"/>
+        </svg>
+        Only {stock} Left!
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-full bg-green-50 border border-green-200 text-green-700">
+      <span className="h-1.5 w-1.5 rounded-full bg-green-500 inline-block animate-pulse" />
+      In Stock
+    </span>
+  );
+}
+
 /* ─── Call Button ────────────────────────────────────────────── */
 function CallProductButton({ callingNumber }: { callingNumber: string }) {
   const [copied, setCopied] = useState(false);
@@ -484,18 +520,54 @@ export default function ProductDetail() {
               <div className="lg:w-[45%] p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-gray-100">
                 <ImageCarousel images={product.images} productName={product.name} />
 
-                {/* Trust badges under image */}
+                {/* Trust badges under image — premium cards */}
                 <div className="grid grid-cols-3 gap-2 mt-5">
-                  {[
-                    { Icon: ShieldCheck, label: "1 Year Warranty", color: "text-green-400" },
-                    { Icon: Truck,       label: "Free Delivery",    color: "text-blue-400" },
-                    { Icon: Award,       label: "100% Genuine",     color: "text-yellow-400" },
-                  ].map(({ Icon, label, color }) => (
-                    <div key={label} className="flex flex-col items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-xl py-3 px-2 text-center">
-                      <Icon className={`h-5 w-5 ${color}`} />
-                      <p className="text-[10px] text-slate-500 font-medium leading-tight">{label}</p>
+                  {/* 1 Year Warranty */}
+                  <div className="relative flex flex-col items-center gap-2 rounded-2xl py-4 px-2 text-center overflow-hidden" style={{ background: "linear-gradient(145deg,#f0fdf4,#dcfce7)", border: "1.5px solid #86efac" }}>
+                    <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle at 80% 20%, #22c55e 0%, transparent 60%)" }} />
+                    <div className="relative h-11 w-11 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", boxShadow: "0 4px 14px rgba(22,163,74,0.4)" }}>
+                      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z" fill="rgba(255,255,255,0.2)" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
+                        <path d="M8.5 12l2.5 2.5 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
                     </div>
-                  ))}
+                    <div className="relative">
+                      <p className="text-[11px] font-black text-green-900 leading-tight">1 Year</p>
+                      <p className="text-[10px] font-bold text-green-700 leading-tight">Warranty</p>
+                    </div>
+                  </div>
+
+                  {/* Free Delivery */}
+                  <div className="relative flex flex-col items-center gap-2 rounded-2xl py-4 px-2 text-center overflow-hidden" style={{ background: "linear-gradient(145deg,#eff6ff,#dbeafe)", border: "1.5px solid #93c5fd" }}>
+                    <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle at 80% 20%, #3b82f6 0%, transparent 60%)" }} />
+                    <div className="relative h-11 w-11 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg,#2563eb,#1d4ed8)", boxShadow: "0 4px 14px rgba(37,99,235,0.4)" }}>
+                      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="1" y="3" width="15" height="13" rx="1" stroke="white" strokeWidth="1.5" fill="rgba(255,255,255,0.15)"/>
+                        <path d="M16 8h4l3 4v5h-7V8z" stroke="white" strokeWidth="1.5" strokeLinejoin="round" fill="rgba(255,255,255,0.1)"/>
+                        <circle cx="5.5" cy="18.5" r="2" stroke="white" strokeWidth="1.5"/>
+                        <circle cx="19.5" cy="18.5" r="2" stroke="white" strokeWidth="1.5"/>
+                        <path d="M7.5 18.5h10" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <div className="relative">
+                      <p className="text-[11px] font-black text-blue-900 leading-tight">Free</p>
+                      <p className="text-[10px] font-bold text-blue-700 leading-tight">Delivery</p>
+                    </div>
+                  </div>
+
+                  {/* 100% Genuine */}
+                  <div className="relative flex flex-col items-center gap-2 rounded-2xl py-4 px-2 text-center overflow-hidden" style={{ background: "linear-gradient(145deg,#fefce8,#fef9c3)", border: "1.5px solid #fde047" }}>
+                    <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle at 80% 20%, #eab308 0%, transparent 60%)" }} />
+                    <div className="relative h-11 w-11 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg,#d97706,#b45309)", boxShadow: "0 4px 14px rgba(217,119,6,0.4)" }}>
+                      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z" fill="rgba(255,255,255,0.25)" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <div className="relative">
+                      <p className="text-[11px] font-black text-yellow-900 leading-tight">100%</p>
+                      <p className="text-[10px] font-bold text-yellow-700 leading-tight">Genuine</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -585,25 +657,13 @@ export default function ProductDetail() {
                     <span className="text-slate-500 text-sm">{displayCount.toLocaleString("en-IN")} Reviews</span>
                   )}
                   <span className="text-gray-300">|</span>
-                  <span className={`text-sm font-semibold px-2.5 py-1 rounded-full ${
-                    product.stock > 0
-                      ? "text-green-600 bg-green-500/10 border border-green-500/20"
-                      : "text-red-500 bg-red-500/10 border border-red-500/20"
-                  }`}>
-                    {product.stock > 0 ? `✓ In Stock (${product.stock})` : "✗ Out of Stock"}
-                  </span>
+                  <StockBadge stock={product.stock} />
                 </div>
                 )}
                 {/* Stock badge standalone when no ratings */}
                 {!displayAvg && displayCount === 0 && (
                   <div className="mb-5 pb-5 border-b border-gray-100">
-                    <span className={`text-sm font-semibold px-2.5 py-1 rounded-full ${
-                      product.stock > 0
-                        ? "text-green-600 bg-green-500/10 border border-green-500/20"
-                        : "text-red-500 bg-red-500/10 border border-red-500/20"
-                    }`}>
-                      {product.stock > 0 ? `✓ In Stock (${product.stock})` : "✗ Out of Stock"}
-                    </span>
+                    <StockBadge stock={product.stock} />
                   </div>
                 )}
 
