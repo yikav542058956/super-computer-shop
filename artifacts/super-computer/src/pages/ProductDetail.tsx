@@ -351,7 +351,11 @@ export default function ProductDetail() {
   const Shell = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <main className="flex-1 pb-16 md:pb-0">{children}</main>
-      <WhatsAppFloat />
+      <WhatsAppFloat
+        productName={product?.name}
+        productBrand={product?.brand}
+        productPrice={product?.discountPrice || product?.price}
+      />
       <MobileBottomNav />
     </div>
   );
