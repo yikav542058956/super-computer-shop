@@ -435,12 +435,16 @@ export default function ProductDetail() {
   const discountPct = hasDiscount
     ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
     : 0;
-  // Only real reviews — no fake seeded data
+  // Real reviews only for the list (no seeded)
   const realReviews = reviews.filter((r: any) => !r.isSeeded);
-  const displayAvg = realReviews.length
+
+  // For display stats: prefer product-level seeded stats when available
+  const avgRating = realReviews.length
     ? (realReviews.reduce((s, r) => s + r.rating, 0) / realReviews.length).toFixed(1)
     : null;
-  const displayCount = realReviews.length;
+  const displayAvg = product?.rating ? product.rating.toFixed(1) : avgRating;
+  const displayCount = product?.reviewsCount || realReviews.length || 0;
+  const hasDist = product?.ratingDist && displayCount > 0;
 
   /* ── Wrappers for loading / not-found (still no footer) ── */
   const Shell = ({ children }: { children: React.ReactNode }) => (
@@ -787,8 +791,8 @@ export default function ProductDetail() {
               </h2>
             </div>
 
-            {/* Rating summary bar — only when real reviews exist */}
-            {realReviews.length > 0 && (
+            {/* Rating summary bar — shown when seeded stats or real reviews exist */}
+            {(displayAvg || displayCount > 0) && (
               <div className="flex items-center gap-6 px-6 py-5 border-b border-gray-100">
                 <div className="text-center shrink-0">
                   <p className="text-5xl font-black text-gray-900">{displayAvg ?? "—"}</p>
@@ -801,8 +805,11 @@ export default function ProductDetail() {
                 </div>
                 <div className="flex-1 space-y-1.5">
                   {[5, 4, 3, 2, 1].map((star) => {
-                    const count = realReviews.filter((r: any) => r.rating === star).length;
-                    const pct = realReviews.length ? (count / realReviews.length) * 100 : 0;
+                    const count = hasDist
+                      ? (product.ratingDist[star] ?? 0) + realReviews.filter((r: any) => r.rating === star).length
+                      : realReviews.filter((r: any) => r.rating === star).length;
+                    const total = hasDist ? displayCount : realReviews.length;
+                    const pct = total ? (count / total) * 100 : 0;
                     return (
                       <div key={star} className="flex items-center gap-2">
                         <span className="text-xs text-slate-600 w-3">{star}</span>
