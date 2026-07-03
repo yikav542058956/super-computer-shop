@@ -213,6 +213,36 @@ function SuggestedCard({ p }: { p: any }) {
   );
 }
 
+/* ─── Description with Read More ────────────────────────────── */
+function DescriptionSection({ description }: { description?: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const text = description || "No description available.";
+  // ~3 lines ≈ 280 characters on mobile
+  const LIMIT = 280;
+  const isLong = text.length > LIMIT;
+  const displayed = !isLong || expanded ? text : text.slice(0, LIMIT).trimEnd() + "…";
+
+  return (
+    <div id="sec-description" className="scroll-mt-16 bg-white border border-gray-100 rounded-2xl shadow-sm mb-4">
+      <div className="px-6 py-4 border-b border-gray-100">
+        <h2 className="text-base font-black text-gray-900">Description</h2>
+      </div>
+      <div className="px-6 py-5">
+        <p className="text-slate-600 leading-relaxed text-[15px] whitespace-pre-line">{displayed}</p>
+        {isLong && (
+          <button
+            onClick={() => setExpanded(e => !e)}
+            className="mt-3 text-sm font-bold flex items-center gap-1 transition-colors"
+            style={{ color: "#16a34a" }}
+          >
+            {expanded ? "Read Less ↑" : "Read More ↓"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Page ──────────────────────────────────────────────── */
 export default function ProductDetail() {
   const { id } = useParams();
@@ -522,14 +552,7 @@ export default function ProductDetail() {
           </div>
 
           {/* ── Description Section ───────────────────────────── */}
-          <div id="sec-description" className="scroll-mt-16 bg-white border border-gray-100 rounded-2xl shadow-sm mb-4">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-base font-black text-gray-900">Description</h2>
-            </div>
-            <div className="px-6 py-5">
-              <p className="text-slate-600 leading-relaxed text-[15px]">{product.description || "No description available."}</p>
-            </div>
-          </div>
+          <DescriptionSection description={product.description} />
 
           {/* ── Specifications Section ────────────────────────── */}
           {product.specs && Object.keys(product.specs).length > 0 && (

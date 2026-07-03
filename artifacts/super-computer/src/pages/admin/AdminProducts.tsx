@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash, Upload, ImageIcon, Loader2, X, Search, Star } from "lucide-react";
+import { Plus, Edit, Trash, Upload, ImageIcon, Loader2, X, Search, Star, Sparkles } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -47,7 +47,40 @@ export default function AdminProducts() {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [generatingDesc, setGeneratingDesc] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  async function generateDescription() {
+    if (!form.name.trim()) {
+      toast.error("Product name likhne ke baad AI generate karein");
+      return;
+    }
+    setGeneratingDesc(true);
+    try {
+      const specsObj: Record<string, string> = {};
+      form.specs.forEach(s => { if (s.key && s.value) specsObj[s.key] = s.value; });
+      const res = await fetch("/api/generate-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          brand: form.brand,
+          category: form.category,
+          price: form.price,
+          discountPrice: form.discountPrice,
+          specs: specsObj,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setForm(f => ({ ...f, description: data.description }));
+      toast.success("AI description generate ho gayi!");
+    } catch (e: any) {
+      toast.error("AI error: " + e.message);
+    } finally {
+      setGeneratingDesc(false);
+    }
+  }
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -432,8 +465,27 @@ export default function AdminProducts() {
 
             {/* Description */}
             <div className="space-y-1">
-              <Label>Description</Label>
-              <Textarea rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Detailed product description..." />
+              <div className="flex items-center justify-between">
+                <Label>Description</Label>
+                <button
+                  type="button"
+                  onClick={generateDescription}
+                  disabled={generatingDesc}
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all disabled:opacity-60"
+                  style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", color: "#fff", boxShadow: "0 2px 8px rgba(124,58,237,0.3)" }}
+                >
+                  {generatingDesc
+                    ? <><Loader2 className="h-3 w-3 animate-spin" /> Generating...</>
+                    : <><Sparkles className="h-3 w-3" /> AI se Generate</>}
+                </button>
+              </div>
+              <Textarea
+                rows={5}
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Product name, brand aur price bharne ke baad AI se auto-generate karein..."
+              />
+              <p className="text-[11px] text-slate-400">✨ AI generate karne ke baad aap manually edit bhi kar sakte hain</p>
             </div>
 
             {/* Images */}
