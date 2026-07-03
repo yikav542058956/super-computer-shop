@@ -10,9 +10,9 @@ import { toast } from "sonner";
 import {
   ShoppingCart, Heart, ShieldCheck, Truck, Star,
   Info, ChevronRight, Cpu, HardDrive, MemoryStick,
-  ChevronLeft, User, Package, Zap, Award, ArrowLeft, Phone,
+  ChevronLeft, User, Package, Zap, Award, ArrowLeft, Phone, CheckCheck,
 } from "lucide-react";
-import { WhatsAppProductButton } from "@/components/WhatsAppButton";
+import { WhatsAppFloat } from "@/components/WhatsAppButton";
 import { formatINR } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -243,6 +243,61 @@ function DescriptionSection({ description }: { description?: string }) {
   );
 }
 
+/* ─── Call Button ────────────────────────────────────────────── */
+function CallProductButton({ callingNumber }: { callingNumber: string }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!callingNumber) return null;
+
+  // Normalize: strip non-digits, remove leading 91 if present, keep 10 digits
+  const digits = callingNumber.replace(/\D/g, "").replace(/^91/, "").slice(-10);
+  const phone = `+91${digits}`;
+
+  const handleCall = () => {
+    const isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.location.href = `tel:${phone}`;
+    } else {
+      try {
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(phone)
+            .then(() => {
+              setCopied(true);
+              toast.success(`📋 Number copied: ${phone}`);
+              setTimeout(() => setCopied(false), 3000);
+            })
+            .catch(() => { window.location.href = `tel:${phone}`; });
+        } else {
+          window.location.href = `tel:${phone}`;
+        }
+      } catch {
+        window.location.href = `tel:${phone}`;
+      }
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCall}
+      className="w-full flex items-center justify-center gap-2.5 h-12 rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-95 border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:border-blue-300"
+    >
+      {copied ? (
+        <>
+          <CheckCheck className="h-4 w-4 text-green-600" />
+          <span className="text-green-700">Number Copied!</span>
+          <span className="text-xs font-normal text-green-600">{phone}</span>
+        </>
+      ) : (
+        <>
+          <Phone className="h-4 w-4" />
+          Call for More Information
+          <span className="text-xs font-normal text-blue-500 hidden sm:inline">({phone})</span>
+        </>
+      )}
+    </button>
+  );
+}
+
 /* ─── Main Page ──────────────────────────────────────────────── */
 export default function ProductDetail() {
   const { id } = useParams();
@@ -251,10 +306,18 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<any[]>([]);
   const [suggested, setSuggested] = useState<any[]>([]);
+  const [callingNumber, setCallingNumber] = useState<string>("");
 
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
   const { currentUser, userData } = useAuth();
+
+  useEffect(() => {
+    const unsub = onValue(ref(db, "settings/callingNumber"), (snap) => {
+      if (snap.exists()) setCallingNumber(snap.val());
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -351,6 +414,11 @@ export default function ProductDetail() {
   const Shell = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <main className="flex-1 pb-16 md:pb-0">{children}</main>
+      <WhatsAppFloat
+        productName={product?.name}
+        productPrice={product?.discountPrice || product?.price}
+        productBrand={product?.brand}
+      />
       <MobileBottomNav />
     </div>
   );
@@ -618,6 +686,9 @@ export default function ProductDetail() {
                     <Heart className={`h-5 w-5 transition-all ${isWishlisted(product.id) ? "fill-red-400 scale-110" : ""}`} />
                   </button>
                 </div>
+
+                {/* Call for More Information */}
+                <CallProductButton callingNumber={callingNumber} />
 
               </div>
             </div>
