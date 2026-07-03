@@ -18,6 +18,7 @@ import {
   Wallet,
   BookOpen,
   CreditCard,
+  ShoppingBag,
 } from "lucide-react";
 
 export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
@@ -34,6 +35,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     { label: "Dashboard",      href: "/admin/dashboard",       icon: LayoutDashboard },
     { label: "Products",       href: "/admin/products",        icon: Package },
     { label: "Orders",         href: "/admin/orders",          icon: ShoppingCart },
+    { label: "Offline Sale",   href: "/admin/offline-sale",    icon: ShoppingBag },
     { label: "Customers",      href: "/admin/customers",       icon: Users },
     { label: "Categories",     href: "/admin/categories",      icon: Tag },
     { label: "Banners",        href: "/admin/banners",         icon: ImageIcon },

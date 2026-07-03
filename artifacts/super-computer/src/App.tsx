@@ -46,6 +46,7 @@ import AdminAnnouncements from "@/pages/admin/AdminAnnouncements";
 import AdminCustomerPhotos from "@/pages/admin/AdminCustomerPhotos";
 import AdminWallet from "@/pages/admin/AdminWallet";
 import AdminAccounting from "@/pages/admin/AdminAccounting";
+import AdminOfflineSale from "@/pages/admin/AdminOfflineSale";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 
 const queryClient = new QueryClient();
@@ -177,6 +178,12 @@ function Router() {
       <Route path="/admin/accounting">
         <AdminRoute>
           <AdminAccounting />
+        </AdminRoute>
+      </Route>
+
+      <Route path="/admin/offline-sale">
+        <AdminRoute>
+          <AdminOfflineSale />
         </AdminRoute>
       </Route>
 
