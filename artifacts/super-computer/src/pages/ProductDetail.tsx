@@ -444,7 +444,20 @@ export default function ProductDetail() {
                     {product.brand}
                   </span>
                   {product.isNewArrival && (
-                    <span className="text-xs font-black bg-blue-500/15 border border-blue-500/30 text-blue-500 px-2.5 py-1 rounded-full">✨ New Arrival</span>
+                    <span
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black text-white tracking-wide select-none"
+                      style={{
+                        background: "linear-gradient(110deg,#6d28d9,#4f46e5,#7c3aed,#6d28d9)",
+                        backgroundSize: "200% 100%",
+                        animation: "shimmerBadge 2.2s linear infinite",
+                        boxShadow: "0 0 12px rgba(109,40,217,0.55), 0 2px 6px rgba(79,70,229,0.3)",
+                      }}
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 shrink-0">
+                        <path d="M10 1l1.8 6.2H18l-5.1 3.7 1.9 6.1L10 13.4l-4.8 3.6 1.9-6.1L2 7.2h6.2L10 1z"/>
+                      </svg>
+                      NEW ARRIVAL
+                    </span>
                   )}
                   {product.isFeatured && (
                     <span className="text-xs font-black bg-yellow-500/15 border border-yellow-500/30 text-yellow-600 px-2.5 py-1 rounded-full">⭐ Featured</span>
