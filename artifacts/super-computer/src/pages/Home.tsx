@@ -195,8 +195,16 @@ function HeroBanner({ banners }: { banners: any[] }) {
           {slides.map((b: any, i) => (
             <div key={b.id || i} className="relative flex-[0_0_100%] h-full"
               style={{ background: `linear-gradient(135deg, ${b.from || "#0B0F19"} 0%, ${b.via || "#151A24"} 60%, #1E293B 100%)` }}>
-              {b.img && <img src={b.img} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.18, mixBlendMode: "luminosity" }} />}
-              <div className="absolute inset-0" style={{ background: "linear-gradient(90deg,rgba(0,0,0,0.7) 0%,rgba(0,0,0,0.3) 55%,transparent 100%)" }} />
+              {/* Admin-uploaded banners use imageUrl; hardcoded slides use img */}
+              {(b.imageUrl || b.img) && (
+                <img
+                  src={b.imageUrl || b.img}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={b.imageUrl ? { opacity: 1 } : { opacity: 0.18, mixBlendMode: "luminosity" }}
+                />
+              )}
+              <div className="absolute inset-0" style={{ background: "linear-gradient(90deg,rgba(0,0,0,0.72) 0%,rgba(0,0,0,0.35) 55%,transparent 100%)" }} />
               {/* glow */}
               <div className="absolute bottom-0 right-1/4 w-64 h-64 rounded-full blur-3xl pointer-events-none" style={{ background: "rgba(22,163,74,0.08)" }} />
 
