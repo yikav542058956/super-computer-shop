@@ -295,111 +295,72 @@ function BrandCarousel() {
 
   return (
     <motion.section initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }}
-      className="py-5 border-y" style={{ borderColor: "rgba(0,0,0,0.07)" }}>
+      className="py-6 border-y" style={{ background: "#ffffff", borderColor: "rgba(0,0,0,0.07)" }}>
 
       {/* Header */}
-      <div className="container mx-auto px-4 mb-4 flex items-center justify-between">
+      <div className="container mx-auto px-4 mb-5 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#16a34a" }}>Authorized Reseller</p>
           <h3 className="text-gray-900 font-black text-base mt-0.5">Top Brands</h3>
         </div>
         <Link href="/search">
-          <span className="text-xs font-bold px-3 py-1.5 rounded-full transition-all"
-            style={{ background: "rgba(22,163,74,0.1)", color: "#16a34a", border: "1px solid rgba(22,163,74,0.2)" }}>
+          <span className="text-xs font-bold px-3 py-1.5 rounded-full"
+            style={{ background: "rgba(22,163,74,0.08)", color: "#16a34a", border: "1px solid rgba(22,163,74,0.18)" }}>
             View All →
           </span>
         </Link>
       </div>
 
-      {/* Film Strip */}
-      <div className="relative" style={{ perspective: "1200px" }}>
-        {/* Film strip container */}
-        <div className="relative overflow-hidden"
-          style={{ background: "linear-gradient(135deg,#0f0f0f 0%,#1a1a2e 50%,#0f0f0f 100%)" }}>
+      {/* Scrolling strip — white background, soft cards */}
+      <div className="relative overflow-hidden">
+        {/* Left & right fade */}
+        <div className="absolute inset-y-0 left-0 w-16 pointer-events-none z-10"
+          style={{ background: "linear-gradient(to right,#fff,transparent)" }} />
+        <div className="absolute inset-y-0 right-0 w-16 pointer-events-none z-10"
+          style={{ background: "linear-gradient(to left,#fff,transparent)" }} />
 
-          {/* Top sprocket holes */}
-          <div className="flex gap-0 h-4 items-center" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-            {Array.from({ length: 60 }).map((_, i) => (
-              <div key={i} className="flex-shrink-0 mx-1.5"
-                style={{ width: 10, height: 8, borderRadius: 2, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.06)" }} />
-            ))}
-          </div>
-
-          {/* Scrolling brand frames */}
-          <Marquee speed={38} gradient={false} className="py-3">
-            {strip.map((brand, idx) => (
-              <Link key={`${brand.name}-${idx}`} href={`/search?q=${encodeURIComponent(brand.name)}`}>
-                <div className="mx-2 cursor-pointer group"
-                  style={{ width: 100 }}>
-                  {/* Film frame */}
-                  <div className="relative rounded-lg overflow-hidden transition-all duration-300 group-hover:scale-105"
-                    style={{
-                      background: brand.bg || "#F8FAFC",
-                      border: "2px solid rgba(255,255,255,0.15)",
-                      boxShadow: "0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
-                    }}>
-                    {/* Frame top bar */}
-                    <div className="h-1.5 w-full" style={{ background: `${brand.color}30` }} />
-
-                    {/* Logo area */}
-                    <div className="h-16 flex items-center justify-center p-3">
-                      {brand.logo ? (
-                        <img
-                          src={brand.logo}
-                          alt={brand.name}
-                          className="max-h-full max-w-full object-contain"
-                          style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.15))" }}
-                          onError={e => {
-                            const t = e.target as HTMLImageElement;
-                            t.style.display = "none";
-                            const parent = t.parentElement;
-                            if (parent) {
-                              const span = document.createElement("span");
-                              span.style.cssText = `font-size:11px;font-weight:900;color:${brand.color};`;
-                              span.textContent = brand.name;
-                              parent.appendChild(span);
-                            }
-                          }}
-                        />
-                      ) : (
-                        <span className="font-black text-xs" style={{ color: brand.color }}>{brand.name}</span>
-                      )}
-                    </div>
-
-                    {/* Frame bottom bar */}
-                    <div className="h-1.5 w-full" style={{ background: `${brand.color}30` }} />
-
-                    {/* Brand name */}
-                    <div className="py-1.5 text-center"
-                      style={{ background: "rgba(0,0,0,0.05)" }}>
-                      <p className="text-[9px] font-black uppercase tracking-wider" style={{ color: brand.color }}>
-                        {brand.name}
-                      </p>
-                    </div>
-
-                    {/* Hover glow */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                      style={{ background: `radial-gradient(circle at center, ${brand.color}20 0%, transparent 70%)` }} />
-                  </div>
+        <Marquee speed={36} gradient={false} pauseOnHover>
+          {strip.map((brand, idx) => (
+            <Link key={`${brand.name}-${idx}`} href={`/search?q=${encodeURIComponent(brand.name)}`}>
+              <motion.div
+                whileHover={{ scale: 1.06, y: -3 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className="mx-2.5 cursor-pointer"
+                style={{ width: 96 }}>
+                <div className="flex items-center justify-center rounded-2xl"
+                  style={{
+                    height: 72,
+                    background: "#ffffff",
+                    border: "1.5px solid rgba(0,0,0,0.08)",
+                    boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+                    padding: "12px 14px",
+                  }}>
+                  {brand.logo ? (
+                    <img
+                      src={brand.logo}
+                      alt={brand.name}
+                      className="max-h-full max-w-full object-contain"
+                      onError={e => {
+                        const t = e.target as HTMLImageElement;
+                        t.style.display = "none";
+                        const p = t.parentElement;
+                        if (p) {
+                          const s = document.createElement("span");
+                          s.style.cssText = `font-size:12px;font-weight:900;color:${brand.color};`;
+                          s.textContent = brand.name;
+                          p.appendChild(s);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <span className="font-black text-sm" style={{ color: brand.color }}>{brand.name}</span>
+                  )}
                 </div>
-              </Link>
-            ))}
-          </Marquee>
-
-          {/* Bottom sprocket holes */}
-          <div className="flex gap-0 h-4 items-center" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-            {Array.from({ length: 60 }).map((_, i) => (
-              <div key={i} className="flex-shrink-0 mx-1.5"
-                style={{ width: 10, height: 8, borderRadius: 2, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.06)" }} />
-            ))}
-          </div>
-
-          {/* Side fade gradients */}
-          <div className="absolute inset-y-0 left-0 w-16 pointer-events-none z-10"
-            style={{ background: "linear-gradient(to right, #0f0f0f, transparent)" }} />
-          <div className="absolute inset-y-0 right-0 w-16 pointer-events-none z-10"
-            style={{ background: "linear-gradient(to left, #0f0f0f, transparent)" }} />
-        </div>
+              </motion.div>
+            </Link>
+          ))}
+        </Marquee>
       </div>
     </motion.section>
   );
