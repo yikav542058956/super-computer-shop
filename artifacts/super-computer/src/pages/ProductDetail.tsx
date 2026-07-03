@@ -781,38 +781,42 @@ export default function ProductDetail() {
             <div className="px-6 py-4 border-b border-gray-100">
               <h2 className="text-base font-black text-gray-900">
                 Ratings &amp; Reviews
-                <span className="ml-2 text-sm font-normal text-slate-400">({displayCount.toLocaleString("en-IN")})</span>
+                {displayCount > 0 && (
+                  <span className="ml-2 text-sm font-normal text-slate-400">({displayCount.toLocaleString("en-IN")})</span>
+                )}
               </h2>
             </div>
 
-            {/* Rating summary bar */}
-            <div className="flex items-center gap-6 px-6 py-5 border-b border-gray-100">
-              <div className="text-center shrink-0">
-                <p className="text-5xl font-black text-gray-900">{displayAvg ?? "—"}</p>
-                <div className="flex gap-0.5 justify-center mt-1.5">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Star key={s} className={`h-4 w-4 ${s <= Math.round(Number(displayAvg)) ? "fill-yellow-400 text-yellow-400" : "text-gray-200 fill-transparent"}`} />
-                  ))}
+            {/* Rating summary bar — only when real reviews exist */}
+            {realReviews.length > 0 && (
+              <div className="flex items-center gap-6 px-6 py-5 border-b border-gray-100">
+                <div className="text-center shrink-0">
+                  <p className="text-5xl font-black text-gray-900">{displayAvg ?? "—"}</p>
+                  <div className="flex gap-0.5 justify-center mt-1.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} className={`h-4 w-4 ${s <= Math.round(Number(displayAvg)) ? "fill-yellow-400 text-yellow-400" : "text-gray-200 fill-transparent"}`} />
+                    ))}
+                  </div>
+                  <p className="text-slate-500 text-xs mt-1">{displayCount.toLocaleString("en-IN")} Ratings</p>
                 </div>
-                <p className="text-slate-500 text-xs mt-1">{displayCount.toLocaleString("en-IN")} Ratings</p>
-              </div>
-              <div className="flex-1 space-y-1.5">
-                {[5, 4, 3, 2, 1].map((star) => {
-                  const count = realReviews.filter((r: any) => r.rating === star).length;
-                  const pct = realReviews.length ? (count / realReviews.length) * 100 : 0;
-                  return (
-                    <div key={star} className="flex items-center gap-2">
-                      <span className="text-xs text-slate-600 w-3">{star}</span>
-                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />
-                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                <div className="flex-1 space-y-1.5">
+                  {[5, 4, 3, 2, 1].map((star) => {
+                    const count = realReviews.filter((r: any) => r.rating === star).length;
+                    const pct = realReviews.length ? (count / realReviews.length) * 100 : 0;
+                    return (
+                      <div key={star} className="flex items-center gap-2">
+                        <span className="text-xs text-slate-600 w-3">{star}</span>
+                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />
+                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-[10px] text-slate-400 w-10 text-right">{count.toLocaleString("en-IN")}</span>
                       </div>
-                      <span className="text-[10px] text-slate-400 w-10 text-right">{count.toLocaleString("en-IN")}</span>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
 
             {/* Reviews list — real reviews only */}
