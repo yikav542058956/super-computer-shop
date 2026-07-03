@@ -1,5 +1,5 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ref, get, set, remove, onValue } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -758,7 +758,7 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid grid-cols-3 w-full h-11 bg-slate-100">
+        <TabsList className="grid grid-cols-4 w-full h-11 bg-slate-100">
           <TabsTrigger value="general" className="gap-1.5 text-xs sm:text-sm font-semibold">
             <Store className="h-4 w-4 hidden sm:block" /> General
           </TabsTrigger>
@@ -767,6 +767,9 @@ export default function AdminSettings() {
           </TabsTrigger>
           <TabsTrigger value="admin" className="gap-1.5 text-xs sm:text-sm font-semibold">
             <ShieldCheck className="h-4 w-4 hidden sm:block" /> Admin
+          </TabsTrigger>
+          <TabsTrigger value="data" className="gap-1.5 text-xs sm:text-sm font-semibold">
+            <Database className="h-4 w-4 hidden sm:block" /> Data
           </TabsTrigger>
         </TabsList>
 
@@ -1001,6 +1004,11 @@ export default function AdminSettings() {
         {/* ── Admin Tab ── */}
         <TabsContent value="admin">
           <AdminManagement />
+        </TabsContent>
+
+        {/* ── Data Tab ── */}
+        <TabsContent value="data">
+          <DataManagement />
         </TabsContent>
       </Tabs>
     </AdminLayout>
