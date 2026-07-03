@@ -166,6 +166,8 @@ export default function Checkout() {
   const [orderId, setOrderId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "online">("online");
   const [storeUpi, setStoreUpi] = useState("supercomputer@upi");
+  const [gatewayEnabled, setGatewayEnabled] = useState(true);
+  const [paymentConfigLoaded, setPaymentConfigLoaded] = useState(false);
   const [deliveryZones, setDeliveryZones] = useState({
     localDistricts: "Kasganj, Etah, Kannauj, Aliganj, Soron, Patiyali, Ganj Dundwara",
     localCharge: 0,
@@ -176,7 +178,21 @@ export default function Checkout() {
   });
 
   useEffect(() => {
-    get(ref(db, "settings/storeUpi")).then((s) => { if (s.exists()) setStoreUpi(s.val()); });
+    // Read payment config from Firebase (new path with fallback)
+    get(ref(db, "settings/payment")).then((s) => {
+      if (s.exists()) {
+        const p = s.val();
+        if (p.upiId) setStoreUpi(p.upiId);
+        const enabled = p.gatewayEnabled !== false;
+        setGatewayEnabled(enabled);
+        // If gateway is off, default to COD so online option is never pre-selected
+        if (!enabled) setPaymentMethod("cod");
+      } else {
+        // fallback old path
+        get(ref(db, "settings/storeUpi")).then((s2) => { if (s2.exists()) setStoreUpi(s2.val()); });
+      }
+      setPaymentConfigLoaded(true);
+    });
     get(ref(db, "settings/deliveryZones")).then((s) => {
       if (s.exists()) {
         const z = s.val();
@@ -265,6 +281,7 @@ export default function Checkout() {
   /* ── Cashfree ── */
   const launchCashfree = async () => {
     if (!isLoggedIn) { toast.error("Please login first"); return; }
+    if (!gatewayEnabled) { toast.error("Online payment abhi available nahi hai. COD ya UPI use karein."); return; }
     setCfLoading(true);
     try {
       const newOrderId = await createFirebaseOrder("payment_pending");
@@ -590,37 +607,47 @@ export default function Checkout() {
 
                 <div className="p-5 space-y-3">
 
-                  {/* Online / Cashfree */}
-                  <button
-                    onClick={() => setPaymentMethod("online")}
-                    className={`w-full flex items-start gap-4 p-4 rounded border-2 transition-all text-left ${
-                      paymentMethod === "online" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300 bg-white"
-                    }`}
-                  >
-                    <div className={`mt-0.5 h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                      paymentMethod === "online" ? "border-blue-500" : "border-gray-300"
-                    }`}>
-                      {paymentMethod === "online" && <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />}
+                  {/* Gateway disabled notice */}
+                  {!gatewayEnabled && paymentConfigLoaded && (
+                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-xs text-amber-800">
+                      <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                      <span><span className="font-bold">Online payment abhi available nahi hai.</span> COD ya UPI manual payment se order karein — UPI ID pe advance bhejein aur screenshot WhatsApp karein.</span>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Smartphone className="h-5 w-5 text-blue-600" />
-                        <span className="font-black text-gray-900 text-sm">Pay Online</span>
-                        <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">UPI / Cards / NetBanking</span>
-                        <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Zap className="h-2.5 w-2.5" /> Instant Confirm
-                        </span>
+                  )}
+
+                  {/* Online / Cashfree — only when gateway is ON */}
+                  {gatewayEnabled && (
+                    <button
+                      onClick={() => setPaymentMethod("online")}
+                      className={`w-full flex items-start gap-4 p-4 rounded border-2 transition-all text-left ${
+                        paymentMethod === "online" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300 bg-white"
+                      }`}
+                    >
+                      <div className={`mt-0.5 h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        paymentMethod === "online" ? "border-blue-500" : "border-gray-300"
+                      }`}>
+                        {paymentMethod === "online" && <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />}
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">Powered by Cashfree · 100% Secure</p>
-                      {paymentMethod === "online" && (
-                        <div className="mt-3 bg-blue-50 border border-blue-200 rounded p-3">
-                          <p className="text-xs font-bold text-blue-800">Total Payable</p>
-                          <p className="text-xl font-black text-blue-700">{formatINR(finalAmount)}</p>
-                          <p className="text-xs text-gray-500 mt-1">Order instantly confirmed after payment</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Smartphone className="h-5 w-5 text-blue-600" />
+                          <span className="font-black text-gray-900 text-sm">Pay Online</span>
+                          <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">UPI / Cards / NetBanking</span>
+                          <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <Zap className="h-2.5 w-2.5" /> Instant Confirm
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  </button>
+                        <p className="text-xs text-gray-500 mt-1">Powered by Cashfree · 100% Secure</p>
+                        {paymentMethod === "online" && (
+                          <div className="mt-3 bg-blue-50 border border-blue-200 rounded p-3">
+                            <p className="text-xs font-bold text-blue-800">Total Payable</p>
+                            <p className="text-xl font-black text-blue-700">{formatINR(finalAmount)}</p>
+                            <p className="text-xs text-gray-500 mt-1">Order instantly confirmed after payment</p>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  )}
 
                   {/* COD */}
                   <button

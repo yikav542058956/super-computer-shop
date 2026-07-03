@@ -6,8 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Settings, MessageCircle, Store, Phone, Mail, Percent, Truck, Save, CheckCircle, ShieldCheck, Trash2, UserPlus, MapPin } from "lucide-react";
+import {
+  Settings, MessageCircle, Store, Phone, Mail, Percent, Truck, Save, CheckCircle,
+  ShieldCheck, Trash2, UserPlus, MapPin, CreditCard, Eye, EyeOff, Smartphone,
+  AlertTriangle, Info,
+} from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
 function WhatsAppIcon({ size = 20 }: { size?: number }) {
@@ -29,54 +35,45 @@ function AdminManagement() {
 
   useEffect(() => {
     const unsub = onValue(ref(db, "adminPhones"), (snap) => {
-      if (snap.exists()) {
-        setAdminPhones(Object.keys(snap.val()));
-      } else {
-        setAdminPhones([]);
-      }
+      if (snap.exists()) setAdminPhones(Object.keys(snap.val()));
+      else setAdminPhones([]);
     });
     return () => unsub();
   }, []);
 
   const addAdmin = async () => {
     const digits = newPhone.replace(/\D/g, "");
-    if (digits.length < 10) { toast.error("Enter a valid 10-digit phone number"); return; }
+    if (digits.length < 10) { toast.error("10-digit phone number daalen"); return; }
     setAdding(true);
     try {
       await set(ref(db, `adminPhones/${digits}`), "true");
       setNewPhone("");
-      toast.success(`+91 ${digits} is now an admin!`);
-    } catch {
-      toast.error("Failed to add admin");
-    } finally {
-      setAdding(false);
-    }
+      toast.success(`+91 ${digits} ab admin hai!`);
+    } catch { toast.error("Admin add karne mein error"); }
+    finally { setAdding(false); }
   };
 
   const removeAdmin = async (phone: string) => {
     try {
       await remove(ref(db, `adminPhones/${phone}`));
-      toast.success(`${phone} removed from admins`);
-    } catch {
-      toast.error("Failed to remove admin");
-    }
+      toast.success(`${phone} admin se remove kiya`);
+    } catch { toast.error("Remove karne mein error"); }
   };
 
   return (
-    <Card className="lg:col-span-2 border-2 border-blue-200 bg-blue-50/30">
+    <Card className="border-2 border-blue-200 bg-blue-50/30">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-blue-800">
           <ShieldCheck className="h-5 w-5" /> Admin Management
         </CardTitle>
         <CardDescription className="text-blue-700">
-          Phone numbers listed here get full admin access when they log in via OTP.
+          Yahan jis phone ka number daala jayega, OTP login karte time unhe admin access milega.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Add new admin */}
         <div className="flex gap-2 items-end">
           <div className="flex-1 space-y-1.5">
-            <Label className="font-medium">Add Admin Phone Number</Label>
+            <Label className="font-medium">Admin Phone Number Add Karein</Label>
             <div className="flex gap-2">
               <div className="flex items-center px-3 bg-white border rounded-lg text-slate-600 font-bold text-sm shrink-0">
                 🇮🇳 +91
@@ -99,12 +96,10 @@ function AdminManagement() {
             {adding ? "Adding..." : "Add Admin"}
           </Button>
         </div>
-
-        {/* Current admins list */}
         <div className="space-y-2">
           <p className="text-sm font-semibold text-slate-700">Current Admins ({adminPhones.length})</p>
           {adminPhones.length === 0 ? (
-            <p className="text-sm text-slate-400 py-2">No admin phones set yet.</p>
+            <p className="text-sm text-slate-400 py-2">Koi admin phone set nahi hai.</p>
           ) : (
             <div className="space-y-2">
               {adminPhones.map((phone) => (
@@ -118,11 +113,8 @@ function AdminManagement() {
                       <p className="text-xs text-blue-600 font-medium">Admin Access</p>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost" size="icon"
-                    onClick={() => removeAdmin(phone)}
-                    className="text-red-400 hover:text-red-600 hover:bg-red-50"
-                  >
+                  <Button variant="ghost" size="icon" onClick={() => removeAdmin(phone)}
+                    className="text-red-400 hover:text-red-600 hover:bg-red-50">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -135,6 +127,207 @@ function AdminManagement() {
   );
 }
 
+/* ── Payment Settings Section ─────────────────────────────────── */
+function PaymentSettings() {
+  const [gatewayEnabled, setGatewayEnabled] = useState(true);
+  const [cashfreeAppId, setCashfreeAppId] = useState("");
+  const [cashfreeSecretKey, setCashfreeSecretKey] = useState("");
+  const [upiId, setUpiId] = useState("");
+  const [showSecret, setShowSecret] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    get(ref(db, "settings/payment")).then((snap) => {
+      if (snap.exists()) {
+        const d = snap.val();
+        setGatewayEnabled(d.gatewayEnabled !== false);
+        setCashfreeAppId(d.cashfreeAppId || "");
+        setCashfreeSecretKey(d.cashfreeSecretKey || "");
+        setUpiId(d.upiId || "");
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  const savePayment = async () => {
+    if (!upiId.trim()) { toast.error("UPI ID zaroor daalni hai"); return; }
+    setSaving(true);
+    try {
+      await set(ref(db, "settings/payment"), {
+        gatewayEnabled,
+        cashfreeAppId: cashfreeAppId.trim(),
+        cashfreeSecretKey: cashfreeSecretKey.trim(),
+        upiId: upiId.trim(),
+        updatedAt: Date.now(),
+      });
+      // Also update old storeUpi path for backward compat
+      await set(ref(db, "settings/storeUpi"), upiId.trim());
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      toast.success("Payment settings save ho gayi!");
+    } catch { toast.error("Save karne mein error aaya"); }
+    finally { setSaving(false); }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12 text-slate-400">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-200 border-t-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+
+      {/* Gateway Toggle Card */}
+      <Card className={`border-2 ${gatewayEnabled ? "border-indigo-200 bg-indigo-50/30" : "border-amber-200 bg-amber-50/30"}`}>
+        <CardContent className="pt-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${gatewayEnabled ? "bg-indigo-100" : "bg-amber-100"}`}>
+                <CreditCard className={`h-5 w-5 ${gatewayEnabled ? "text-indigo-600" : "text-amber-600"}`} />
+              </div>
+              <div>
+                <p className="font-bold text-slate-800">Payment Gateway (Cashfree)</p>
+                <p className="text-xs text-slate-500">
+                  {gatewayEnabled
+                    ? "✅ Gateway ON — customers online Cashfree se pay kar sakte hain"
+                    : "⚠️ Gateway OFF — sirf UPI manual payment milegi"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={gatewayEnabled}
+              onCheckedChange={setGatewayEnabled}
+              className={gatewayEnabled ? "data-[state=checked]:bg-indigo-600" : ""}
+            />
+          </div>
+          {!gatewayEnabled && (
+            <div className="mt-3 flex items-start gap-2 bg-amber-100/60 rounded-lg px-3 py-2.5 border border-amber-200">
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-800 font-medium">
+                Gateway band hai — customers ko neeche wali UPI ID dikhegi. Wo manually payment karenge aur screenshot share karenge.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Cashfree Credentials */}
+      {gatewayEnabled && (
+        <Card className="border-2 border-indigo-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-indigo-800 text-base">
+              <CreditCard className="h-4 w-4" /> Cashfree Credentials
+            </CardTitle>
+            <CardDescription className="text-slate-500 flex items-start gap-1.5">
+              <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              Cashfree dashboard se Production App ID aur Secret Key copy karke daalen.
+              Ye values securely Firebase mein store hoti hain.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="font-semibold">Cashfree App ID</Label>
+              <Input
+                placeholder="CF_XXXXXXXXXXXXXXXX"
+                value={cashfreeAppId}
+                onChange={(e) => setCashfreeAppId(e.target.value)}
+                className="font-mono bg-white"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="font-semibold">Cashfree Secret Key</Label>
+              <div className="relative">
+                <Input
+                  type={showSecret ? "text" : "password"}
+                  placeholder="••••••••••••••••••••••••"
+                  value={cashfreeSecretKey}
+                  onChange={(e) => setCashfreeSecretKey(e.target.value)}
+                  className="font-mono bg-white pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSecret(!showSecret)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
+                >
+                  {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-slate-400">
+                Secret key kabhi bhi share mat karein. Yahan sirf aap dekh sakte hain.
+              </p>
+            </div>
+            <div className="bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3 text-xs text-indigo-700 space-y-1">
+              <p className="font-semibold">📋 Kahan milegi ye info?</p>
+              <p>1. cashfree.com pe login karein</p>
+              <p>2. Developers → API Keys menu mein jaayein</p>
+              <p>3. Production keys copy karein (Test keys checkout pe kaam nahi karenge)</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* UPI ID */}
+      <Card className="border-2 border-green-200 bg-green-50/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-green-800 text-base">
+            <Smartphone className="h-4 w-4" /> UPI ID (Manual Payment)
+          </CardTitle>
+          <CardDescription className="text-slate-500">
+            {gatewayEnabled
+              ? "COD advance ke liye ya backup ke liye ye UPI ID customers ko dikhti hai."
+              : "Gateway OFF hone par customers ko sirf ye UPI ID dikhegi — wo is par payment karenge."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="font-semibold">UPI ID</Label>
+            <Input
+              placeholder="yourname@upi"
+              value={upiId}
+              onChange={(e) => setUpiId(e.target.value)}
+              className="font-mono text-lg bg-white"
+            />
+          </div>
+          {upiId && (
+            <div className="bg-white border border-green-200 rounded-xl p-4">
+              <p className="text-xs text-slate-500 mb-1">Customers ko dikhega:</p>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                  <Smartphone className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-black text-slate-900 text-base">{upiId}</p>
+                  <p className="text-xs text-green-600 font-medium">UPI Payment</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Save Button */}
+      <Button
+        onClick={savePayment}
+        disabled={saving}
+        className={`gap-2 w-full h-12 text-base font-bold ${gatewayEnabled ? "bg-indigo-600 hover:bg-indigo-700" : "bg-amber-600 hover:bg-amber-700"}`}
+      >
+        {saved
+          ? <><CheckCircle className="h-5 w-5" />Payment Settings Save Ho Gayi!</>
+          : saving
+            ? "Saving..."
+            : <><Save className="h-5 w-5" />Payment Settings Save Karein</>
+        }
+      </Button>
+    </div>
+  );
+}
+
+/* ── Main Settings Page ─────────────────────────────────────── */
 export default function AdminSettings() {
   const [general, setGeneral] = useState({
     storeName: "Super Computers",
@@ -173,16 +366,13 @@ export default function AdminSettings() {
     load();
   }, []);
 
-  const flash = (key: string) => {
-    setSaved(key);
-    setTimeout(() => setSaved(null), 2500);
-  };
+  const flash = (key: string) => { setSaved(key); setTimeout(() => setSaved(null), 2500); };
 
   const saveGeneral = async () => {
     setSaving("general");
     await set(ref(db, "settings/general"), general);
     setSaving(null); flash("general");
-    toast.success("General settings saved!");
+    toast.success("General settings save ho gayi!");
   };
 
   const saveBusiness = async () => {
@@ -192,7 +382,7 @@ export default function AdminSettings() {
       freeDeliveryAbove: Number(business.freeDeliveryAbove),
     });
     setSaving(null); flash("business");
-    toast.success("Business settings saved!");
+    toast.success("Business settings save ho gayi!");
   };
 
   const saveDelivery = async () => {
@@ -203,16 +393,16 @@ export default function AdminSettings() {
       otherCharge: Number(delivery.otherCharge),
     });
     setSaving(null); flash("delivery");
-    toast.success("Delivery zones saved!");
+    toast.success("Delivery zones save ho gayi!");
   };
 
   const saveWhatsapp = async () => {
     const digits = whatsapp.number.replace(/\D/g, "");
-    if (digits.length !== 10) { toast.error("Enter a valid 10-digit WhatsApp number"); return; }
+    if (digits.length !== 10) { toast.error("Valid 10-digit WhatsApp number daalen"); return; }
     setSaving("whatsapp");
     await set(ref(db, "settings/whatsappNumber"), digits);
     setSaving(null); flash("whatsapp");
-    toast.success("WhatsApp number saved! Floating button is now live.");
+    toast.success("WhatsApp number save ho gaya!");
   };
 
   const previewUrl = whatsapp.number.replace(/\D/g, "").length === 10
@@ -227,218 +417,210 @@ export default function AdminSettings() {
         </div>
         <div>
           <h1 className="text-2xl font-bold">Settings</h1>
-          <p className="text-slate-500 text-sm">Manage store configuration and integrations</p>
+          <p className="text-slate-500 text-sm">Store configuration aur integrations manage karein</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* WhatsApp — shown first & prominently */}
-        <Card className="lg:col-span-2 border-2 border-green-200 bg-green-50/40">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-green-800">
-              <WhatsAppIcon size={22} />WhatsApp Business Integration
-            </CardTitle>
-            <CardDescription className="text-green-700">
-              Add your WhatsApp number. A floating button appears on the site, and each product page gets an "Ask on WhatsApp" button that sends the product name automatically.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-3 items-end">
-              <div className="flex-1 space-y-1.5">
-                <Label className="font-medium">WhatsApp Number (10 digits)</Label>
-                <div className="flex gap-2">
-                  <div className="flex items-center px-3 bg-white border rounded-lg text-slate-600 font-bold text-sm shrink-0">
-                    🇮🇳 +91
+      <Tabs defaultValue="general" className="space-y-6">
+        <TabsList className="grid grid-cols-4 w-full h-11 bg-slate-100">
+          <TabsTrigger value="general" className="gap-1.5 text-xs sm:text-sm font-semibold">
+            <Store className="h-4 w-4 hidden sm:block" /> General
+          </TabsTrigger>
+          <TabsTrigger value="delivery" className="gap-1.5 text-xs sm:text-sm font-semibold">
+            <Truck className="h-4 w-4 hidden sm:block" /> Delivery
+          </TabsTrigger>
+          <TabsTrigger value="payment" className="gap-1.5 text-xs sm:text-sm font-semibold">
+            <CreditCard className="h-4 w-4 hidden sm:block" /> Payment
+          </TabsTrigger>
+          <TabsTrigger value="admin" className="gap-1.5 text-xs sm:text-sm font-semibold">
+            <ShieldCheck className="h-4 w-4 hidden sm:block" /> Admin
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── General Tab ── */}
+        <TabsContent value="general" className="space-y-5">
+          {/* WhatsApp */}
+          <Card className="border-2 border-green-200 bg-green-50/40">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-green-800">
+                <WhatsAppIcon size={22} />WhatsApp Business Integration
+              </CardTitle>
+              <CardDescription className="text-green-700">
+                Number save karo — site par floating button aur products pe "Ask on WhatsApp" button dikhega.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-3 items-end">
+                <div className="flex-1 space-y-1.5">
+                  <Label className="font-medium">WhatsApp Number (10 digits)</Label>
+                  <div className="flex gap-2">
+                    <div className="flex items-center px-3 bg-white border rounded-lg text-slate-600 font-bold text-sm shrink-0">
+                      🇮🇳 +91
+                    </div>
+                    <Input
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
+                      placeholder="9761809960"
+                      value={whatsapp.number}
+                      onChange={(e) => setWhatsapp({ number: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                      className="font-mono tracking-widest bg-white text-lg"
+                    />
                   </div>
-                  <Input
-                    type="tel"
-                    inputMode="numeric"
-                    maxLength={10}
-                    placeholder="9761809960"
-                    value={whatsapp.number}
-                    onChange={(e) => setWhatsapp({ number: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-                    className="font-mono tracking-widest bg-white text-lg"
+                </div>
+                <Button onClick={saveWhatsapp} disabled={saving === "whatsapp"}
+                  className="h-11 gap-2 bg-green-600 hover:bg-green-700 shrink-0">
+                  {saved === "whatsapp"
+                    ? <><CheckCircle className="h-4 w-4" />Saved!</>
+                    : saving === "whatsapp" ? "Saving..."
+                    : <><Save className="h-4 w-4" />Save</>
+                  }
+                </Button>
+              </div>
+              {previewUrl && (
+                <div className="bg-white rounded-xl border border-green-200 p-4 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 mb-0.5">✅ WhatsApp button active hai</p>
+                    <p className="text-xs text-slate-500">Customers har page aur product se chat kar sakte hain.</p>
+                  </div>
+                  <a href={previewUrl} target="_blank" rel="noopener noreferrer">
+                    <Button size="sm" variant="outline" className="border-green-400 text-green-700 hover:bg-green-50 gap-2 shrink-0">
+                      <WhatsAppIcon size={16} />Test
+                    </Button>
+                  </a>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* General + Business */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base"><Store className="h-5 w-5 text-primary" />General Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label>Store Name</Label>
+                  <Input value={general.storeName} onChange={(e) => setGeneral(g => ({ ...g, storeName: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" />Contact Email</Label>
+                  <Input type="email" value={general.contactEmail} onChange={(e) => setGeneral(g => ({ ...g, contactEmail: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />Contact Phone</Label>
+                  <Input value={general.contactPhone} onChange={(e) => setGeneral(g => ({ ...g, contactPhone: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Store Address</Label>
+                  <Input value={general.address} onChange={(e) => setGeneral(g => ({ ...g, address: e.target.value }))} />
+                </div>
+                <Button onClick={saveGeneral} disabled={saving === "general"} className="gap-2 w-full">
+                  {saved === "general" ? <><CheckCircle className="h-4 w-4" />Saved!</> : saving === "general" ? "Saving..." : <><Save className="h-4 w-4" />Save General</>}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base"><MessageCircle className="h-5 w-5 text-primary" />Business Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label>Currency</Label>
+                  <Input defaultValue="INR (₹)" disabled className="bg-slate-50" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5"><Percent className="h-3.5 w-3.5" />Tax Percentage (%)</Label>
+                  <Input type="number" value={business.taxPercent} onChange={(e) => setBusiness(b => ({ ...b, taxPercent: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5"><Truck className="h-3.5 w-3.5" />Free Delivery Above (₹)</Label>
+                  <Input type="number" value={business.freeDeliveryAbove} onChange={(e) => setBusiness(b => ({ ...b, freeDeliveryAbove: e.target.value }))} />
+                </div>
+                <Button onClick={saveBusiness} disabled={saving === "business"} className="gap-2 w-full">
+                  {saved === "business" ? <><CheckCircle className="h-4 w-4" />Saved!</> : saving === "business" ? "Saving..." : <><Save className="h-4 w-4" />Save Business</>}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ── Delivery Tab ── */}
+        <TabsContent value="delivery">
+          <Card className="border-2 border-orange-200 bg-orange-50/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-orange-800">
+                <MapPin className="h-5 w-5" /> Delivery Zones (District-wise)
+              </CardTitle>
+              <CardDescription className="text-orange-700">
+                Local districts mein free/kam delivery, baaki jagah standard charge. Checkout pe automatically calculate hoga.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2 space-y-1.5">
+                  <Label className="font-semibold flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-orange-600" /> Local Districts
+                  </Label>
+                  <Textarea
+                    value={delivery.localDistricts}
+                    onChange={e => setDelivery(d => ({ ...d, localDistricts: e.target.value }))}
+                    placeholder="Kasganj, Etah, Soron, Patiyali..."
+                    className="bg-white min-h-[80px] resize-none"
+                    rows={3}
                   />
+                  <p className="text-xs text-slate-500">Comma se alag karein — customer ki city match kare to local rate apply hoga</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-semibold flex items-center gap-1.5">
+                    <Truck className="h-3.5 w-3.5 text-green-600" /> Local Delivery Charge (₹)
+                  </Label>
+                  <Input type="number" min="0" value={delivery.localCharge}
+                    onChange={e => setDelivery(d => ({ ...d, localCharge: e.target.value }))}
+                    className="bg-white" placeholder="0" />
+                  <p className="text-xs text-slate-500">0 = bilkul free delivery</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-semibold flex items-center gap-1.5">
+                    <Truck className="h-3.5 w-3.5 text-orange-600" /> Other Districts Charge (₹)
+                  </Label>
+                  <Input type="number" min="0" value={delivery.otherCharge}
+                    onChange={e => setDelivery(d => ({ ...d, otherCharge: e.target.value }))}
+                    className="bg-white" placeholder="499" />
+                  <p className="text-xs text-slate-500">Dusre districts/states ke liye charge</p>
                 </div>
               </div>
-              <Button
-                onClick={saveWhatsapp}
-                disabled={saving === "whatsapp"}
-                className="h-11 gap-2 bg-green-600 hover:bg-green-700 shrink-0"
-              >
-                {saved === "whatsapp" ? (
-                  <><CheckCircle className="h-4 w-4" />Saved!</>
-                ) : saving === "whatsapp" ? (
-                  "Saving..."
-                ) : (
-                  <><Save className="h-4 w-4" />Save Number</>
-                )}
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-black text-green-700">₹{delivery.localCharge || 0}</p>
+                  <p className="text-xs text-green-700 font-semibold mt-0.5">Local Districts</p>
+                  <p className="text-[10px] text-slate-500">{delivery.localDistricts.split(",").slice(0, 3).map(s => s.trim()).join(", ")}{delivery.localDistricts.split(",").length > 3 ? "..." : ""}</p>
+                </div>
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-black text-orange-700">₹{delivery.otherCharge || 499}</p>
+                  <p className="text-xs text-orange-700 font-semibold mt-0.5">Other Districts</p>
+                  <p className="text-[10px] text-slate-500">UP, Delhi, Rajasthan, etc.</p>
+                </div>
+              </div>
+              <Button onClick={saveDelivery} disabled={saving === "delivery"} className="gap-2 w-full bg-orange-600 hover:bg-orange-700">
+                {saved === "delivery" ? <><CheckCircle className="h-4 w-4" />Saved!</> : saving === "delivery" ? "Saving..." : <><Save className="h-4 w-4" />Save Delivery Zones</>}
               </Button>
-            </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            {previewUrl && (
-              <div className="bg-white rounded-xl border border-green-200 p-4 flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-slate-800 mb-0.5">✅ WhatsApp button is active</p>
-                  <p className="text-xs text-slate-500">Customers can now chat on WhatsApp from every page & product.</p>
-                </div>
-                <a href={previewUrl} target="_blank" rel="noopener noreferrer">
-                  <Button size="sm" variant="outline" className="border-green-400 text-green-700 hover:bg-green-50 gap-2 shrink-0">
-                    <WhatsAppIcon size={16} />Test Chat
-                  </Button>
-                </a>
-              </div>
-            )}
+        {/* ── Payment Tab ── */}
+        <TabsContent value="payment">
+          <PaymentSettings />
+        </TabsContent>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-              {[
-                { icon: "📱", title: "Floating Button", desc: "Appears on every page, bottom-right corner" },
-                { icon: "🛍️", title: "Product Inquiry", desc: "Product name auto-filled in the message" },
-                { icon: "⚡", title: "Instant Connect", desc: "Opens WhatsApp with pre-written message" },
-              ].map(({ icon, title, desc }) => (
-                <div key={title} className="bg-white rounded-lg border border-green-100 p-3 text-center">
-                  <p className="text-2xl mb-1">{icon}</p>
-                  <p className="font-semibold text-sm text-slate-800">{title}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* General */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2"><Store className="h-5 w-5 text-primary" />General Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Store Name</Label>
-              <Input value={general.storeName} onChange={(e) => setGeneral(g => ({ ...g, storeName: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" />Contact Email</Label>
-              <Input type="email" value={general.contactEmail} onChange={(e) => setGeneral(g => ({ ...g, contactEmail: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />Contact Phone</Label>
-              <Input value={general.contactPhone} onChange={(e) => setGeneral(g => ({ ...g, contactPhone: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Store Address</Label>
-              <Input value={general.address} onChange={(e) => setGeneral(g => ({ ...g, address: e.target.value }))} />
-            </div>
-            <Button onClick={saveGeneral} disabled={saving === "general"} className="gap-2 w-full">
-              {saved === "general" ? <><CheckCircle className="h-4 w-4" />Saved!</> : saving === "general" ? "Saving..." : <><Save className="h-4 w-4" />Save General</>}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Business */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-primary" />Business Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Currency</Label>
-              <Input defaultValue="INR (₹)" disabled className="bg-slate-50" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5"><Percent className="h-3.5 w-3.5" />Tax Percentage (%)</Label>
-              <Input type="number" value={business.taxPercent} onChange={(e) => setBusiness(b => ({ ...b, taxPercent: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5"><Truck className="h-3.5 w-3.5" />Free Delivery Above (₹)</Label>
-              <Input type="number" value={business.freeDeliveryAbove} onChange={(e) => setBusiness(b => ({ ...b, freeDeliveryAbove: e.target.value }))} />
-            </div>
-            <Button onClick={saveBusiness} disabled={saving === "business"} className="gap-2 w-full">
-              {saved === "business" ? <><CheckCircle className="h-4 w-4" />Saved!</> : saving === "business" ? "Saving..." : <><Save className="h-4 w-4" />Save Business</>}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Delivery Zones */}
-        <Card className="lg:col-span-2 border-2 border-orange-200 bg-orange-50/30">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-orange-800">
-              <MapPin className="h-5 w-5" /> Delivery Zones (District-wise)
-            </CardTitle>
-            <CardDescription className="text-orange-700">
-              Local districts mein free/kam delivery, baaki jagah standard charge. Checkout pe automatically calculate hoga.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2 space-y-1.5">
-                <Label className="font-semibold flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-orange-600" />
-                  Local Districts (free/local delivery)
-                </Label>
-                <Textarea
-                  value={delivery.localDistricts}
-                  onChange={e => setDelivery(d => ({ ...d, localDistricts: e.target.value }))}
-                  placeholder="Kasganj, Etah, Soron, Patiyali..."
-                  className="bg-white min-h-[80px] resize-none"
-                  rows={3}
-                />
-                <p className="text-xs text-slate-500">Comma se alag karein — customer ki city in mein se kisi se match kare to local rate apply hoga</p>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="font-semibold flex items-center gap-1.5">
-                  <Truck className="h-3.5 w-3.5 text-green-600" />
-                  Local Delivery Charge (₹)
-                </Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={delivery.localCharge}
-                  onChange={e => setDelivery(d => ({ ...d, localCharge: e.target.value }))}
-                  className="bg-white"
-                  placeholder="0"
-                />
-                <p className="text-xs text-slate-500">0 = bilkul free delivery</p>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="font-semibold flex items-center gap-1.5">
-                  <Truck className="h-3.5 w-3.5 text-orange-600" />
-                  Other Districts Charge (₹)
-                </Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={delivery.otherCharge}
-                  onChange={e => setDelivery(d => ({ ...d, otherCharge: e.target.value }))}
-                  className="bg-white"
-                  placeholder="499"
-                />
-                <p className="text-xs text-slate-500">Dusre districts/states ke liye charge</p>
-              </div>
-            </div>
-
-            {/* Preview */}
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
-                <p className="text-2xl font-black text-green-700">₹{delivery.localCharge || 0}</p>
-                <p className="text-xs text-green-700 font-semibold mt-0.5">Local Districts</p>
-                <p className="text-[10px] text-slate-500">{delivery.localDistricts.split(",").slice(0, 3).map(s => s.trim()).join(", ")}{delivery.localDistricts.split(",").length > 3 ? "..." : ""}</p>
-              </div>
-              <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
-                <p className="text-2xl font-black text-orange-700">₹{delivery.otherCharge || 499}</p>
-                <p className="text-xs text-orange-700 font-semibold mt-0.5">Other Districts</p>
-                <p className="text-[10px] text-slate-500">UP, Delhi, Rajasthan, etc.</p>
-              </div>
-            </div>
-
-            <Button onClick={saveDelivery} disabled={saving === "delivery"} className="gap-2 w-full bg-orange-600 hover:bg-orange-700">
-              {saved === "delivery" ? <><CheckCircle className="h-4 w-4" />Saved!</> : saving === "delivery" ? "Saving..." : <><Save className="h-4 w-4" />Save Delivery Zones</>}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Admin Management */}
-        <AdminManagement />
-      </div>
+        {/* ── Admin Tab ── */}
+        <TabsContent value="admin">
+          <AdminManagement />
+        </TabsContent>
+      </Tabs>
     </AdminLayout>
   );
 }
