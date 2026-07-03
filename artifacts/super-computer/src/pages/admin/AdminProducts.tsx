@@ -337,12 +337,62 @@ export default function AdminProducts() {
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label>Price (₹) *</Label>
-                <Input type="number" min={0} value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="85000" />
+                <Label className="font-semibold">MRP / Original Price (₹) *</Label>
+                <Input
+                  type="number" min={0}
+                  value={form.price}
+                  onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+                  placeholder="85000"
+                />
+                <p className="text-[11px] text-slate-400">Product ka original/market price — customer ko kata hua dikhega</p>
               </div>
               <div className="space-y-1">
-                <Label>Discount Price (₹)</Label>
-                <Input type="number" min={0} value={form.discountPrice} onChange={(e) => setForm((f) => ({ ...f, discountPrice: e.target.value }))} placeholder="75000" />
+                <Label className="font-semibold text-green-700">Sale Price / Offer Price (₹)</Label>
+                <Input
+                  type="number" min={0}
+                  value={form.discountPrice}
+                  onChange={(e) => setForm((f) => ({ ...f, discountPrice: e.target.value }))}
+                  placeholder="75000"
+                  className={
+                    form.discountPrice && form.price && Number(form.discountPrice) >= Number(form.price)
+                      ? "border-red-400 focus-visible:ring-red-400"
+                      : form.discountPrice ? "border-green-400 focus-visible:ring-green-400" : ""
+                  }
+                />
+                <p className="text-[11px] text-slate-400">
+                  Yahan <span className="font-semibold text-green-700">final selling price</span> daalen — jo customer actually pay karega.
+                  Discount amount ya percentage mat daalen.
+                </p>
+                {/* Live price preview */}
+                {form.price && form.discountPrice && Number(form.discountPrice) > 0 && (
+                  <div className={`rounded-lg border px-3 py-2 text-xs mt-1 ${
+                    Number(form.discountPrice) < Number(form.price)
+                      ? "bg-green-50 border-green-200"
+                      : "bg-red-50 border-red-200"
+                  }`}>
+                    {Number(form.discountPrice) < Number(form.price) ? (
+                      <div className="space-y-0.5">
+                        <p className="font-bold text-green-800">✅ Product card pe dikhega:</p>
+                        <p>
+                          <span className="font-black text-slate-900 text-sm">₹{Number(form.discountPrice).toLocaleString("en-IN")}</span>
+                          {" "}<span className="text-slate-400 line-through text-[11px]">₹{Number(form.price).toLocaleString("en-IN")}</span>
+                          {" "}<span className="text-green-700 font-bold">
+                            {Math.round(((Number(form.price) - Number(form.discountPrice)) / Number(form.price)) * 100)}% off
+                          </span>
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="font-bold text-red-700">
+                        ❌ Sale price MRP se kam honi chahiye ({Number(form.discountPrice).toLocaleString("en-IN")} ≥ {Number(form.price).toLocaleString("en-IN")})
+                      </p>
+                    )}
+                  </div>
+                )}
+                {form.price && !form.discountPrice && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs mt-1 text-slate-500">
+                    Preview: <span className="font-black text-slate-900">₹{Number(form.price).toLocaleString("en-IN")}</span> (koi discount nahi dikhega)
+                  </div>
+                )}
               </div>
               <div className="space-y-1">
                 <Label>Stock *</Label>
