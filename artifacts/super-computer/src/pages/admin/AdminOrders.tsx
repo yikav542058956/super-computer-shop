@@ -440,7 +440,12 @@ export default function AdminOrders() {
                 <TableCell className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</TableCell>
                 <TableCell>
                   <p className="font-semibold text-sm">{order.address?.name || order.userName}</p>
-                  <p className="text-xs text-slate-400">{order.address?.city}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <p className="text-xs text-slate-400">{order.address?.city}</p>
+                    {order.source === "offline" && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">🏪 Offline</span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="font-bold">{formatINR(order.finalAmount || order.totalAmount)}</TableCell>
                 <TableCell>

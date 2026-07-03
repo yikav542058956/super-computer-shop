@@ -1,17 +1,49 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { ref, onValue } from "firebase/database";
 import { db } from "@/lib/firebase";
-import { Package, Users, ShoppingCart, IndianRupee, TrendingUp, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Package, Users, ShoppingCart, IndianRupee, TrendingUp, Clock, CheckCircle, XCircle, AlertCircle, Calendar } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 import { Link } from "wouter";
+
+type Period = "today" | "week" | "month" | "year" | "all";
+
+const PERIODS: { key: Period; label: string }[] = [
+  { key: "today", label: "Today" },
+  { key: "week",  label: "This Week" },
+  { key: "month", label: "This Month" },
+  { key: "year",  label: "This Year" },
+  { key: "all",   label: "All Time" },
+];
+
+function inPeriod(ts: number, period: Period): boolean {
+  const now = new Date();
+  const d = new Date(ts);
+  if (period === "all") return true;
+  if (period === "today") {
+    return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }
+  if (period === "week") {
+    const startOfWeek = new Date(now);
+    startOfWeek.setHours(0, 0, 0, 0);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    return d >= startOfWeek;
+  }
+  if (period === "month") {
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }
+  if (period === "year") {
+    return d.getFullYear() === now.getFullYear();
+  }
+  return true;
+}
 
 function StatCard({ icon: Icon, label, value, color, bg, sub }: {
   icon: any; label: string; value: string; color: string; bg: string; sub?: string;
 }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
-      <div className={`h-14 w-14 rounded-2xl flex items-center justify-center shrink-0`} style={{ background: bg }}>
+      <div className="h-14 w-14 rounded-2xl flex items-center justify-center shrink-0" style={{ background: bg }}>
         <Icon className="h-7 w-7" style={{ color }} />
       </div>
       <div className="min-w-0">
@@ -43,9 +75,10 @@ function timeAgo(ts: number) {
 }
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({ products: 0, orders: 0, customers: 0, revenue: 0, pendingOrders: 0 });
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
-  const [recentProducts, setRecentProducts] = useState<any[]>([]);
+  const [period, setPeriod] = useState<Period>("all");
+  const [allOrders, setAllOrders] = useState<any[]>([]);
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [customerCount, setCustomerCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,66 +86,95 @@ export default function AdminDashboard() {
 
     unsubs.push(onValue(ref(db, "products"), (snap) => {
       if (snap.exists()) {
-        const list = Object.entries(snap.val()).map(([id, v]: any) => ({ id, ...v }));
-        setStats(s => ({ ...s, products: list.length }));
-        setRecentProducts(
-          list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 5)
-        );
-      } else {
-        setStats(s => ({ ...s, products: 0 }));
-        setRecentProducts([]);
-      }
+        setAllProducts(Object.entries(snap.val()).map(([id, v]: any) => ({ id, ...v })));
+      } else setAllProducts([]);
       setLoading(false);
     }));
 
     unsubs.push(onValue(ref(db, "orders"), (snap) => {
       if (snap.exists()) {
-        const list = Object.entries(snap.val()).map(([id, v]: any) => ({ id, ...v }));
-        const revenue = list.reduce((sum: number, o: any) => sum + (Number(o.finalAmount) || 0), 0);
-        const pending = list.filter((o: any) => o.status === "pending" || !o.status).length;
-        setStats(s => ({ ...s, orders: list.length, revenue, pendingOrders: pending }));
-        setRecentOrders(
-          list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 6)
-        );
-      } else {
-        setStats(s => ({ ...s, orders: 0, revenue: 0, pendingOrders: 0 }));
-        setRecentOrders([]);
-      }
+        setAllOrders(Object.entries(snap.val()).map(([id, v]: any) => ({ id, ...v })));
+      } else setAllOrders([]);
     }));
 
     unsubs.push(onValue(ref(db, "users"), (snap) => {
-      setStats(s => ({ ...s, customers: snap.exists() ? Object.keys(snap.val()).length : 0 }));
+      setCustomerCount(snap.exists() ? Object.keys(snap.val()).length : 0);
     }));
 
     return () => unsubs.forEach(u => u());
   }, []);
 
+  const filteredOrders = useMemo(() =>
+    allOrders.filter(o => inPeriod(o.createdAt || 0, period)),
+    [allOrders, period]
+  );
+
+  const stats = useMemo(() => {
+    const revenue = filteredOrders
+      .filter(o => o.paymentStatus === "paid")
+      .reduce((s, o) => s + (Number(o.finalAmount) || 0), 0);
+    const pending = filteredOrders.filter(o => ["pending", "payment_pending"].includes(o.orderStatus)).length;
+    return { orders: filteredOrders.length, revenue, pending };
+  }, [filteredOrders]);
+
+  const recentOrders = useMemo(() =>
+    [...filteredOrders].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 6),
+    [filteredOrders]
+  );
+
+  const recentProducts = useMemo(() =>
+    [...allProducts].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 5),
+    [allProducts]
+  );
+
+  const periodLabel = PERIODS.find(p => p.key === period)?.label || "All Time";
+
   return (
     <AdminLayout>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-black text-slate-900">Dashboard</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Welcome back! Here's what's happening.</p>
+          <p className="text-slate-500 text-sm mt-0.5">
+            {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          </p>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-slate-400">{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
+
+        {/* Period Filter */}
+        <div className="flex items-center gap-1.5 bg-slate-100 rounded-xl p-1 w-fit">
+          <Calendar className="h-4 w-4 text-slate-400 ml-1.5 shrink-0" />
+          {PERIODS.map(p => (
+            <button
+              key={p.key}
+              onClick={() => setPeriod(p.key)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                period === p.key
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={IndianRupee} label="Total Revenue"  value={formatINR(stats.revenue)}    color="#16a34a" bg="#dcfce7" sub="All time orders" />
-        <StatCard icon={ShoppingCart} label="Total Orders"  value={String(stats.orders)}         color="#3B82F6" bg="#dbeafe" sub={stats.pendingOrders > 0 ? `${stats.pendingOrders} pending` : "All fulfilled"} />
-        <StatCard icon={Package}      label="Products"      value={String(stats.products)}        color="#8B5CF6" bg="#ede9fe" sub="Active listings" />
-        <StatCard icon={Users}        label="Customers"     value={String(stats.customers)}       color="#F59E0B" bg="#fef3c7" sub="Registered users" />
+        <StatCard icon={IndianRupee} label={`Revenue (${periodLabel})`}  value={formatINR(stats.revenue)}     color="#16a34a" bg="#dcfce7" sub="Paid orders only" />
+        <StatCard icon={ShoppingCart} label={`Orders (${periodLabel})`}  value={String(stats.orders)}          color="#3B82F6" bg="#dbeafe" sub={stats.pending > 0 ? `${stats.pending} pending` : "All fulfilled"} />
+        <StatCard icon={Package}      label="Total Products"              value={String(allProducts.length)}    color="#8B5CF6" bg="#ede9fe" sub="Active listings" />
+        <StatCard icon={Users}        label="Customers"                   value={String(customerCount)}         color="#F59E0B" bg="#fef3c7" sub="Registered users" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         {/* Recent Orders */}
         <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-            <h2 className="font-bold text-slate-900">Recent Orders</h2>
+            <h2 className="font-bold text-slate-900">
+              Recent Orders
+              <span className="ml-2 text-xs font-normal text-slate-400">({periodLabel})</span>
+            </h2>
             <Link href="/admin/orders">
               <span className="text-xs font-semibold text-green-600 hover:underline cursor-pointer">View All →</span>
             </Link>
@@ -132,11 +194,12 @@ export default function AdminDashboard() {
             ) : recentOrders.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                 <ShoppingCart className="h-10 w-10 mb-2 opacity-30" />
-                <p className="text-sm font-medium">No orders yet</p>
+                <p className="text-sm font-medium">No orders for {periodLabel.toLowerCase()}</p>
               </div>
             ) : (
               recentOrders.map((order) => {
-                const st = ORDER_STATUS_STYLE[order.status] || ORDER_STATUS_STYLE.pending;
+                const statusKey = order.orderStatus || order.status || "pending";
+                const st = ORDER_STATUS_STYLE[statusKey] || ORDER_STATUS_STYLE.pending;
                 const Icon = st.icon;
                 return (
                   <div key={order.id} className="px-5 py-3.5 flex items-center gap-3 hover:bg-slate-50 transition-colors">
@@ -144,12 +207,15 @@ export default function AdminDashboard() {
                       <Icon className="h-4 w-4" style={{ color: st.color }} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">
-                        {order.customerName || order.userName || "Customer"}
-                      </p>
-                      <p className="text-xs text-slate-400 truncate">
-                        {order.items?.length || 1} item{(order.items?.length || 1) !== 1 ? "s" : ""} · {order.phone || ""}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-slate-800 truncate">
+                          {order.address?.name || order.customerName || order.userName || "Customer"}
+                        </p>
+                        {order.source === "offline" && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 shrink-0">🏪 Offline</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400">{timeAgo(order.createdAt)}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-bold text-slate-800">{formatINR(order.finalAmount || order.totalAmount || 0)}</p>
@@ -167,14 +233,14 @@ export default function AdminDashboard() {
         {/* Right column */}
         <div className="lg:col-span-2 flex flex-col gap-4">
           {/* Pending Alert */}
-          {stats.pendingOrders > 0 && (
+          {stats.pending > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
                 <Clock className="h-5 w-5 text-amber-600" />
               </div>
               <div className="flex-1">
-                <p className="font-bold text-amber-800 text-sm">{stats.pendingOrders} Pending Order{stats.pendingOrders > 1 ? "s" : ""}</p>
-                <p className="text-xs text-amber-600 mt-0.5">Need your attention</p>
+                <p className="font-bold text-amber-800 text-sm">{stats.pending} Pending Order{stats.pending > 1 ? "s" : ""}</p>
+                <p className="text-xs text-amber-600 mt-0.5">{periodLabel} · Need attention</p>
               </div>
               <Link href="/admin/orders">
                 <button className="text-xs font-bold text-amber-700 bg-amber-200 hover:bg-amber-300 px-3 py-1.5 rounded-lg transition-colors">
@@ -237,10 +303,10 @@ export default function AdminDashboard() {
             <p className="text-sm font-bold text-slate-700 mb-3">Quick Actions</p>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: "Add Product", href: "/admin/products", color: "#16a34a", bg: "#dcfce7" },
-                { label: "View Orders", href: "/admin/orders",   color: "#3B82F6", bg: "#dbeafe" },
-                { label: "Add Banner",  href: "/admin/banners",  color: "#8B5CF6", bg: "#ede9fe" },
-                { label: "Settings",    href: "/admin/settings", color: "#F59E0B", bg: "#fef3c7" },
+                { label: "Add Product",    href: "/admin/products",      color: "#16a34a", bg: "#dcfce7" },
+                { label: "Offline Sale",   href: "/admin/offline-sale",  color: "#EA580C", bg: "#FFF7ED" },
+                { label: "View Orders",    href: "/admin/orders",        color: "#3B82F6", bg: "#dbeafe" },
+                { label: "Settings",       href: "/admin/settings",      color: "#F59E0B", bg: "#fef3c7" },
               ].map(({ label, href, color, bg }) => (
                 <Link key={href} href={href}>
                   <button className="w-full text-xs font-bold py-2.5 rounded-xl transition-colors"
