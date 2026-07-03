@@ -155,6 +155,9 @@ export default function AdminProducts() {
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Product name is required"); return; }
     if (!form.price || isNaN(Number(form.price))) { toast.error("Valid price is required"); return; }
+    if (form.discountPrice && (isNaN(Number(form.discountPrice)) || Number(form.discountPrice) >= Number(form.price))) {
+      toast.error("Sale Price MRP se kam honi chahiye — discount amount nahi, final price daalen"); return;
+    }
     if (!form.stock || isNaN(Number(form.stock))) { toast.error("Valid stock is required"); return; }
     if (form.images.length === 0) { toast.error("Please upload at least one product image"); return; }
 

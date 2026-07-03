@@ -41,6 +41,7 @@ import AdminCoupons from "@/pages/admin/AdminCoupons";
 import AdminReviews from "@/pages/admin/AdminReviews";
 import AdminReports from "@/pages/admin/AdminReports";
 import AdminSettings from "@/pages/admin/AdminSettings";
+import AdminPayment from "@/pages/admin/AdminPayment";
 import AdminAnnouncements from "@/pages/admin/AdminAnnouncements";
 import AdminCustomerPhotos from "@/pages/admin/AdminCustomerPhotos";
 import AdminWallet from "@/pages/admin/AdminWallet";
@@ -146,6 +147,12 @@ function Router() {
       <Route path="/admin/settings">
         <AdminRoute>
           <AdminSettings />
+        </AdminRoute>
+      </Route>
+
+      <Route path="/admin/payment">
+        <AdminRoute>
+          <AdminPayment />
         </AdminRoute>
       </Route>
 

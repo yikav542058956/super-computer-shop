@@ -422,15 +422,12 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid grid-cols-4 w-full h-11 bg-slate-100">
+        <TabsList className="grid grid-cols-3 w-full h-11 bg-slate-100">
           <TabsTrigger value="general" className="gap-1.5 text-xs sm:text-sm font-semibold">
             <Store className="h-4 w-4 hidden sm:block" /> General
           </TabsTrigger>
           <TabsTrigger value="delivery" className="gap-1.5 text-xs sm:text-sm font-semibold">
             <Truck className="h-4 w-4 hidden sm:block" /> Delivery
-          </TabsTrigger>
-          <TabsTrigger value="payment" className="gap-1.5 text-xs sm:text-sm font-semibold">
-            <CreditCard className="h-4 w-4 hidden sm:block" /> Payment
           </TabsTrigger>
           <TabsTrigger value="admin" className="gap-1.5 text-xs sm:text-sm font-semibold">
             <ShieldCheck className="h-4 w-4 hidden sm:block" /> Admin
@@ -609,11 +606,6 @@ export default function AdminSettings() {
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* ── Payment Tab ── */}
-        <TabsContent value="payment">
-          <PaymentSettings />
         </TabsContent>
 
         {/* ── Admin Tab ── */}
