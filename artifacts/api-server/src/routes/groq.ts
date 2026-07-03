@@ -152,4 +152,27 @@ Base specs on publicly known specifications for this exact model. If unsure, set
   } catch (e: any) { res.status(502).json({ error: e.message }); }
 });
 
+/* ── 4. Generate a realistic customer review text ─────────────── */
+router.post("/generate-review", async (req, res) => {
+  const { name, brand, category, rating } = req.body as any;
+  if (!name) { res.status(400).json({ error: "name required" }); return; }
+
+  const tone =
+    rating >= 4 ? "positive and enthusiastic" :
+    rating === 3 ? "neutral, noting a few minor concerns" :
+    "critical, pointing out specific drawbacks";
+
+  const prompt = `Write a realistic ${tone} customer review for the product below in 2–4 natural sentences. Sound like a real Indian buyer — mention specific things like performance, battery, build quality, delivery speed, or value for money. Avoid generic phrases. Write in fluent English only.
+
+Product: ${name}${brand ? ` by ${brand}` : ""}${category ? ` (${category})` : ""}
+Rating: ${rating}/5 stars
+
+Return ONLY the review text. No quotes, no labels, no markdown.`;
+
+  try {
+    const text = await groqChat(TEXT_MODEL, [{ role: "user", content: prompt }], 220);
+    res.json({ text });
+  } catch (e: any) { res.status(502).json({ error: e.message }); }
+});
+
 export default router;
