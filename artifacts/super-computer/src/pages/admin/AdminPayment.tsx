@@ -209,7 +209,7 @@ export default function AdminPayment() {
             className={`gap-2 w-full h-12 text-base font-bold ${gatewayEnabled ? "bg-indigo-600 hover:bg-indigo-700" : "bg-amber-600 hover:bg-amber-700"}`}
           >
             {saved
-              ? <><CheckCircle className="h-5 w-5" />Payment Settings Save Ho Gayi!</>
+              ? <><CheckCircle className="h-5 w-5" />Payment Settings Saved!</>
               : saving
                 ? "Saving..."
                 : <><Save className="h-5 w-5" />Save Payment Settings</>}

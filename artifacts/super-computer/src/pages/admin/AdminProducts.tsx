@@ -112,7 +112,7 @@ export default function AdminProducts() {
     }));
     setShowVerifyDialog(false);
     setAiExtracted(null);
-    toast.success("Details form mein fill ho gayi — verify karein aur save karein");
+    toast.success("Details filled in the form — please verify and save.");
   }
 
   /* ── Auto-fetch specs from device name ─────────── */
@@ -153,7 +153,7 @@ export default function AdminProducts() {
       const conf = data.confidence === "high"
         ? "✅ High confidence"
         : data.confidence === "medium"
-          ? "⚠️ Medium — verify karein"
+          ? "⚠️ Medium — please verify"
           : "⚠️ Low — manually verify";
       toast.success(`AI specs ready! ${conf}`);
     } catch (e: any) {
@@ -165,7 +165,7 @@ export default function AdminProducts() {
 
   async function generateDescription() {
     if (!form.name.trim()) {
-      toast.error("Product name likhne ke baad AI generate karein");
+      toast.error("Please enter the product name before generating with AI.");
       return;
     }
     setGeneratingDesc(true);
@@ -461,7 +461,7 @@ export default function AdminProducts() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ScanLine className="h-5 w-5 text-purple-600" />
-              AI ne ye details nikali hain — verify karein
+              AI extracted these details — please verify
             </DialogTitle>
           </DialogHeader>
           {aiExtracted && (
@@ -518,7 +518,7 @@ export default function AdminProducts() {
             <Button variant="outline" onClick={() => { setShowVerifyDialog(false); setAiExtracted(null); }}>Cancel</Button>
             <Button onClick={() => aiExtracted && applyExtracted(aiExtracted)}
               style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", color: "#fff" }}>
-              <CheckCircle className="h-4 w-4 mr-2" /> Form mein Apply Karein
+              <CheckCircle className="h-4 w-4 mr-2" /> Apply to Form
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -535,8 +535,8 @@ export default function AdminProducts() {
           <div className="rounded-xl border-2 border-dashed p-4 flex items-center justify-between gap-3"
             style={{ borderColor: "rgba(124,58,237,0.3)", background: "rgba(124,58,237,0.04)" }}>
             <div>
-              <p className="text-sm font-black" style={{ color: "#7c3aed" }}>📷 Bill / Box Photo se Auto-Fill</p>
-              <p className="text-xs text-slate-500 mt-0.5">Koi bhi bill, invoice ya box ki photo upload karo — AI sab details khud bharega</p>
+              <p className="text-sm font-black" style={{ color: "#7c3aed" }}>📷 Auto-Fill from Bill / Box Photo</p>
+              <p className="text-xs text-slate-500 mt-0.5">Upload any bill, invoice or product box photo — AI will auto-fill all details</p>
             </div>
             <div className="flex gap-2">
               <button
@@ -704,9 +704,9 @@ export default function AdminProducts() {
                 rows={5}
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Product name, brand aur price bharne ke baad AI se auto-generate karein..."
+                placeholder="Enter product name, brand and price — then use AI to auto-generate..."
               />
-              <p className="text-[11px] text-slate-400">✨ AI generate karne ke baad aap manually edit bhi kar sakte hain</p>
+              <p className="text-[11px] text-slate-400">✨ You can manually edit the text after AI generates it</p>
             </div>
 
             {/* Images */}

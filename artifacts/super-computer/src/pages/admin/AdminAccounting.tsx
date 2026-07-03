@@ -80,7 +80,7 @@ export default function AdminAccounting() {
 
   const totalUdhar = customerList.filter((c) => c.balance > 0).reduce((s, c) => s + c.balance, 0);
   const totalAdvance = customerList.filter((c) => c.balance < 0).reduce((s, c) => s + Math.abs(c.balance), 0);
-  const udharCount = customerList.filter((c) => c.balance > 0).length;
+  const outstandingCount = customerList.filter((c) => c.balance > 0).length;
 
   const addEntry = async () => {
     if (!addForm.customerId || !addForm.amount || Number(addForm.amount) <= 0) {
@@ -105,7 +105,7 @@ export default function AdminAccounting() {
 
   const exportCSV = () => {
     const rows = [
-      ["Customer", "Phone", "Email", "Total Udhar (Dr)", "Total Paid (Cr)", "Net Balance", "Orders", "Order Value"],
+      ["Customer", "Phone", "Email", "Total Outstanding (Dr)", "Total Paid (Cr)", "Net Balance", "Orders", "Order Value"],
       ...customerList.map((c) => [c.name, c.phone, c.email, c.totalDebit, c.totalCredit, c.balance, c.ordersCount, c.totalOrderValue]),
     ];
     const csv = rows.map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
@@ -125,8 +125,8 @@ export default function AdminAccounting() {
   return (
     <AdminLayout>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={AlertCircle} label="Total Udhar Due" value={formatINR(totalUdhar)} color="bg-red-100 text-red-600" />
-        <StatCard icon={Users} label="Customers with Udhar" value={udharCount} color="bg-amber-100 text-amber-600" />
+        <StatCard icon={AlertCircle} label="Total Outstanding Due" value={formatINR(totalUdhar)} color="bg-red-100 text-red-600" />
+        <StatCard icon={Users} label="Customers with Outstanding" value={outstandingCount} color="bg-amber-100 text-amber-600" />
         <StatCard icon={TrendingDown} label="Total Advance Received" value={formatINR(totalAdvance)} color="bg-green-100 text-green-600" />
         <StatCard icon={IndianRupee} label="Total Customers" value={customerList.length} color="bg-blue-100 text-blue-600" />
       </div>
@@ -168,7 +168,7 @@ export default function AdminAccounting() {
               <div className="text-right shrink-0">
                 {c.balance > 0 ? (
                   <div>
-                    <p className="text-xs text-red-500 font-semibold">Udhar (Due)</p>
+                    <p className="text-xs text-red-500 font-semibold">Outstanding (Due)</p>
                     <p className="font-black text-red-600">{formatINR(c.balance)}</p>
                   </div>
                 ) : c.balance < 0 ? (
@@ -199,7 +199,7 @@ export default function AdminAccounting() {
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-center">
-                  <p className="text-xs text-red-500 font-semibold">Total Debit (Udhar)</p>
+                  <p className="text-xs text-red-500 font-semibold">Total Debit (Outstanding)</p>
                   <p className="font-black text-red-700 text-lg">{formatINR(selectedCustomer.totalDebit)}</p>
                 </div>
                 <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-center">
@@ -208,7 +208,7 @@ export default function AdminAccounting() {
                 </div>
                 <div className={`rounded-xl p-3 text-center border ${selectedCustomer.balance > 0 ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}`}>
                   <p className={`text-xs font-semibold ${selectedCustomer.balance > 0 ? "text-red-500" : "text-green-500"}`}>
-                    {selectedCustomer.balance > 0 ? "Net Udhar" : "Net Advance"}
+                    {selectedCustomer.balance > 0 ? "Net Outstanding" : "Net Advance"}
                   </p>
                   <p className={`font-black text-lg ${selectedCustomer.balance > 0 ? "text-red-700" : "text-green-700"}`}>
                     {formatINR(Math.abs(selectedCustomer.balance))}
