@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import {
   Settings, MessageCircle, Store, Phone, Mail, Percent, Truck, Save, CheckCircle,
   ShieldCheck, Trash2, UserPlus, MapPin, CreditCard, Eye, EyeOff, Smartphone,
-  AlertTriangle, Info,
+  AlertTriangle, Info, Database, Download, Upload, RotateCcw, PackageX,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -24,6 +24,331 @@ function WhatsAppIcon({ size = 20 }: { size?: number }) {
         d="M34.2 13.7C31.8 11.3 28.6 10 25.2 10C18.1 10 12.4 15.7 12.4 22.8C12.4 25.1 13 27.3 14.2 29.2L12 36L19.1 33.9C20.9 34.9 23 35.5 25.2 35.5C32.3 35.5 38 29.8 38 22.7C38 19.3 36.6 16.1 34.2 13.7ZM25.2 33.3C23.2 33.3 21.3 32.8 19.6 31.8L19.2 31.6L15.1 32.7L16.3 28.7L16 28.3C14.9 26.5 14.3 24.4 14.3 22.2C14.3 16.5 19 11.8 24.7 11.8C27.5 11.8 30.1 12.9 32 14.9C33.9 16.8 35 19.4 35 22.2C35.3 28.3 30.9 33.3 25.2 33.3ZM30.9 25.1C30.6 24.9 29.1 24.2 28.8 24.1C28.5 24 28.3 23.9 28.1 24.2C27.9 24.5 27.3 25.2 27.2 25.4C27 25.6 26.9 25.6 26.6 25.5C26.3 25.3 25.3 25 24.1 23.9C23.2 23.1 22.6 22.1 22.4 21.8C22.2 21.5 22.4 21.3 22.5 21.1C22.7 21 22.8 20.8 23 20.6C23.1 20.4 23.2 20.3 23.3 20.1C23.4 19.9 23.4 19.7 23.3 19.6C23.2 19.4 22.6 17.9 22.3 17.3C22 16.7 21.8 16.8 21.6 16.8H21C20.8 16.8 20.5 16.9 20.2 17.2C20 17.5 19.2 18.2 19.2 19.7C19.2 21.2 20.2 22.6 20.4 22.9C20.6 23.1 22.6 26.1 25.6 27.4C26.3 27.7 26.9 27.9 27.4 28C28.1 28.2 28.7 28.2 29.2 28.1C29.8 28 30.9 27.4 31.2 26.7C31.4 26 31.4 25.4 31.3 25.3C31.2 25.2 31.1 25.2 30.9 25.1Z"
         fill="white" />
     </svg>
+  );
+}
+
+/* ── Data Management Section ────────────────────────────────── */
+const DB_NODES = [
+  { key: "products",        label: "Products",         icon: "📦", color: "blue" },
+  { key: "categories",      label: "Categories",       icon: "🏷️",  color: "purple" },
+  { key: "orders",          label: "Orders",           icon: "🧾", color: "orange" },
+  { key: "users",           label: "Users",            icon: "👤", color: "green" },
+  { key: "productReviews",  label: "Reviews",          icon: "⭐", color: "yellow" },
+  { key: "banners",         label: "Banners",          icon: "🖼️",  color: "pink" },
+  { key: "wishlist",        label: "Wishlists",        icon: "❤️",  color: "red" },
+  { key: "carts",           label: "Carts",            icon: "🛒", color: "cyan" },
+  { key: "settings",        label: "Settings",         icon: "⚙️",  color: "slate" },
+  { key: "adminPhones",     label: "Admin Phones",     icon: "📱", color: "indigo" },
+];
+
+function DataManagement() {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmPartial, setConfirmPartial] = useState(false);
+  const [importData, setImportData] = useState<any>(null);
+  const [importFileName, setImportFileName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleNode = (key: string) =>
+    setSelected(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
+
+  /* ── Export ── */
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const snap = await get(ref(db, "/"));
+      const data = snap.exists() ? snap.val() : {};
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `supercomputer-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("✅ Database exported successfully!");
+    } catch {
+      toast.error("Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  /* ── Import file select ── */
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        setImportData(parsed);
+        toast.success("File loaded — click Import to restore");
+      } catch {
+        toast.error("Invalid JSON file");
+        setImportData(null);
+        setImportFileName("");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  /* ── Import ── */
+  const handleImport = async () => {
+    if (!importData) return;
+    setImporting(true);
+    try {
+      await set(ref(db, "/"), importData);
+      toast.success("✅ Data restored successfully!");
+      setImportData(null);
+      setImportFileName("");
+    } catch {
+      toast.error("Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  /* ── Selective delete ── */
+  const handlePartialDelete = async () => {
+    if (selected.size === 0) return;
+    setDeleting(true);
+    try {
+      await Promise.all([...selected].map(k => remove(ref(db, k))));
+      toast.success(`✅ Deleted: ${[...selected].join(", ")}`);
+      setSelected(new Set());
+      setConfirmPartial(false);
+    } catch {
+      toast.error("Delete failed");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  /* ── Factory reset ── */
+  const handleFactoryReset = async () => {
+    setDeleting(true);
+    try {
+      await Promise.all(DB_NODES.map(n => remove(ref(db, n.key))));
+      toast.success("✅ Factory reset complete — all data deleted");
+      setConfirmReset(false);
+      setSelected(new Set());
+    } catch {
+      toast.error("Factory reset failed");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+
+      {/* ── Export ────────────────────────────────────── */}
+      <Card className="border-2 border-blue-200 bg-blue-50/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-blue-800">
+            <Download className="h-5 w-5" /> Export Data
+          </CardTitle>
+          <CardDescription className="text-blue-700">
+            Download a full backup of all Firebase data as a JSON file. Use this before any risky operation.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            onClick={handleExport}
+            disabled={exporting}
+            className="gap-2 bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+          >
+            {exporting
+              ? <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Exporting...</>
+              : <><Download className="h-4 w-4" /> Export All Data (JSON)</>
+            }
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* ── Import ────────────────────────────────────── */}
+      <Card className="border-2 border-green-200 bg-green-50/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-green-800">
+            <Upload className="h-5 w-5" /> Import / Restore
+          </CardTitle>
+          <CardDescription className="text-green-700">
+            Restore a previously exported JSON backup. <strong>Warning:</strong> This will overwrite all existing data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <input
+            type="file"
+            accept=".json"
+            ref={fileInputRef}
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <div className="flex flex-wrap gap-3 items-center">
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              className="gap-2 border-green-400 text-green-700 hover:bg-green-50"
+            >
+              <Upload className="h-4 w-4" /> Choose JSON File
+            </Button>
+            {importFileName && (
+              <span className="text-sm text-slate-600 bg-white border border-slate-200 px-3 py-1.5 rounded-lg font-medium">
+                📄 {importFileName}
+              </span>
+            )}
+          </div>
+          {importData && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
+              <p className="text-sm font-semibold text-green-800">
+                ✅ File ready — {Object.keys(importData).length} top-level nodes found:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {Object.keys(importData).map(k => (
+                  <span key={k} className="text-xs bg-white border border-green-200 text-green-700 font-medium px-2 py-0.5 rounded-full">
+                    {k}
+                  </span>
+                ))}
+              </div>
+              <Button
+                onClick={handleImport}
+                disabled={importing}
+                className="gap-2 bg-green-600 hover:bg-green-700 w-full"
+              >
+                {importing
+                  ? <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Restoring...</>
+                  : <><RotateCcw className="h-4 w-4" /> Import & Restore Data</>
+                }
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Selective Delete ───────────────────────────── */}
+      <Card className="border-2 border-orange-200 bg-orange-50/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-orange-800">
+            <PackageX className="h-5 w-5" /> Selective Delete
+          </CardTitle>
+          <CardDescription className="text-orange-700">
+            Choose specific data sections to delete. All other data remains untouched.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {DB_NODES.map(node => (
+              <button
+                key={node.key}
+                type="button"
+                onClick={() => toggleNode(node.key)}
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-semibold text-left transition-all ${
+                  selected.has(node.key)
+                    ? "border-orange-500 bg-orange-100 text-orange-900"
+                    : "border-gray-200 bg-white text-slate-600 hover:border-orange-300 hover:bg-orange-50"
+                }`}
+              >
+                <span className="text-base">{node.icon}</span>
+                <span>{node.label}</span>
+                {selected.has(node.key) && (
+                  <span className="ml-auto h-4 w-4 bg-orange-500 rounded-full flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 12 12" fill="none" className="h-2.5 w-2.5">
+                      <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {selected.size > 0 && (
+            <div className="flex items-center gap-2 text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>Will delete: <strong>{[...selected].join(", ")}</strong></span>
+            </div>
+          )}
+
+          {!confirmPartial ? (
+            <Button
+              variant="outline"
+              disabled={selected.size === 0}
+              onClick={() => setConfirmPartial(true)}
+              className="gap-2 border-orange-400 text-orange-700 hover:bg-orange-50 w-full"
+            >
+              <Trash2 className="h-4 w-4" /> Delete Selected ({selected.size})
+            </Button>
+          ) : (
+            <div className="bg-orange-50 border-2 border-orange-300 rounded-xl p-4 space-y-3">
+              <p className="text-sm font-bold text-orange-800 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" /> Are you sure? This cannot be undone.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handlePartialDelete}
+                  disabled={deleting}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 gap-2"
+                >
+                  {deleting ? "Deleting..." : "Yes, Delete"}
+                </Button>
+                <Button variant="outline" onClick={() => setConfirmPartial(false)} className="flex-1">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Factory Reset ─────────────────────────────── */}
+      <Card className="border-2 border-red-300 bg-red-50/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-red-800">
+            <RotateCcw className="h-5 w-5" /> Factory Data Reset
+          </CardTitle>
+          <CardDescription className="text-red-700">
+            <strong>Danger Zone.</strong> Deletes ALL data — products, orders, users, settings, everything. Cannot be undone. Export a backup first.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!confirmReset ? (
+            <Button
+              variant="outline"
+              onClick={() => setConfirmReset(true)}
+              className="gap-2 border-red-400 text-red-700 hover:bg-red-50 w-full"
+            >
+              <RotateCcw className="h-4 w-4" /> Factory Reset
+            </Button>
+          ) : (
+            <div className="bg-red-50 border-2 border-red-400 rounded-xl p-4 space-y-3">
+              <p className="text-sm font-black text-red-800 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" /> LAST WARNING — All data will be permanently deleted!
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleFactoryReset}
+                  disabled={deleting}
+                  className="flex-1 bg-red-600 hover:bg-red-700 gap-2"
+                >
+                  {deleting
+                    ? <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Deleting...</>
+                    : "Yes, Delete Everything"
+                  }
+                </Button>
+                <Button variant="outline" onClick={() => setConfirmReset(false)} className="flex-1">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+    </div>
   );
 }
 
