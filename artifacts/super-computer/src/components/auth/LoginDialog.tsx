@@ -98,7 +98,7 @@ export function LoginDialog() {
   const handleSendOtp = async () => {
     const digits = phone.replace(/\D/g, "");
     if (digits.length !== 10) {
-      toast.error("10 अंकों का मोबाइल नंबर डालें");
+      toast.error("Please enter a valid 10-digit mobile number.");
       return;
     }
     setLoading(true);
@@ -111,7 +111,7 @@ export function LoginDialog() {
         toast.success(`OTP sent to +91 ${digits}`);
         setTimeout(() => otpRefs.current[0]?.focus(), 150);
       } else {
-        toast.error(data.message || "OTP भेजने में विफल। फिर से कोशिश करें।");
+        toast.error(data.message || "Failed to send OTP. Please try again.");
       }
     } catch {
       toast.error("Network error. Please check your connection.");
@@ -158,7 +158,7 @@ export function LoginDialog() {
 
   const verifyOtp = async (code?: string) => {
     const otpCode = code || otp.join("");
-    if (otpCode.length !== 4) { toast.error("4 अंकों का OTP पूरा डालें"); return; }
+    if (otpCode.length !== 4) { toast.error("Please enter the complete 4-digit OTP."); return; }
     setLoading(true);
     try {
       const digits = phone.replace(/\D/g, "");
@@ -181,7 +181,7 @@ export function LoginDialog() {
         toast.success("Login successful! Welcome.");
         closeLoginDialog();
       } else {
-        toast.error(data.message || "OTP गलत है। फिर से कोशिश करें।");
+        toast.error(data.message || "Incorrect OTP. Please try again.");
         setOtp(["", "", "", ""]);
         setTimeout(() => otpRefs.current[0]?.focus(), 50);
       }
