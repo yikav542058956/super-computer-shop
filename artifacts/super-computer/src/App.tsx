@@ -10,6 +10,7 @@ import { LoginDialogProvider } from "@/contexts/LoginDialogContext";
 import { LoginDialog } from "@/components/auth/LoginDialog";
 import { useEffect } from "react";
 import { seedData } from "@/lib/seedData";
+import { useDynamicSEO } from "@/lib/seo";
 import { AdminRoute, ProtectedRoute } from "@/components/auth/RouteGuards";
 
 // Customer Pages
@@ -202,6 +203,7 @@ function Router() {
 }
 
 function App() {
+  useDynamicSEO();
   useEffect(() => {
     seedData();
   }, []);

@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import {
   Settings, MessageCircle, Store, Phone, Mail, Percent, Truck, Save, CheckCircle,
   ShieldCheck, Trash2, UserPlus, MapPin, CreditCard, Eye, EyeOff, Smartphone,
-  AlertTriangle, Info, Database, Download, Upload, RotateCcw, PackageX,
+  AlertTriangle, Info, Database, Download, Upload, RotateCcw, PackageX, Search,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -671,6 +671,12 @@ export default function AdminSettings() {
     localCharge: "0",
     otherCharge: "499",
   });
+  const [seo, setSeo] = useState({
+    metaTitle: "Super1Computer – Laptop, Desktop & Computer Shop in Kasganj | Best Price",
+    metaDescription: "Super1Computer – Kasganj ka No.1 computer store. Buy laptops, desktops, accessories at best prices. HP, Dell, Lenovo, Asus available. Home delivery + easy EMI. Call: 9761809960",
+    metaKeywords: "laptop shop kasganj, computer store kasganj, buy laptop kasganj, hp laptop kasganj, lenovo laptop kasganj, super1computer, super1computer.shop",
+    canonicalUrl: "https://super1computer.shop/",
+  });
   const [saving, setSaving] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
 
@@ -688,6 +694,7 @@ export default function AdminSettings() {
           localCharge: String(d.deliveryZones.localCharge ?? 0),
           otherCharge: String(d.deliveryZones.otherCharge ?? 499),
         });
+        if (d.seo) setSeo(s => ({ ...s, ...d.seo }));
       }
     };
     load();
@@ -741,6 +748,13 @@ export default function AdminSettings() {
     toast.success("Calling number saved!");
   };
 
+  const saveSeo = async () => {
+    setSaving("seo");
+    await set(ref(db, "settings/seo"), seo);
+    setSaving(null); flash("seo");
+    toast.success("SEO settings saved! Changes apply live on the site.");
+  };
+
   const previewUrl = whatsapp.number.replace(/\D/g, "").length === 10
     ? `https://wa.me/91${whatsapp.number.replace(/\D/g, "")}?text=${encodeURIComponent("Hi! I need help from SuperComputer.")}`
     : null;
@@ -758,7 +772,7 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid grid-cols-4 w-full h-11 bg-slate-100">
+        <TabsList className="grid grid-cols-5 w-full h-11 bg-slate-100">
           <TabsTrigger value="general" className="gap-1.5 text-xs sm:text-sm font-semibold">
             <Store className="h-4 w-4 hidden sm:block" /> General
           </TabsTrigger>
@@ -767,6 +781,9 @@ export default function AdminSettings() {
           </TabsTrigger>
           <TabsTrigger value="admin" className="gap-1.5 text-xs sm:text-sm font-semibold">
             <ShieldCheck className="h-4 w-4 hidden sm:block" /> Admin
+          </TabsTrigger>
+          <TabsTrigger value="seo" className="gap-1.5 text-xs sm:text-sm font-semibold">
+            <Search className="h-4 w-4 hidden sm:block" /> SEO
           </TabsTrigger>
           <TabsTrigger value="data" className="gap-1.5 text-xs sm:text-sm font-semibold">
             <Database className="h-4 w-4 hidden sm:block" /> Data
@@ -1004,6 +1021,107 @@ export default function AdminSettings() {
         {/* ── Admin Tab ── */}
         <TabsContent value="admin">
           <AdminManagement />
+        </TabsContent>
+
+        {/* ── SEO Tab ── */}
+        <TabsContent value="seo" className="space-y-5">
+          <Card className="border-2 border-violet-200 bg-violet-50/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-violet-800">
+                <Search className="h-5 w-5" /> SEO & Search Engine Settings
+              </CardTitle>
+              <CardDescription className="text-violet-700">
+                Ye settings Google mein aapki website ka naam, description aur keywords control karti hai. Save karte hi live ho jaati hai.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+
+              <div className="space-y-1.5">
+                <Label className="font-semibold">Page Title (Browser Tab + Google Result)</Label>
+                <Input
+                  value={seo.metaTitle}
+                  onChange={e => setSeo(s => ({ ...s, metaTitle: e.target.value }))}
+                  placeholder="Super1Computer – Best Laptop Shop in Kasganj"
+                />
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>Ideal: 50–60 characters</span>
+                  <span className={seo.metaTitle.length > 60 ? "text-red-500 font-bold" : "text-green-600 font-semibold"}>
+                    {seo.metaTitle.length} chars
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-semibold">Meta Description (Google search snippet)</Label>
+                <Textarea
+                  value={seo.metaDescription}
+                  onChange={e => setSeo(s => ({ ...s, metaDescription: e.target.value }))}
+                  placeholder="Kasganj ka No.1 computer store. Buy laptops, desktops at best prices..."
+                  rows={3}
+                  className="resize-none bg-white"
+                />
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>Ideal: 140–160 characters</span>
+                  <span className={seo.metaDescription.length > 160 ? "text-red-500 font-bold" : "text-green-600 font-semibold"}>
+                    {seo.metaDescription.length} chars
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-semibold">Keywords (comma separated)</Label>
+                <Textarea
+                  value={seo.metaKeywords}
+                  onChange={e => setSeo(s => ({ ...s, metaKeywords: e.target.value }))}
+                  placeholder="laptop shop kasganj, computer store kasganj, hp laptop kasganj..."
+                  rows={2}
+                  className="resize-none bg-white"
+                />
+                <p className="text-xs text-slate-400">Local keywords sabse zyada helpful hain — city name zaroor include karo</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-semibold">Canonical URL (your main domain)</Label>
+                <Input
+                  value={seo.canonicalUrl}
+                  onChange={e => setSeo(s => ({ ...s, canonicalUrl: e.target.value }))}
+                  placeholder="https://super1computer.shop/"
+                />
+                <p className="text-xs text-slate-400">Jab domain laga lo tab yahan <strong>https://super1computer.shop/</strong> daalo</p>
+              </div>
+
+              {/* Google Preview */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-1">
+                <p className="text-xs font-bold text-slate-400 uppercase mb-2">📌 Google Search Preview</p>
+                <p className="text-xs text-slate-400 truncate">{seo.canonicalUrl}</p>
+                <p className="text-blue-700 font-semibold text-sm leading-snug truncate">{seo.metaTitle || "Page Title"}</p>
+                <p className="text-slate-600 text-xs leading-relaxed line-clamp-2">{seo.metaDescription || "Meta description will appear here..."}</p>
+              </div>
+
+              <Button onClick={saveSeo} disabled={saving === "seo"} className="gap-2 w-full bg-violet-600 hover:bg-violet-700">
+                {saved === "seo" ? <><CheckCircle className="h-4 w-4" /> Saved!</> : saving === "seo" ? "Saving..." : <><Save className="h-4 w-4" /> Save SEO Settings</>}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Tips */}
+          <Card className="border border-slate-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-slate-700 flex items-center gap-2">
+                <Info className="h-4 w-4 text-blue-500" /> Google Ranking Tips
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm text-slate-600">
+                <li className="flex gap-2"><span className="text-green-600 font-bold">✓</span> Google My Business par apni dukaan register karo — sabse important hai</li>
+                <li className="flex gap-2"><span className="text-green-600 font-bold">✓</span> Domain <strong>super1computer.shop</strong> ko Vercel mein add karo — aaj hi</li>
+                <li className="flex gap-2"><span className="text-green-600 font-bold">✓</span> Har product ka naam aur description detail mein likho</li>
+                <li className="flex gap-2"><span className="text-green-600 font-bold">✓</span> Customer reviews maango — Google reviews ranking mein bahut help karte hain</li>
+                <li className="flex gap-2"><span className="text-green-600 font-bold">✓</span> Sitemap already ready hai: <strong>super1computer.shop/sitemap.xml</strong></li>
+                <li className="flex gap-2"><span className="text-green-600 font-bold">✓</span> Google Search Console mein site submit karo — <a href="https://search.google.com/search-console" target="_blank" rel="noreferrer" className="text-blue-600 underline">search.google.com/search-console</a></li>
+              </ul>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ── Data Tab ── */}

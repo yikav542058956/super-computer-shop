@@ -1,2 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /admin/*
+
+Sitemap: https://super1computer.shop/sitemap.xml
