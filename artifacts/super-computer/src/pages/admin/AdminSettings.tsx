@@ -43,21 +43,21 @@ function AdminManagement() {
 
   const addAdmin = async () => {
     const digits = newPhone.replace(/\D/g, "");
-    if (digits.length < 10) { toast.error("10-digit phone number daalen"); return; }
+    if (digits.length < 10) { toast.error("Enter a valid 10-digit phone number"); return; }
     setAdding(true);
     try {
       await set(ref(db, `adminPhones/${digits}`), "true");
       setNewPhone("");
-      toast.success(`+91 ${digits} ab admin hai!`);
-    } catch { toast.error("Admin add karne mein error"); }
+      toast.success(`+91 ${digits} is now an admin!`);
+    } catch { toast.error("Failed to add admin"); }
     finally { setAdding(false); }
   };
 
   const removeAdmin = async (phone: string) => {
     try {
       await remove(ref(db, `adminPhones/${phone}`));
-      toast.success(`${phone} admin se remove kiya`);
-    } catch { toast.error("Remove karne mein error"); }
+      toast.success(`${phone} removed from admin`);
+    } catch { toast.error("Failed to remove admin"); }
   };
 
   return (
@@ -67,13 +67,13 @@ function AdminManagement() {
           <ShieldCheck className="h-5 w-5" /> Admin Management
         </CardTitle>
         <CardDescription className="text-blue-700">
-          Yahan jis phone ka number daala jayega, OTP login karte time unhe admin access milega.
+          Phone numbers added here will receive admin access when logging in via OTP.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-2 items-end">
           <div className="flex-1 space-y-1.5">
-            <Label className="font-medium">Admin Phone Number Add Karein</Label>
+            <Label className="font-medium">Add Admin Phone Number</Label>
             <div className="flex gap-2">
               <div className="flex items-center px-3 bg-white border rounded-lg text-slate-600 font-bold text-sm shrink-0">
                 🇮🇳 +91
@@ -99,7 +99,7 @@ function AdminManagement() {
         <div className="space-y-2">
           <p className="text-sm font-semibold text-slate-700">Current Admins ({adminPhones.length})</p>
           {adminPhones.length === 0 ? (
-            <p className="text-sm text-slate-400 py-2">Koi admin phone set nahi hai.</p>
+            <p className="text-sm text-slate-400 py-2">No admin phones configured.</p>
           ) : (
             <div className="space-y-2">
               {adminPhones.map((phone) => (
@@ -152,7 +152,7 @@ function PaymentSettings() {
   }, []);
 
   const savePayment = async () => {
-    if (!upiId.trim()) { toast.error("UPI ID zaroor daalni hai"); return; }
+    if (!upiId.trim()) { toast.error("UPI ID is required"); return; }
     setSaving(true);
     try {
       await set(ref(db, "settings/payment"), {
@@ -166,8 +166,8 @@ function PaymentSettings() {
       await set(ref(db, "settings/storeUpi"), upiId.trim());
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-      toast.success("Payment settings save ho gayi!");
-    } catch { toast.error("Save karne mein error aaya"); }
+      toast.success("Payment settings saved!");
+    } catch { toast.error("Failed to save settings"); }
     finally { setSaving(false); }
   };
 
@@ -194,8 +194,8 @@ function PaymentSettings() {
                 <p className="font-bold text-slate-800">Payment Gateway (Cashfree)</p>
                 <p className="text-xs text-slate-500">
                   {gatewayEnabled
-                    ? "✅ Gateway ON — customers online Cashfree se pay kar sakte hain"
-                    : "⚠️ Gateway OFF — sirf UPI manual payment milegi"}
+                    ? "✅ Gateway ON — customers can pay online via Cashfree"
+                    : "⚠️ Gateway OFF — only manual UPI payment available"}
                 </p>
               </div>
             </div>
@@ -209,7 +209,7 @@ function PaymentSettings() {
             <div className="mt-3 flex items-start gap-2 bg-amber-100/60 rounded-lg px-3 py-2.5 border border-amber-200">
               <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
               <p className="text-xs text-amber-800 font-medium">
-                Gateway band hai — customers ko neeche wali UPI ID dikhegi. Wo manually payment karenge aur screenshot share karenge.
+                Gateway is off — customers will see the UPI ID below and pay manually, then share a screenshot.
               </p>
             </div>
           )}
@@ -225,8 +225,8 @@ function PaymentSettings() {
             </CardTitle>
             <CardDescription className="text-slate-500 flex items-start gap-1.5">
               <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-              Cashfree dashboard se Production App ID aur Secret Key copy karke daalen.
-              Ye values securely Firebase mein store hoti hain.
+              Copy the Production App ID and Secret Key from your Cashfree dashboard.
+              These values are stored securely in Firebase.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -258,14 +258,14 @@ function PaymentSettings() {
                 </button>
               </div>
               <p className="text-xs text-slate-400">
-                Secret key kabhi bhi share mat karein. Yahan sirf aap dekh sakte hain.
+                Never share your secret key. Only you can see this.
               </p>
             </div>
             <div className="bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3 text-xs text-indigo-700 space-y-1">
-              <p className="font-semibold">📋 Kahan milegi ye info?</p>
-              <p>1. cashfree.com pe login karein</p>
-              <p>2. Developers → API Keys menu mein jaayein</p>
-              <p>3. Production keys copy karein (Test keys checkout pe kaam nahi karenge)</p>
+              <p className="font-semibold">📋 Where to find these?</p>
+              <p>1. Log in to cashfree.com</p>
+              <p>2. Go to Developers → API Keys</p>
+              <p>3. Copy the Production keys (Test keys won't work at checkout)</p>
             </div>
           </CardContent>
         </Card>
@@ -295,7 +295,7 @@ function PaymentSettings() {
           </div>
           {upiId && (
             <div className="bg-white border border-green-200 rounded-xl p-4">
-              <p className="text-xs text-slate-500 mb-1">Customers ko dikhega:</p>
+              <p className="text-xs text-slate-500 mb-1">Customers will see:</p>
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                   <Smartphone className="h-5 w-5 text-green-600" />
@@ -320,7 +320,7 @@ function PaymentSettings() {
           ? <><CheckCircle className="h-5 w-5" />Payment Settings Save Ho Gayi!</>
           : saving
             ? "Saving..."
-            : <><Save className="h-5 w-5" />Payment Settings Save Karein</>
+            : <><Save className="h-5 w-5" />Save Payment Settings</>
         }
       </Button>
     </div>
@@ -372,7 +372,7 @@ export default function AdminSettings() {
     setSaving("general");
     await set(ref(db, "settings/general"), general);
     setSaving(null); flash("general");
-    toast.success("General settings save ho gayi!");
+    toast.success("General settings saved!");
   };
 
   const saveBusiness = async () => {
@@ -382,7 +382,7 @@ export default function AdminSettings() {
       freeDeliveryAbove: Number(business.freeDeliveryAbove),
     });
     setSaving(null); flash("business");
-    toast.success("Business settings save ho gayi!");
+    toast.success("Business settings saved!");
   };
 
   const saveDelivery = async () => {
@@ -393,16 +393,16 @@ export default function AdminSettings() {
       otherCharge: Number(delivery.otherCharge),
     });
     setSaving(null); flash("delivery");
-    toast.success("Delivery zones save ho gayi!");
+    toast.success("Delivery zones saved!");
   };
 
   const saveWhatsapp = async () => {
     const digits = whatsapp.number.replace(/\D/g, "");
-    if (digits.length !== 10) { toast.error("Valid 10-digit WhatsApp number daalen"); return; }
+    if (digits.length !== 10) { toast.error("Enter a valid 10-digit WhatsApp number"); return; }
     setSaving("whatsapp");
     await set(ref(db, "settings/whatsappNumber"), digits);
     setSaving(null); flash("whatsapp");
-    toast.success("WhatsApp number save ho gaya!");
+    toast.success("WhatsApp number saved!");
   };
 
   const previewUrl = whatsapp.number.replace(/\D/g, "").length === 10
@@ -417,7 +417,7 @@ export default function AdminSettings() {
         </div>
         <div>
           <h1 className="text-2xl font-bold">Settings</h1>
-          <p className="text-slate-500 text-sm">Store configuration aur integrations manage karein</p>
+          <p className="text-slate-500 text-sm">Manage store configuration and integrations</p>
         </div>
       </div>
 
@@ -443,7 +443,7 @@ export default function AdminSettings() {
                 <WhatsAppIcon size={22} />WhatsApp Business Integration
               </CardTitle>
               <CardDescription className="text-green-700">
-                Number save karo — site par floating button aur products pe "Ask on WhatsApp" button dikhega.
+                Save your number — a floating button and "Ask on WhatsApp" button will appear on all products.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -478,7 +478,7 @@ export default function AdminSettings() {
                 <div className="bg-white rounded-xl border border-green-200 p-4 flex items-center justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold text-slate-800 mb-0.5">✅ WhatsApp button active hai</p>
-                    <p className="text-xs text-slate-500">Customers har page aur product se chat kar sakte hain.</p>
+                    <p className="text-xs text-slate-500">Customers can chat from any page or product.</p>
                   </div>
                   <a href={previewUrl} target="_blank" rel="noopener noreferrer">
                     <Button size="sm" variant="outline" className="border-green-400 text-green-700 hover:bg-green-50 gap-2 shrink-0">
@@ -552,7 +552,7 @@ export default function AdminSettings() {
                 <MapPin className="h-5 w-5" /> Delivery Zones (District-wise)
               </CardTitle>
               <CardDescription className="text-orange-700">
-                Local districts mein free/kam delivery, baaki jagah standard charge. Checkout pe automatically calculate hoga.
+                Local districts get free or reduced delivery; all other areas pay the standard charge. Calculated automatically at checkout.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -568,7 +568,7 @@ export default function AdminSettings() {
                     className="bg-white min-h-[80px] resize-none"
                     rows={3}
                   />
-                  <p className="text-xs text-slate-500">Comma se alag karein — customer ki city match kare to local rate apply hoga</p>
+                  <p className="text-xs text-slate-500">Separate with commas — local rate applies when the customer's city matches</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="font-semibold flex items-center gap-1.5">

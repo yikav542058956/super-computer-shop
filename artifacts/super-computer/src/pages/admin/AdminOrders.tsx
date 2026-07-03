@@ -190,7 +190,7 @@ function exportCSV(orders: any[]) {
   const a = document.createElement("a");
   a.href = url; a.download = `orders_${Date.now()}.csv`; a.click();
   URL.revokeObjectURL(url);
-  toast.success("CSV export ho gaya!");
+  toast.success("CSV exported successfully!");
 }
 
 export default function AdminOrders() {
@@ -600,7 +600,7 @@ export default function AdminOrders() {
               <Textarea placeholder="Reason for refund..." value={refundNote} onChange={(e) => setRefundNote(e.target.value)} rows={2} className="mt-1" />
             </div>
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
-              ⚠️ Refund manually process karein — UPI ya bank transfer se customer ko bhejein. Ye record sirf internal tracking ke liye hai.
+              ⚠️ Process the refund manually — send via UPI or bank transfer to the customer. This record is for internal tracking only.
             </div>
           </div>
           <DialogFooter>

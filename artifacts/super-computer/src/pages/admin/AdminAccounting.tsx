@@ -84,7 +84,7 @@ export default function AdminAccounting() {
 
   const addEntry = async () => {
     if (!addForm.customerId || !addForm.amount || Number(addForm.amount) <= 0) {
-      toast.error("Customer aur amount bharo"); return;
+      toast.error("Please select a customer and enter an amount"); return;
     }
     setAdding(true);
     try {
@@ -96,10 +96,10 @@ export default function AdminAccounting() {
         date: new Date(addForm.date).getTime(),
         createdAt: Date.now(),
       });
-      toast.success(`${addForm.type === "debit" ? "Udhar" : "Payment"} entry add ho gaya!`);
+      toast.success(`${addForm.type === "debit" ? "Debit" : "Payment"} entry added!`);
       setAddDialog(false);
       setAddForm({ customerId: "", type: "debit", amount: "", note: "", date: new Date().toISOString().slice(0, 10) });
-    } catch { toast.error("Error aaya"); }
+    } catch { toast.error("Failed to add entry"); }
     finally { setAdding(false); }
   };
 
@@ -113,7 +113,7 @@ export default function AdminAccounting() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = `accounting_${Date.now()}.csv`; a.click();
     URL.revokeObjectURL(url);
-    toast.success("Export ho gaya!");
+    toast.success("Exported successfully!");
   };
 
   const customerLedgerEntries = selectedCustomer
@@ -141,7 +141,7 @@ export default function AdminAccounting() {
 
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-        <Input placeholder="Customer naam, phone ya email search karo..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+        <Input placeholder="Search by name, phone, or email..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
       </div>
 
       {loading ? (
@@ -149,7 +149,7 @@ export default function AdminAccounting() {
       ) : customerList.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl border border-dashed">
           <Users className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-          <p className="text-slate-400">Koi customer nahi mila.</p>
+          <p className="text-slate-400">No customers found.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -224,14 +224,14 @@ export default function AdminAccounting() {
               </Button>
 
               {customerLedgerEntries.length === 0 ? (
-                <p className="text-center text-slate-400 py-8">Koi entry nahi hai.</p>
+                <p className="text-center text-slate-400 py-8">No entries yet.</p>
               ) : (
                 <div className="space-y-2">
                   {customerLedgerEntries.map((entry) => (
                     <div key={entry.id} className={`flex items-center gap-3 p-3 rounded-xl border ${entry.type === "debit" ? "bg-red-50 border-red-100" : "bg-green-50 border-green-100"}`}>
                       {entry.type === "debit" ? <TrendingUp className="h-4 w-4 text-red-500 shrink-0" /> : <TrendingDown className="h-4 w-4 text-green-500 shrink-0" />}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm">{entry.note || (entry.type === "debit" ? "Udhar diya" : "Payment received")}</p>
+                        <p className="font-semibold text-sm">{entry.note || (entry.type === "debit" ? "Credit given" : "Payment received")}</p>
                         <p className="text-xs text-slate-500">{new Date(entry.date || entry.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
                       </div>
                       <p className={`font-black shrink-0 ${entry.type === "debit" ? "text-red-600" : "text-green-600"}`}>
@@ -258,7 +258,7 @@ export default function AdminAccounting() {
               <div>
                 <Label>Customer *</Label>
                 <Select value={addForm.customerId} onValueChange={(v) => setAddForm((f) => ({ ...f, customerId: v }))}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Customer select karo..." /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select customer..." /></SelectTrigger>
                   <SelectContent>
                     {Object.entries(customers).map(([uid, data]: any) => (
                       <SelectItem key={uid} value={uid}>{data.name || data.displayName || uid}</SelectItem>
@@ -278,11 +278,11 @@ export default function AdminAccounting() {
               <div className="grid grid-cols-2 gap-2 mt-1">
                 <button onClick={() => setAddForm((f) => ({ ...f, type: "debit" }))}
                   className={`p-3 rounded-xl border-2 text-sm font-bold transition-all flex items-center gap-2 justify-center ${addForm.type === "debit" ? "border-red-400 bg-red-50 text-red-700" : "border-gray-200"}`}>
-                  <TrendingUp className="h-4 w-4" /> Udhar Diya (Dr)
+                  <TrendingUp className="h-4 w-4" /> Credit Given (Dr)
                 </button>
                 <button onClick={() => setAddForm((f) => ({ ...f, type: "credit" }))}
                   className={`p-3 rounded-xl border-2 text-sm font-bold transition-all flex items-center gap-2 justify-center ${addForm.type === "credit" ? "border-green-400 bg-green-50 text-green-700" : "border-gray-200"}`}>
-                  <TrendingDown className="h-4 w-4" /> Payment Mila (Cr)
+                  <TrendingDown className="h-4 w-4" /> Payment Received (Cr)
                 </button>
               </div>
             </div>
@@ -296,7 +296,7 @@ export default function AdminAccounting() {
             </div>
             <div>
               <Label>Note (optional)</Label>
-              <Textarea placeholder="Jaise: Laptop ka udhar, UPI se payment mila..." value={addForm.note} onChange={(e) => setAddForm((f) => ({ ...f, note: e.target.value }))} rows={2} className="mt-1" />
+              <Textarea placeholder="e.g. Laptop credit, UPI payment received..." value={addForm.note} onChange={(e) => setAddForm((f) => ({ ...f, note: e.target.value }))} rows={2} className="mt-1" />
             </div>
           </div>
           <DialogFooter>

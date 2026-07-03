@@ -274,14 +274,14 @@ export default function Checkout() {
       setOrderId(id);
       setStep(4);   // set step BEFORE clearCart so redirect guard sees step=4
       clearCart();
-    } catch { toast.error("Order place karne mein error aaya"); }
+    } catch { toast.error("Error placing order. Please try again."); }
     finally { setLoading(false); }
   };
 
   /* ── Cashfree ── */
   const launchCashfree = async () => {
     if (!isLoggedIn) { toast.error("Please login first"); return; }
-    if (!gatewayEnabled) { toast.error("Online payment abhi available nahi hai. COD ya UPI use karein."); return; }
+    if (!gatewayEnabled) { toast.error("Online payment is currently unavailable. Please use COD or UPI."); return; }
     setCfLoading(true);
     try {
       const newOrderId = await createFirebaseOrder("payment_pending");
@@ -304,13 +304,13 @@ export default function Checkout() {
       const data = await res.json();
 
       if (!res.ok || !data.paymentSessionId) {
-        toast.error(data.error || "Payment session create nahi hua");
+        toast.error(data.error || "Failed to create payment session");
         setCfLoading(false);
         return;
       }
 
-      // Redirect FIRST — clearCart() se pehle nahi, warna cart empty hote hi
-      // useEffect /cart pe bhej deta hai aur redirect kabhi nahi hota
+      // Redirect FIRST — not before clearCart(), otherwise once cart empties
+      // the useEffect sends user to /cart and the redirect never fires
       window.location.href = `https://payments.cashfree.com/order/#${data.paymentSessionId}`;
     } catch (err: any) {
       console.error("Cashfree error:", err);
@@ -334,18 +334,18 @@ export default function Checkout() {
               </div>
             </div>
             <h2 className="text-2xl font-black text-gray-900 mb-2">Order Placed! 🎉</h2>
-            <p className="text-slate-500 text-sm mb-1">Super Computer pe shopping ka shukriya!</p>
+            <p className="text-slate-500 text-sm mb-1">Thank you for shopping at Super Computer!</p>
             <p className="text-xs text-slate-400 mb-6 font-mono">Order ID: {orderId.slice(-8).toUpperCase()}</p>
             <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-6 text-left space-y-4">
               <div className="flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold text-gray-900 text-sm">50% Advance Bhejni Hogi</p>
-                  <p className="text-slate-500 text-xs mt-0.5">Order confirm karne ke liye {formatINR(advanceAmount)} abhi bhejein</p>
+                  <p className="font-bold text-gray-900 text-sm">50% Advance Required</p>
+                  <p className="text-slate-500 text-xs mt-0.5">Send {formatINR(advanceAmount)} now to confirm your order</p>
                 </div>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <p className="text-xs text-slate-500 mb-1">UPI ID pe bhejein:</p>
+                <p className="text-xs text-slate-500 mb-1">Send to UPI ID:</p>
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-black text-gray-900 text-lg">{storeUpi}</p>
                   <button onClick={copyUpi} className="p-2 rounded-lg bg-white border border-amber-200 hover:bg-amber-100 transition-colors">
@@ -353,10 +353,10 @@ export default function Checkout() {
                   </button>
                 </div>
                 <p className="text-xs text-slate-500 mt-2">Amount: <span className="font-bold text-amber-700">{formatINR(advanceAmount)}</span></p>
-                <p className="text-xs text-slate-500">Delivery pe remaining: <span className="font-bold">{formatINR(finalAmount - advanceAmount)}</span></p>
+                <p className="text-xs text-slate-500">Remaining at delivery: <span className="font-bold">{formatINR(finalAmount - advanceAmount)}</span></p>
               </div>
               <p className="text-xs text-slate-400 flex items-center gap-1">
-                <Info className="h-3.5 w-3.5" />Payment screenshot WhatsApp karein — order jaldi confirm hoga
+                <Info className="h-3.5 w-3.5" />WhatsApp the payment screenshot — your order will be confirmed quickly
               </p>
               <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
                 <Truck className="h-5 w-5 text-blue-400" />
@@ -560,7 +560,7 @@ export default function Checkout() {
                 <div className="px-5 py-3 border-t border-gray-100">
                   <div className="flex items-start gap-2 text-xs text-gray-500">
                     <Package className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                    <span><span className="font-bold text-gray-700">Open Box Delivery</span> — Delivery agent box kholega taaki aap product check kar sakein delivery pe.</span>
+                    <span><span className="font-bold text-gray-700">Open Box Delivery</span> — Delivery agent will open the box so you can inspect the product at the time of delivery.</span>
                   </div>
                 </div>
 
@@ -611,7 +611,7 @@ export default function Checkout() {
                   {!gatewayEnabled && paymentConfigLoaded && (
                     <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-xs text-amber-800">
                       <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                      <span><span className="font-bold">Online payment abhi available nahi hai.</span> COD ya UPI manual payment se order karein — UPI ID pe advance bhejein aur screenshot WhatsApp karein.</span>
+                      <span><span className="font-bold">Online payment is currently unavailable.</span> Please order via COD or manual UPI payment — send the advance to the UPI ID and WhatsApp the screenshot.</span>
                     </div>
                   )}
 
@@ -667,11 +667,11 @@ export default function Checkout() {
                         <span className="font-black text-gray-900 text-sm">Cash on Delivery</span>
                         <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">50% Advance</span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">Delivery pe remaining payment karein</p>
+                      <p className="text-xs text-gray-500 mt-1">Pay the remaining amount at delivery</p>
                       {paymentMethod === "cod" && (
                         <div className="mt-3 bg-amber-50 border border-amber-200 rounded p-3 space-y-1">
-                          <p className="text-xs font-bold text-amber-800">Advance (abhi bhejein): <span className="text-base font-black">{formatINR(advanceAmount)}</span></p>
-                          <p className="text-xs text-gray-500">Delivery pe: {formatINR(finalAmount - advanceAmount)}</p>
+                          <p className="text-xs font-bold text-amber-800">Advance (pay now): <span className="text-base font-black">{formatINR(advanceAmount)}</span></p>
+                          <p className="text-xs text-gray-500">At delivery: {formatINR(finalAmount - advanceAmount)}</p>
                           <p className="text-xs text-amber-700 font-semibold">UPI: {storeUpi}</p>
                         </div>
                       )}

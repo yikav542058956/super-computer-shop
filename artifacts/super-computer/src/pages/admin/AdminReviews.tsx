@@ -51,16 +51,16 @@ const FAKE_NAMES = [
 ];
 
 const FAKE_COMMENTS = [
-  "Bahut acha product hai! Bilkul waise hi jaise picture mein tha. Delivery bhi fast thi.",
-  "Excellent quality! Price ke hisaab se bahut hi badiya hai. Highly recommend karta hoon.",
-  "Super fast delivery aur product bilkul genuine hai. Very happy with this purchase.",
-  "Great product! Performance wise ekdum top notch. Paise vasool hai.",
-  "Mast product mila. Quality first class hai. Dono bhai ke liye liya, dono khush hain.",
-  "Awesome! Isse better deal kahin nahi milegi. Super Computer pe hi milta hai aisa.",
+  "Excellent product! Exactly as shown in the pictures. Delivery was very fast too.",
+  "Excellent quality! Great value for money. Highly recommend to everyone.",
+  "Super fast delivery and the product is 100% genuine. Very happy with this purchase.",
+  "Great product! Performance is absolutely top notch. Totally worth the price.",
+  "Amazing product. First class quality. Bought it for both my brothers, both are happy.",
+  "Awesome! You won't find a better deal anywhere. Super Computer is the best.",
   "Product exactly as described. No issues at all. Will buy again for sure.",
-  "Zabardast quality! Mere dost ne bhi same product liya. Both of us very satisfied.",
-  "Bahut fast delivery mili aur packaging bhi safe thi. Product bhi genuine nikla.",
-  "Best purchase of this year! Quality dekhke dil khush ho gaya.",
+  "Outstanding quality! My friend also bought the same product. Both of us very satisfied.",
+  "Very fast delivery and packaging was safe. Product is also 100% genuine.",
+  "Best purchase of this year! Absolutely love the quality.",
 ];
 
 export default function AdminReviews() {
@@ -159,9 +159,9 @@ export default function AdminReviews() {
   };
 
   const handleAddFake = async () => {
-    if (!fakeForm.productId) { toast.error("Product select karo"); return; }
-    if (!fakeForm.userName.trim()) { toast.error("Reviewer ka naam dalo"); return; }
-    if (!fakeForm.body.trim()) { toast.error("Review text likho"); return; }
+    if (!fakeForm.productId) { toast.error("Please select a product"); return; }
+    if (!fakeForm.userName.trim()) { toast.error("Reviewer name is required"); return; }
+    if (!fakeForm.body.trim()) { toast.error("Review text is required"); return; }
 
     setAddingFake(true);
     try {
@@ -180,11 +180,11 @@ export default function AdminReviews() {
         userId: `fake_${Date.now()}`,
       });
 
-      toast.success("Fake review add ho gaya!");
+      toast.success("Fake review added!");
       setFakeDialog(false);
       setFakeForm({ productId: "", userName: "", rating: 5, title: "", body: "", isApproved: true });
     } catch (e) {
-      toast.error("Review add karne mein error aaya");
+      toast.error("Failed to add review. Please try again.");
     } finally {
       setAddingFake(false);
     }
@@ -240,7 +240,7 @@ export default function AdminReviews() {
         </div>
         <Button onClick={() => { setFakeDialog(true); randomizeFakeForm(); }} className="gap-2">
           <PlusCircle className="h-4 w-4" />
-          Fake Review Add Karo
+          Add Fake Review
         </Button>
       </div>
 
@@ -399,7 +399,7 @@ export default function AdminReviews() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
-              Fake Review Add Karo
+              Add Fake Review
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -407,7 +407,7 @@ export default function AdminReviews() {
               <Label>Product *</Label>
               <Select value={fakeForm.productId} onValueChange={(v) => setFakeForm((f) => ({ ...f, productId: v }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Product select karo..." />
+                  <SelectValue placeholder="Select a product..." />
                 </SelectTrigger>
                 <SelectContent>
                   {productList.map((p) => (
@@ -419,17 +419,17 @@ export default function AdminReviews() {
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label>Reviewer ka Naam *</Label>
+                <Label>Reviewer Name *</Label>
                 <button
                   type="button"
                   onClick={randomizeFakeForm}
                   className="text-xs text-primary hover:underline"
                 >
-                  🎲 Random karo
+                  🎲 Randomize
                 </button>
               </div>
               <Input
-                placeholder="Jaise: Rahul Sharma"
+                placeholder="e.g. Rahul Sharma"
                 value={fakeForm.userName}
                 onChange={(e) => setFakeForm((f) => ({ ...f, userName: e.target.value }))}
               />
@@ -446,7 +446,7 @@ export default function AdminReviews() {
             <div className="space-y-1.5">
               <Label>Review Title (Optional)</Label>
               <Input
-                placeholder="Jaise: Best laptop under 50k!"
+                placeholder="e.g. Best laptop under 50k!"
                 value={fakeForm.title}
                 onChange={(e) => setFakeForm((f) => ({ ...f, title: e.target.value }))}
               />
@@ -456,7 +456,7 @@ export default function AdminReviews() {
               <Label>Review Text *</Label>
               <Textarea
                 rows={3}
-                placeholder="Review likho..."
+                placeholder="Write the review..."
                 value={fakeForm.body}
                 onChange={(e) => setFakeForm((f) => ({ ...f, body: e.target.value }))}
               />
@@ -470,13 +470,13 @@ export default function AdminReviews() {
                 onChange={(e) => setFakeForm((f) => ({ ...f, isApproved: e.target.checked }))}
                 className="h-4 w-4 rounded border-gray-300"
               />
-              <Label htmlFor="auto-approve" className="cursor-pointer">Auto-approve karo (immediately dikhega)</Label>
+              <Label htmlFor="auto-approve" className="cursor-pointer">Auto-approve (visible immediately)</Label>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFakeDialog(false)}>Cancel</Button>
             <Button onClick={handleAddFake} disabled={addingFake}>
-              {addingFake ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Adding...</> : "Review Add Karo"}
+              {addingFake ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Adding...</> : "Add Review"}
             </Button>
           </DialogFooter>
         </DialogContent>

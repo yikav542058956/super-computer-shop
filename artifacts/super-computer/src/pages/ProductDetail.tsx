@@ -214,7 +214,7 @@ function SuggestedCard({ p }: { p: any }) {
               e.preventDefault();
               e.stopPropagation();
               addToCart({ productId: p.id, name: p.name, price: p.discountPrice || p.price, qty: 1, image: p.images?.[0] || "" });
-              toast.success("Cart mein add ho gaya! 🛒");
+              toast.success("Added to cart! 🛒");
             }}
             className="mt-2 w-full flex items-center justify-center gap-1.5 bg-green-500 hover:bg-green-400 text-black text-xs font-bold py-2 rounded-xl transition-colors"
           >
@@ -322,7 +322,7 @@ export default function ProductDetail() {
       qty: 1,
       image: product.images?.[0] || "",
     });
-    toast.success("Cart mein add ho gaya! 🛒");
+    toast.success("Added to cart! 🛒");
   };
 
   const handleToggleWishlist = () => {
@@ -336,16 +336,16 @@ export default function ProductDetail() {
       brand: product.brand,
       addedAt: Date.now(),
     });
-    toast(wasWishlisted ? "Wishlist se remove ho gaya" : "Wishlist mein save ho gaya! ❤️", {
+    toast(wasWishlisted ? "Removed from wishlist" : "Saved to wishlist! ❤️", {
       icon: wasWishlisted ? "💔" : "❤️",
     });
   };
 
   const handleSubmitReview = async () => {
     if (!currentUser) { toast.error("Please login to write a review"); return; }
-    if (!hasOrdered) { toast.error("Sirf wo log review likh sakte hain jinhoone ye product order kiya ho"); return; }
-    if (alreadyReviewed) { toast.error("Aap pehle hi review de chuke ho"); return; }
-    if (!reviewForm.comment.trim()) { toast.error("Review likhna zaroori hai"); return; }
+    if (!hasOrdered) { toast.error("Only customers who ordered this product can write a review"); return; }
+    if (alreadyReviewed) { toast.error("You have already submitted a review for this product"); return; }
+    if (!reviewForm.comment.trim()) { toast.error("Please write your review before submitting"); return; }
     setSubmittingReview(true);
     try {
       let imageUrl = "";
@@ -364,9 +364,9 @@ export default function ProductDetail() {
         createdAt: Date.now(),
       });
       setReviewForm({ rating: 5, comment: "", imageFile: null, imagePreview: "" });
-      toast.success("Review submit ho gaya! ⭐");
+      toast.success("Review submitted! ⭐");
     } catch {
-      toast.error("Review submit karne mein error aaya");
+      toast.error("Failed to submit review. Please try again.");
     } finally {
       setSubmittingReview(false);
     }
@@ -669,27 +669,27 @@ export default function ProductDetail() {
               {alreadyReviewed ? (
                 <div className="flex items-center gap-3 py-3 px-4 bg-green-50 rounded-2xl border border-green-100">
                   <Star className="h-5 w-5 text-green-500 fill-green-500 shrink-0" />
-                  <p className="text-green-700 text-sm font-semibold">✓ Aapne is product ka review de diya hai. Shukriya!</p>
+                  <p className="text-green-700 text-sm font-semibold">✓ You have already reviewed this product. Thank you!</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <h4 className="font-black text-gray-900 text-sm flex items-center gap-2">
-                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" /> Apna Review Likho
+                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" /> Write Your Review
                     <span className="text-[10px] font-semibold text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full">✓ Verified Buyer</span>
                   </h4>
 
                   {/* Star rating */}
                   <div>
-                    <p className="text-xs text-slate-500 mb-1.5">Rating do</p>
+                    <p className="text-xs text-slate-500 mb-1.5">Your rating</p>
                     <StarRatingInput value={reviewForm.rating} onChange={(v) => setReviewForm((f) => ({ ...f, rating: v }))} />
                   </div>
 
                   {/* Text area */}
                   <div>
-                    <p className="text-xs text-slate-500 mb-1.5">Review likho</p>
+                    <p className="text-xs text-slate-500 mb-1.5">Your review</p>
                     <textarea
                       rows={4}
-                      placeholder="Product ke baare mein apna experience share karo — build quality, performance, delivery, sab kuch..."
+                      placeholder="Share your experience — build quality, performance, delivery, and more..."
                       value={reviewForm.comment}
                       onChange={(e) => setReviewForm((f) => ({ ...f, comment: e.target.value }))}
                       className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 text-sm placeholder-gray-400 outline-none focus:border-green-500 focus:bg-white transition-all resize-none"
@@ -698,7 +698,7 @@ export default function ProductDetail() {
 
                   {/* Image upload */}
                   <div>
-                    <p className="text-xs text-slate-500 mb-1.5">Photo add karo (optional)</p>
+                    <p className="text-xs text-slate-500 mb-1.5">Add photo (optional)</p>
                     {reviewForm.imagePreview ? (
                       <div className="relative inline-block">
                         <img
@@ -716,7 +716,7 @@ export default function ProductDetail() {
                     ) : (
                       <label className="flex items-center gap-2 w-fit cursor-pointer bg-gray-50 border-2 border-dashed border-gray-200 hover:border-green-400 hover:bg-green-50 rounded-xl px-4 py-3 transition-all group">
                         <span className="text-2xl">📷</span>
-                        <span className="text-sm text-slate-500 group-hover:text-green-600 font-medium">Photo select karo</span>
+                        <span className="text-sm text-slate-500 group-hover:text-green-600 font-medium">Select photo</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -740,7 +740,7 @@ export default function ProductDetail() {
                     className="bg-green-500 hover:bg-green-400 text-black font-bold rounded-xl gap-2 text-sm px-6"
                   >
                     <Send className="h-3.5 w-3.5" />
-                    {submittingReview ? "Submit ho raha hai..." : "Review Submit Karo"}
+                    {submittingReview ? "Submitting..." : "Submit Review"}
                   </Button>
                 </div>
               )}
@@ -751,7 +751,7 @@ export default function ProductDetail() {
               {reviews.length === 0 ? (
                 <div className="text-center py-10">
                   <Star className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-                  <p className="text-slate-500 text-sm">Abhi tak koi review nahi. Pehle review likhne wale bano!</p>
+                  <p className="text-slate-500 text-sm">No reviews yet. Be the first to write one!</p>
                 </div>
               ) : (
                 reviews.map((r) => (

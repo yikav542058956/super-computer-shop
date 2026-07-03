@@ -36,7 +36,7 @@ export default function AdminPayment() {
   }, []);
 
   const savePayment = async () => {
-    if (!upiId.trim()) { toast.error("UPI ID zaroor daalni hai"); return; }
+    if (!upiId.trim()) { toast.error("UPI ID is required"); return; }
     setSaving(true);
     try {
       await set(ref(db, "settings/payment"), {
@@ -49,8 +49,8 @@ export default function AdminPayment() {
       await set(ref(db, "settings/storeUpi"), upiId.trim());
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-      toast.success("Payment settings save ho gayi!");
-    } catch { toast.error("Save karne mein error aaya"); }
+      toast.success("Payment settings saved!");
+    } catch { toast.error("Failed to save settings"); }
     finally { setSaving(false); }
   };
 
@@ -63,7 +63,7 @@ export default function AdminPayment() {
         </div>
         <div>
           <h1 className="text-2xl font-bold">Payment Settings</h1>
-          <p className="text-slate-500 text-sm">Payment gateway aur UPI configuration manage karein</p>
+          <p className="text-slate-500 text-sm">Manage payment gateway and UPI configuration</p>
         </div>
       </div>
 
@@ -87,7 +87,7 @@ export default function AdminPayment() {
                     <p className="text-xs text-slate-500">
                       {gatewayEnabled
                         ? "✅ Gateway ON — customers online Cashfree se pay kar sakte hain"
-                        : "⚠️ Gateway OFF — sirf UPI manual payment milegi"}
+                        : "⚠️ Gateway OFF — only manual UPI payment available"}
                     </p>
                   </div>
                 </div>
@@ -101,7 +101,7 @@ export default function AdminPayment() {
                 <div className="mt-3 flex items-start gap-2 bg-amber-100/60 rounded-lg px-3 py-2.5 border border-amber-200">
                   <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-800 font-medium">
-                    Gateway band hai — customers ko neeche wali UPI ID dikhegi. Wo manually payment karenge aur screenshot share karenge.
+                    Gateway is off — customers will see the UPI ID below and pay manually, then share a payment screenshot.
                   </p>
                 </div>
               )}
@@ -117,7 +117,7 @@ export default function AdminPayment() {
                 </CardTitle>
                 <CardDescription className="text-slate-500 flex items-start gap-1.5">
                   <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                  Cashfree dashboard se Production App ID aur Secret Key copy karke daalen.
+                  Copy the Production App ID and Secret Key from your Cashfree dashboard.
                   Ye values securely Firebase mein store hoti hain.
                 </CardDescription>
               </CardHeader>
@@ -150,14 +150,14 @@ export default function AdminPayment() {
                     </button>
                   </div>
                   <p className="text-xs text-slate-400">
-                    Secret key kabhi bhi share mat karein. Yahan sirf aap dekh sakte hain.
+                    Never share your secret key. Only you can see this.
                   </p>
                 </div>
                 <div className="bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3 text-xs text-indigo-700 space-y-1">
-                  <p className="font-semibold">📋 Kahan milegi ye info?</p>
-                  <p>1. cashfree.com pe login karein</p>
-                  <p>2. Developers → API Keys menu mein jaayein</p>
-                  <p>3. Production keys copy karein (Test keys checkout pe kaam nahi karenge)</p>
+                  <p className="font-semibold">📋 Where to find these?</p>
+                  <p>1. Log in to cashfree.com</p>
+                  <p>2. Go to Developers → API Keys</p>
+                  <p>3. Copy the Production keys (Test keys won't work at checkout)</p>
                 </div>
               </CardContent>
             </Card>
@@ -187,7 +187,7 @@ export default function AdminPayment() {
               </div>
               {upiId && (
                 <div className="bg-white border border-green-200 rounded-xl p-4">
-                  <p className="text-xs text-slate-500 mb-1">Customers ko dikhega:</p>
+                  <p className="text-xs text-slate-500 mb-1">Customers will see:</p>
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                       <Smartphone className="h-5 w-5 text-green-600" />
@@ -212,7 +212,7 @@ export default function AdminPayment() {
               ? <><CheckCircle className="h-5 w-5" />Payment Settings Save Ho Gayi!</>
               : saving
                 ? "Saving..."
-                : <><Save className="h-5 w-5" />Payment Settings Save Karein</>}
+                : <><Save className="h-5 w-5" />Save Payment Settings</>}
           </Button>
         </div>
       )}

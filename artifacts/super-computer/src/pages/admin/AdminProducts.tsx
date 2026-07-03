@@ -156,7 +156,7 @@ export default function AdminProducts() {
     if (!form.name.trim()) { toast.error("Product name is required"); return; }
     if (!form.price || isNaN(Number(form.price))) { toast.error("Valid price is required"); return; }
     if (form.discountPrice && (isNaN(Number(form.discountPrice)) || Number(form.discountPrice) >= Number(form.price))) {
-      toast.error("Sale Price MRP se kam honi chahiye — discount amount nahi, final price daalen"); return;
+      toast.error("Sale Price must be less than MRP — enter the final selling price, not the discount amount"); return;
     }
     if (!form.stock || isNaN(Number(form.stock))) { toast.error("Valid stock is required"); return; }
     if (form.images.length === 0) { toast.error("Please upload at least one product image"); return; }
@@ -347,7 +347,7 @@ export default function AdminProducts() {
                   onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
                   placeholder="85000"
                 />
-                <p className="text-[11px] text-slate-400">Product ka original/market price — customer ko kata hua dikhega</p>
+                <p className="text-[11px] text-slate-400">Original / market price — shown crossed out to the customer</p>
               </div>
               <div className="space-y-1">
                 <Label className="font-semibold text-green-700">Sale Price / Offer Price (₹)</Label>
@@ -363,8 +363,8 @@ export default function AdminProducts() {
                   }
                 />
                 <p className="text-[11px] text-slate-400">
-                  Yahan <span className="font-semibold text-green-700">final selling price</span> daalen — jo customer actually pay karega.
-                  Discount amount ya percentage mat daalen.
+                  Enter the <span className="font-semibold text-green-700">final selling price</span> — what the customer will actually pay.
+                  Do not enter a discount amount or percentage.
                 </p>
                 {/* Live price preview */}
                 {form.price && form.discountPrice && Number(form.discountPrice) > 0 && (
@@ -375,7 +375,7 @@ export default function AdminProducts() {
                   }`}>
                     {Number(form.discountPrice) < Number(form.price) ? (
                       <div className="space-y-0.5">
-                        <p className="font-bold text-green-800">✅ Product card pe dikhega:</p>
+                        <p className="font-bold text-green-800">✅ Product card preview:</p>
                         <p>
                           <span className="font-black text-slate-900 text-sm">₹{Number(form.discountPrice).toLocaleString("en-IN")}</span>
                           {" "}<span className="text-slate-400 line-through text-[11px]">₹{Number(form.price).toLocaleString("en-IN")}</span>
@@ -386,14 +386,14 @@ export default function AdminProducts() {
                       </div>
                     ) : (
                       <p className="font-bold text-red-700">
-                        ❌ Sale price MRP se kam honi chahiye ({Number(form.discountPrice).toLocaleString("en-IN")} ≥ {Number(form.price).toLocaleString("en-IN")})
+                        ❌ Sale price must be less than MRP ({Number(form.discountPrice).toLocaleString("en-IN")} ≥ {Number(form.price).toLocaleString("en-IN")})
                       </p>
                     )}
                   </div>
                 )}
                 {form.price && !form.discountPrice && (
                   <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs mt-1 text-slate-500">
-                    Preview: <span className="font-black text-slate-900">₹{Number(form.price).toLocaleString("en-IN")}</span> (koi discount nahi dikhega)
+                    Preview: <span className="font-black text-slate-900">₹{Number(form.price).toLocaleString("en-IN")}</span> (no discount shown)
                   </div>
                 )}
               </div>
