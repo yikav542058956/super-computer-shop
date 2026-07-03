@@ -39,7 +39,6 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     { label: "Banners",        href: "/admin/banners",         icon: ImageIcon },
     { label: "Announcements",  href: "/admin/announcements",   icon: Megaphone },
     { label: "Coupons",        href: "/admin/coupons",         icon: Ticket },
-    { label: "Reviews",        href: "/admin/reviews",         icon: MessageSquare },
     { label: "Reports",        href: "/admin/reports",         icon: BarChart },
     { label: "Customer Photos",href: "/admin/customer-photos", icon: Camera },
     { label: "Wallet",         href: "/admin/wallet",          icon: Wallet },

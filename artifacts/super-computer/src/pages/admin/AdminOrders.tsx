@@ -1,6 +1,6 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useEffect, useState, useMemo } from "react";
-import { ref, onValue, update } from "firebase/database";
+import { ref, onValue, update, set, push } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -215,6 +215,13 @@ export default function AdminOrders() {
   const [refundNote, setRefundNote] = useState("");
   const [refunding, setRefunding] = useState(false);
 
+  const [offlineDialog, setOfflineDialog] = useState(false);
+  const [offlineSaving, setOfflineSaving] = useState(false);
+  const [offlineForm, setOfflineForm] = useState({
+    customerName: "", phone: "", productName: "", qty: "1",
+    amount: "", paymentMethod: "cash", notes: "",
+  });
+
   useEffect(() => {
     const unsub = onValue(ref(db, "orders"), (snap) => {
       if (snap.exists()) {
@@ -314,6 +321,49 @@ export default function AdminOrders() {
     }
   };
 
+  const addOfflineSale = async () => {
+    if (!offlineForm.customerName.trim() || !offlineForm.productName.trim() || !offlineForm.amount) {
+      toast.error("Customer name, product, and amount are required");
+      return;
+    }
+    setOfflineSaving(true);
+    try {
+      const newRef = push(ref(db, "orders"));
+      await set(newRef, {
+        source: "offline",
+        orderStatus: "delivered",
+        paymentStatus: "paid",
+        paymentMethod: offlineForm.paymentMethod,
+        finalAmount: Number(offlineForm.amount),
+        subtotal: Number(offlineForm.amount),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        address: {
+          name: offlineForm.customerName.trim(),
+          phone: offlineForm.phone.trim(),
+          city: "Walk-in",
+          state: "",
+          pincode: "",
+          address: "In-store / Offline sale",
+        },
+        items: [{
+          name: offlineForm.productName.trim(),
+          qty: Number(offlineForm.qty) || 1,
+          price: Number(offlineForm.amount),
+        }],
+        notes: offlineForm.notes.trim(),
+        statusHistory: [{ status: "delivered", timestamp: Date.now(), note: "Offline / in-store sale added by admin" }],
+      });
+      toast.success("✅ Offline sale recorded!");
+      setOfflineDialog(false);
+      setOfflineForm({ customerName: "", phone: "", productName: "", qty: "1", amount: "", paymentMethod: "cash", notes: "" });
+    } catch {
+      toast.error("Failed to save offline sale");
+    } finally {
+      setOfflineSaving(false);
+    }
+  };
+
   const orderItems = (order: any): any[] => {
     if (!order?.items) return [];
     return Array.isArray(order.items) ? order.items : Object.values(order.items);
@@ -336,6 +386,9 @@ export default function AdminOrders() {
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => exportCSV(filtered)} className="gap-2">
             <Download className="h-4 w-4" /> Export CSV
+          </Button>
+          <Button size="sm" onClick={() => setOfflineDialog(true)} className="gap-2 bg-orange-600 hover:bg-orange-700">
+            <Plus className="h-4 w-4" /> Add Offline Sale
           </Button>
         </div>
       </div>
@@ -607,6 +660,72 @@ export default function AdminOrders() {
             <Button variant="outline" onClick={() => setRefundDialog(false)}>Cancel</Button>
             <Button onClick={handleRefund} disabled={refunding || !refundAmount} className="bg-teal-600 hover:bg-teal-500 text-white">
               {refunding ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />Processing...</> : "Confirm Refund"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Offline Sale Dialog ── */}
+      <Dialog open={offlineDialog} onOpenChange={setOfflineDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-700">
+              <Plus className="h-5 w-5" /> Add Offline / In-Store Sale
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5 col-span-2">
+                <Label>Customer Name <span className="text-red-500">*</span></Label>
+                <Input placeholder="e.g. Ramesh Kumar" value={offlineForm.customerName}
+                  onChange={e => setOfflineForm(f => ({ ...f, customerName: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Phone</Label>
+                <Input placeholder="10-digit number" inputMode="numeric" maxLength={10}
+                  value={offlineForm.phone}
+                  onChange={e => setOfflineForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Payment Method</Label>
+                <Select value={offlineForm.paymentMethod} onValueChange={v => setOfflineForm(f => ({ ...f, paymentMethod: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">💵 Cash</SelectItem>
+                    <SelectItem value="upi">📱 UPI</SelectItem>
+                    <SelectItem value="card">💳 Card</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Product Name <span className="text-red-500">*</span></Label>
+                <Input placeholder="e.g. Lenovo IdeaPad 3 i5 12th Gen" value={offlineForm.productName}
+                  onChange={e => setOfflineForm(f => ({ ...f, productName: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Qty</Label>
+                <Input type="number" min="1" value={offlineForm.qty}
+                  onChange={e => setOfflineForm(f => ({ ...f, qty: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Amount (₹) <span className="text-red-500">*</span></Label>
+                <Input type="number" min="0" placeholder="e.g. 45000" value={offlineForm.amount}
+                  onChange={e => setOfflineForm(f => ({ ...f, amount: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Notes (optional)</Label>
+                <Textarea placeholder="Any additional info..." rows={2} value={offlineForm.notes}
+                  onChange={e => setOfflineForm(f => ({ ...f, notes: e.target.value }))} />
+              </div>
+            </div>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-xs text-orange-700 font-medium">
+              📦 This sale will be saved as <strong>Delivered + Paid</strong> and appear in Orders & Reports.
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setOfflineDialog(false)}>Cancel</Button>
+            <Button onClick={addOfflineSale} disabled={offlineSaving} className="bg-orange-600 hover:bg-orange-700 gap-2">
+              {offlineSaving ? <><Loader2 className="h-4 w-4 animate-spin" />Saving...</> : <><Plus className="h-4 w-4" />Save Sale</>}
             </Button>
           </DialogFooter>
         </DialogContent>
