@@ -34,15 +34,21 @@ const scaleIn = {
 
 /* ─── Data ──────────────────────────────────────────────────── */
 
-const BRANDS = [
-  { name: "HP",      logo: "/images/brands/hp.png",      color: "#0096D6" },
-  { name: "Dell",    logo: "/images/brands/dell.png",    color: "#007DB8" },
-  { name: "Lenovo",  logo: "/images/brands/lenovo.png",  color: "#E2231A" },
-  { name: "ASUS",    logo: "/images/brands/asus.png",    color: "#00539C" },
-  { name: "Acer",    logo: "/images/brands/acer.png",    color: "#83B81A" },
-  { name: "MSI",     logo: "/images/brands/msi.png",     color: "#FF0000" },
-  { name: "Apple",   logo: "/images/brands/apple.png",   color: "#555555" },
-  { name: "Samsung", logo: "/images/brands/samsung.png", color: "#1428A0" },
+const BRANDS: { name: string; logo: string; color: string; bg?: string }[] = [
+  { name: "HP",       logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/HP_logo_2012.svg/120px-HP_logo_2012.svg.png",      color: "#0096D6", bg: "#E8F4FD" },
+  { name: "Dell",     logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Dell_logo_2016.svg/180px-Dell_logo_2016.svg.png",     color: "#007DB8", bg: "#E3F2F9" },
+  { name: "Lenovo",   logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Lenovo_logo_2015.svg/200px-Lenovo_logo_2015.svg.png",   color: "#E2231A", bg: "#FDECEA" },
+  { name: "ASUS",     logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/ASUS_Logo.svg/200px-ASUS_Logo.svg.png",     color: "#00539C", bg: "#E2EEF8" },
+  { name: "Acer",     logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Acer_2011.svg/200px-Acer_2011.svg.png",     color: "#83B81A", bg: "#F2F8E3" },
+  { name: "MSI",      logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/MSI_Logo_2022.svg/200px-MSI_Logo_2022.svg.png",      color: "#CC0000", bg: "#FDEAEA" },
+  { name: "Apple",    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/100px-Apple_logo_black.svg.png",    color: "#333333", bg: "#F2F2F2" },
+  { name: "Samsung",  logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Samsung_Logo.svg/220px-Samsung_Logo.svg.png",  color: "#1428A0", bg: "#E3E6F8" },
+  { name: "Razer",    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Razer_logo.svg/200px-Razer_logo.svg.png",    color: "#44D62C", bg: "#E7FAE3" },
+  { name: "LG",       logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/LG_logo_%282015%29.svg/200px-LG_logo_%282015%29.svg.png",       color: "#A50034", bg: "#F8E3E9" },
+  { name: "Sony",     logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Sony_logo.svg/200px-Sony_logo.svg.png",     color: "#000000", bg: "#F2F2F2" },
+  { name: "Toshiba",  logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Toshiba_logo.svg/200px-Toshiba_logo.svg.png",  color: "#CC0000", bg: "#FDEAEA" },
+  { name: "Xiaomi",   logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Xiaomi_logo.svg/200px-Xiaomi_logo.svg.png",   color: "#FF6900", bg: "#FFF0E5" },
+  { name: "Gigabyte", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Gigabyte_Technology_logo_2020.svg/200px-Gigabyte_Technology_logo_2020.svg.png", color: "#E2001A", bg: "#FDEAEA" },
 ];
 
 const CATEGORIES = [
@@ -259,49 +265,140 @@ function HeroBanner({ banners }: { banners: any[] }) {
   );
 }
 
-/* ─── Brand Carousel ─────────────────────────────────────────── */
+/* ─── Film Strip Brand Carousel ─────────────────────────────── */
 function BrandCarousel() {
+  const [fbBrands, setFbBrands] = useState<{ name: string; logo: string; color: string; bg?: string }[]>([]);
+
+  // Read brands added via admin (from products' unique brand names)
+  useEffect(() => {
+    const unsub = onValue(ref(db, "products"), snap => {
+      if (!snap.exists()) { setFbBrands([]); return; }
+      const products = Object.values(snap.val()) as any[];
+      const seen = new Set(BRANDS.map(b => b.name.toLowerCase()));
+      const extra: { name: string; logo: string; color: string; bg: string }[] = [];
+      products.forEach(p => {
+        if (!p || typeof p !== "object") return;
+        const bn = (p.brand || "").trim();
+        if (bn && !seen.has(bn.toLowerCase())) {
+          seen.add(bn.toLowerCase());
+          extra.push({ name: bn, logo: "", color: "#16a34a", bg: "#E8F8EE" });
+        }
+      });
+      setFbBrands(extra);
+    });
+    return () => unsub();
+  }, []);
+
+  const allBrands = [...BRANDS, ...fbBrands];
+  // Duplicate list so marquee loops seamlessly
+  const strip = [...allBrands, ...allBrands];
+
   return (
     <motion.section initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }}
-      className="py-6 border-y" style={{ borderColor: "rgba(0,0,0,0.07)" }}>
+      className="py-5 border-y" style={{ borderColor: "rgba(0,0,0,0.07)" }}>
+
+      {/* Header */}
       <div className="container mx-auto px-4 mb-4 flex items-center justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Authorized Reseller</p>
-          <h3 className="text-gray-800 font-bold text-sm mt-0.5">Top Brands</h3>
+          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#16a34a" }}>Authorized Reseller</p>
+          <h3 className="text-gray-900 font-black text-base mt-0.5">Top Brands</h3>
         </div>
-        <Link href="/search"><span className="text-xs font-semibold" style={{ color: "#16a34a" }}>View All →</span></Link>
+        <Link href="/search">
+          <span className="text-xs font-bold px-3 py-1.5 rounded-full transition-all"
+            style={{ background: "rgba(22,163,74,0.1)", color: "#16a34a", border: "1px solid rgba(22,163,74,0.2)" }}>
+            View All →
+          </span>
+        </Link>
       </div>
-      <div className="overflow-x-auto scrollbar-none">
-        <div className="flex items-center gap-3 px-4 w-max">
-          {BRANDS.map(brand => (
-            <Link key={brand.name} href={`/search?q=${encodeURIComponent(brand.name)}`}>
-              <motion.div
-                whileHover={{ scale: 1.06, y: -2 }} whileTap={{ scale: 0.94 }}
-                className="flex flex-col items-center gap-2 p-3 rounded-2xl cursor-pointer flex-shrink-0 transition-all"
-                style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", width: 72 }}>
-                <div className="h-10 w-10 flex items-center justify-center">
-                  <img
-                    src={brand.logo}
-                    alt={brand.name}
-                    className="max-h-full max-w-full object-contain"
-                    onError={e => {
-                      const t = e.target as HTMLImageElement;
-                      t.style.display = "none";
-                      const parent = t.parentElement;
-                      if (parent) {
-                        const span = document.createElement("span");
-                        span.className = "font-black text-xs";
-                        span.style.color = brand.color;
-                        span.textContent = brand.name;
-                        parent.appendChild(span);
-                      }
-                    }}
-                  />
+
+      {/* Film Strip */}
+      <div className="relative" style={{ perspective: "1200px" }}>
+        {/* Film strip container */}
+        <div className="relative overflow-hidden"
+          style={{ background: "linear-gradient(135deg,#0f0f0f 0%,#1a1a2e 50%,#0f0f0f 100%)" }}>
+
+          {/* Top sprocket holes */}
+          <div className="flex gap-0 h-4 items-center" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            {Array.from({ length: 60 }).map((_, i) => (
+              <div key={i} className="flex-shrink-0 mx-1.5"
+                style={{ width: 10, height: 8, borderRadius: 2, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.06)" }} />
+            ))}
+          </div>
+
+          {/* Scrolling brand frames */}
+          <Marquee speed={38} gradient={false} className="py-3">
+            {strip.map((brand, idx) => (
+              <Link key={`${brand.name}-${idx}`} href={`/search?q=${encodeURIComponent(brand.name)}`}>
+                <div className="mx-2 cursor-pointer group"
+                  style={{ width: 100 }}>
+                  {/* Film frame */}
+                  <div className="relative rounded-lg overflow-hidden transition-all duration-300 group-hover:scale-105"
+                    style={{
+                      background: brand.bg || "#F8FAFC",
+                      border: "2px solid rgba(255,255,255,0.15)",
+                      boxShadow: "0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
+                    }}>
+                    {/* Frame top bar */}
+                    <div className="h-1.5 w-full" style={{ background: `${brand.color}30` }} />
+
+                    {/* Logo area */}
+                    <div className="h-16 flex items-center justify-center p-3">
+                      {brand.logo ? (
+                        <img
+                          src={brand.logo}
+                          alt={brand.name}
+                          className="max-h-full max-w-full object-contain"
+                          style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.15))" }}
+                          onError={e => {
+                            const t = e.target as HTMLImageElement;
+                            t.style.display = "none";
+                            const parent = t.parentElement;
+                            if (parent) {
+                              const span = document.createElement("span");
+                              span.style.cssText = `font-size:11px;font-weight:900;color:${brand.color};`;
+                              span.textContent = brand.name;
+                              parent.appendChild(span);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span className="font-black text-xs" style={{ color: brand.color }}>{brand.name}</span>
+                      )}
+                    </div>
+
+                    {/* Frame bottom bar */}
+                    <div className="h-1.5 w-full" style={{ background: `${brand.color}30` }} />
+
+                    {/* Brand name */}
+                    <div className="py-1.5 text-center"
+                      style={{ background: "rgba(0,0,0,0.05)" }}>
+                      <p className="text-[9px] font-black uppercase tracking-wider" style={{ color: brand.color }}>
+                        {brand.name}
+                      </p>
+                    </div>
+
+                    {/* Hover glow */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                      style={{ background: `radial-gradient(circle at center, ${brand.color}20 0%, transparent 70%)` }} />
+                  </div>
                 </div>
-                <p className="text-[10px] font-bold text-slate-600 leading-none">{brand.name}</p>
-              </motion.div>
-            </Link>
-          ))}
+              </Link>
+            ))}
+          </Marquee>
+
+          {/* Bottom sprocket holes */}
+          <div className="flex gap-0 h-4 items-center" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+            {Array.from({ length: 60 }).map((_, i) => (
+              <div key={i} className="flex-shrink-0 mx-1.5"
+                style={{ width: 10, height: 8, borderRadius: 2, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.06)" }} />
+            ))}
+          </div>
+
+          {/* Side fade gradients */}
+          <div className="absolute inset-y-0 left-0 w-16 pointer-events-none z-10"
+            style={{ background: "linear-gradient(to right, #0f0f0f, transparent)" }} />
+          <div className="absolute inset-y-0 right-0 w-16 pointer-events-none z-10"
+            style={{ background: "linear-gradient(to left, #0f0f0f, transparent)" }} />
         </div>
       </div>
     </motion.section>
