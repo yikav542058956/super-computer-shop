@@ -327,9 +327,9 @@ function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
           style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
 
           {/* Image */}
-          <div className="relative overflow-hidden" style={{ background: "#F8FAFC", height: 186, padding: 16 }}>
+          <div className="relative overflow-hidden" style={{ background: "#F8FAFC", height: 200 }}>
             <img src={product.images?.[0] || "/images/laptops/macbook-pro.png"} alt={product.name}
-              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 drop-shadow-xl" />
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
 
             {/* Badges */}
             <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">

@@ -106,12 +106,12 @@ export default function Wishlist() {
                 return (
                   <div key={item.productId} className="bg-white rounded-2xl border shadow-sm overflow-hidden group hover:shadow-md transition-all duration-200">
                     {/* Image */}
-                    <div className="relative bg-slate-50 p-6 flex items-center justify-center h-48">
+                    <div className="relative bg-slate-50 h-48 overflow-hidden">
                       <Link href={`/products/${item.productId}`}>
                         <img
                           src={item.image}
                           alt={item.name}
-                          className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </Link>
                       {hasDiscount && (
