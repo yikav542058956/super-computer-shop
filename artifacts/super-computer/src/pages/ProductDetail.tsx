@@ -455,18 +455,42 @@ export default function ProductDetail() {
 
                 {/* ── Premium Trust Badges ── below product name ── */}
                 <div className="grid grid-cols-3 gap-2 mb-5">
+                  {/* Cash on Delivery */}
                   <div className="flex flex-col items-center gap-1.5 rounded-2xl py-3 px-2 text-center border border-green-100 bg-gradient-to-b from-green-50 to-emerald-50 shadow-sm">
-                    <div className="h-9 w-9 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center text-lg">🚚</div>
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-md shadow-green-500/30">
+                      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-white" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 3h15v13H1z"/>
+                        <path d="M16 8h4l3 4v5h-7V8z"/>
+                        <circle cx="5.5" cy="18.5" r="2.5"/>
+                        <circle cx="18.5" cy="18.5" r="2.5"/>
+                      </svg>
+                    </div>
                     <p className="text-[11px] font-black text-green-800 leading-tight">Cash on</p>
                     <p className="text-[10px] font-bold text-green-600 -mt-1 leading-tight">Delivery</p>
                   </div>
+
+                  {/* Easy EMI */}
                   <div className="flex flex-col items-center gap-1.5 rounded-2xl py-3 px-2 text-center border border-blue-100 bg-gradient-to-b from-blue-50 to-indigo-50 shadow-sm">
-                    <div className="h-9 w-9 rounded-full bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-lg">💳</div>
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/30">
+                      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-white" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="1" y="4" width="22" height="16" rx="2"/>
+                        <line x1="1" y1="10" x2="23" y2="10"/>
+                        <line x1="6" y1="16" x2="8" y2="16"/>
+                        <line x1="10" y1="16" x2="12" y2="16"/>
+                      </svg>
+                    </div>
                     <p className="text-[11px] font-black text-blue-800 leading-tight">Easy</p>
                     <p className="text-[10px] font-bold text-blue-600 -mt-1 leading-tight">EMI Available</p>
                   </div>
+
+                  {/* 7-Day Returns */}
                   <div className="flex flex-col items-center gap-1.5 rounded-2xl py-3 px-2 text-center border border-orange-100 bg-gradient-to-b from-orange-50 to-amber-50 shadow-sm">
-                    <div className="h-9 w-9 rounded-full bg-orange-500/15 border border-orange-500/25 flex items-center justify-center text-lg">🔄</div>
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-600 flex items-center justify-center shadow-md shadow-orange-500/30">
+                      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-white" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                        <path d="M3 3v5h5"/>
+                      </svg>
+                    </div>
                     <p className="text-[11px] font-black text-orange-800 leading-tight">7-Day</p>
                     <p className="text-[10px] font-bold text-orange-600 -mt-1 leading-tight">Easy Returns</p>
                   </div>
