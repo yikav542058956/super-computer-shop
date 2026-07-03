@@ -1,6 +1,6 @@
 import { useParams, useLocation, Link } from "wouter";
 import { useEffect, useState, useCallback } from "react";
-import { ref, get, push, set, onValue } from "firebase/database";
+import { ref, get, onValue } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import {
   ShoppingCart, Heart, ShieldCheck, Truck, Star,
   Info, ChevronRight, Cpu, HardDrive, MemoryStick,
-  ChevronLeft, User, Package, Zap, Award, ArrowLeft, Phone, CheckCheck,
+  ChevronLeft, Package, Zap, Award, ArrowLeft, Phone, CheckCheck,
 } from "lucide-react";
 import { WhatsAppFloat } from "@/components/WhatsAppButton";
 import { formatINR } from "@/lib/utils";
@@ -99,60 +99,6 @@ function ImageCarousel({ images, productName }: { images: string[]; productName:
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-/* ─── Star Rating Display ────────────────────────────────────── */
-function StarRatingDisplay({ value }: { value: number }) {
-  return (
-    <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`h-4 w-4 ${star <= value ? "fill-yellow-400 text-yellow-400" : "text-gray-300 fill-transparent"}`}
-        />
-      ))}
-    </div>
-  );
-}
-
-/* ─── Review Card ────────────────────────────────────────────── */
-function ReviewCard({ review }: { review: any }) {
-  return (
-    <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-      <div className="flex items-start gap-3">
-        <div className="h-10 w-10 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center shrink-0">
-          <span className="text-green-600 font-bold text-sm">{review.userName?.[0]?.toUpperCase() || "U"}</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <p className="font-semibold text-gray-800 text-sm">{review.userName || "Anonymous"}</p>
-              <span className="text-[10px] font-semibold text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full">✓ Verified Purchase</span>
-            </div>
-            <p className="text-[10px] text-slate-400">
-              {new Date(review.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-            </p>
-          </div>
-          <div className="flex gap-0.5 mt-1.5 mb-2">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <Star key={s} className={`h-3.5 w-3.5 ${s <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200 fill-transparent"}`} />
-            ))}
-          </div>
-          <p className="text-gray-700 text-sm leading-relaxed">{review.comment}</p>
-          {review.imageUrl && (
-            <div className="mt-3">
-              <img
-                src={review.imageUrl}
-                alt="Review photo"
-                className="h-32 w-32 object-cover rounded-xl border border-gray-200 cursor-pointer hover:scale-105 transition-transform"
-                onClick={() => window.open(review.imageUrl, "_blank")}
-              />
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
@@ -340,7 +286,6 @@ export default function ProductDetail() {
   const [, navigate] = useLocation();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [reviews, setReviews] = useState<any[]>([]);
   const [suggested, setSuggested] = useState<any[]>([]);
   const [callingNumber, setCallingNumber] = useState<string>("");
 
@@ -369,20 +314,6 @@ export default function ProductDetail() {
     } catch {}
   }, [id]);
 
-  useEffect(() => {
-    if (!id) return;
-    const unsubscribe = onValue(ref(db, `productReviews/${id}`), (snap) => {
-      if (snap.exists()) {
-        const list = Object.entries(snap.val())
-          .map(([rid, val]: any) => ({ id: rid, ...val }))
-          .sort((a, b) => b.createdAt - a.createdAt);
-        setReviews(list);
-      } else {
-        setReviews([]);
-      }
-    });
-    return () => unsubscribe();
-  }, [id]);
 
   // Fetch suggested products (same brand or category, excluding current)
   useEffect(() => {
@@ -435,16 +366,6 @@ export default function ProductDetail() {
   const discountPct = hasDiscount
     ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
     : 0;
-  // Real reviews only for the list (no seeded)
-  const realReviews = reviews.filter((r: any) => !r.isSeeded);
-
-  // For display stats: prefer product-level seeded stats when available
-  const avgRating = realReviews.length
-    ? (realReviews.reduce((s, r) => s + r.rating, 0) / realReviews.length).toFixed(1)
-    : null;
-  const displayAvg = product?.rating ? product.rating.toFixed(1) : avgRating;
-  const displayCount = product?.reviewsCount || realReviews.length || 0;
-  const hasDist = product?.ratingDist && displayCount > 0;
 
   /* ── Wrappers for loading / not-found (still no footer) ── */
   const Shell = ({ children }: { children: React.ReactNode }) => (
@@ -648,28 +569,10 @@ export default function ProductDetail() {
                   </div>
                 </div>
 
-                {/* Rating row — only shown when ratings exist */}
-                {(displayAvg || displayCount > 0) && (
-                <div className="flex items-center gap-3 mb-5 pb-5 border-b border-gray-100">
-                  {displayAvg && (
-                    <div className="flex items-center gap-1.5 bg-green-600 px-3 py-1.5 rounded-xl">
-                      <span className="text-white font-black text-sm">{displayAvg}</span>
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    </div>
-                  )}
-                  {displayCount > 0 && (
-                    <span className="text-slate-500 text-sm">{displayCount.toLocaleString("en-IN")} Reviews</span>
-                  )}
-                  <span className="text-gray-300">|</span>
+                {/* Stock badge */}
+                <div className="mb-5 pb-5 border-b border-gray-100">
                   <StockBadge stock={product.stock} />
                 </div>
-                )}
-                {/* Stock badge standalone when no ratings */}
-                {!displayAvg && displayCount === 0 && (
-                  <div className="mb-5 pb-5 border-b border-gray-100">
-                    <StockBadge stock={product.stock} />
-                  </div>
-                )}
 
                 {/* Price */}
                 <div className="mb-6">
@@ -780,77 +683,14 @@ export default function ProductDetail() {
             </div>
           )}
 
-          {/* ── Ratings & Reviews Section ─────────────────────── */}
-          <div id="sec-reviews" className="scroll-mt-16 bg-white border border-gray-100 rounded-2xl shadow-sm mb-8">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-base font-black text-gray-900">
-                Ratings &amp; Reviews
-                {displayCount > 0 && (
-                  <span className="ml-2 text-sm font-normal text-slate-400">({displayCount.toLocaleString("en-IN")})</span>
-                )}
-              </h2>
-            </div>
-
-            {/* Rating summary bar — shown when seeded stats or real reviews exist */}
-            {(displayAvg || displayCount > 0) && (
-              <div className="flex items-center gap-6 px-6 py-5 border-b border-gray-100">
-                <div className="text-center shrink-0">
-                  <p className="text-5xl font-black text-gray-900">{displayAvg ?? "—"}</p>
-                  <div className="flex gap-0.5 justify-center mt-1.5">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} className={`h-4 w-4 ${s <= Math.round(Number(displayAvg)) ? "fill-yellow-400 text-yellow-400" : "text-gray-200 fill-transparent"}`} />
-                    ))}
-                  </div>
-                  <p className="text-slate-500 text-xs mt-1">{displayCount.toLocaleString("en-IN")} Ratings</p>
-                </div>
-                <div className="flex-1 space-y-1.5">
-                  {[5, 4, 3, 2, 1].map((star) => {
-                    const count = hasDist
-                      ? (product.ratingDist[star] ?? 0) + realReviews.filter((r: any) => r.rating === star).length
-                      : realReviews.filter((r: any) => r.rating === star).length;
-                    const total = hasDist ? displayCount : realReviews.length;
-                    const pct = total ? (count / total) * 100 : 0;
-                    return (
-                      <div key={star} className="flex items-center gap-2">
-                        <span className="text-xs text-slate-600 w-3">{star}</span>
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />
-                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-[10px] text-slate-400 w-10 text-right">{count.toLocaleString("en-IN")}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-
-            {/* Reviews list — real reviews only */}
-            <div className="divide-y divide-gray-50">
-              {realReviews.length === 0 ? (
-                <div className="text-center py-10">
-                  <Star className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-                  <p className="text-slate-500 text-sm">No reviews yet. Be the first to write one!</p>
-                </div>
-              ) : (
-                realReviews.map((r) => (
-                  <div key={r.id} className="px-6 py-4">
-                    <ReviewCard review={r} />
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* ── Suggested Products ─────────────────────────────── */}
+          {/* ── Related Products ───────────────────────────────── */}
           {suggested.length > 0 && (
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-black text-gray-900">
-                  You Might Also Like
-                  <span className="ml-2 text-sm font-semibold text-slate-400">({product.brand})</span>
-                </h2>
+                <div>
+                  <h2 className="text-lg font-black text-gray-900">Related Products</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">More from {product.brand}</p>
+                </div>
                 <Link href={`/search?q=${encodeURIComponent(product.brand)}`}>
                   <span className="text-sm font-semibold text-green-600 hover:text-green-500 transition-colors flex items-center gap-1">
                     See all <ChevronRight className="h-4 w-4" />

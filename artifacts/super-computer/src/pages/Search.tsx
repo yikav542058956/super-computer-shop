@@ -5,11 +5,11 @@ import { db } from "@/lib/firebase";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Search, Mic, Camera, ShoppingCart,
-  Star, Heart, GitCompare, MessageCircle, Shield,
+  Heart, GitCompare, MessageCircle, Shield,
   Truck, BadgeCheck, X, Clock, TrendingUp, SlidersHorizontal,
   ChevronRight, Package,
 } from "lucide-react";
-import { formatINR, fakeRating, fakeReviewCount } from "@/lib/utils";
+import { formatINR } from "@/lib/utils";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useCart as useCartBadge } from "@/contexts/CartContext";
@@ -147,13 +147,8 @@ function ProductCard({ product, index, onNavigate }: { product: any; index: numb
           {/* Specs */}
           <p className="text-[11px] text-[#6B7280] mt-0.5 leading-relaxed line-clamp-1">{specsLine(product)}</p>
 
-          {/* Rating + Badges */}
+          {/* Badges */}
           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            <span className="flex items-center gap-0.5 bg-[#16A34A] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-none">
-              <Star size={8} className="fill-white" />
-              {fakeRating(product.id, product.rating).toFixed(1)}
-            </span>
-            <span className="text-[10px] text-[#6B7280]">({fakeReviewCount(product.id, product.reviewsCount)})</span>
             <span className="flex items-center gap-0.5 text-[10px] text-[#2563EB] font-semibold">
               <BadgeCheck size={11} />
               Verified

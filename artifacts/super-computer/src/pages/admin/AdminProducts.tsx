@@ -1,6 +1,6 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useEffect, useState, useRef } from "react";
-import { ref, onValue, remove, push, update, get, set } from "firebase/database";
+import { ref, onValue, remove, push, update, get } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { Button } from "@/components/ui/button";
@@ -12,32 +12,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash, Upload, ImageIcon, Loader2, X, Search, ScanLine, CheckCircle, AlertCircle, Cpu, Camera, Sparkles, Star, ChevronDown } from "lucide-react";
+import { Plus, Edit, Trash, Upload, ImageIcon, Loader2, X, Search, ScanLine, CheckCircle, AlertCircle, Cpu, Camera, Sparkles } from "lucide-react";
+// Camera & Sparkles used for bill scan & AI description
 import { formatINR } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface SpecField { key: string; value: string; }
-interface SeedReview { userName: string; rating: number; text: string; imageUrl: string; daysAgo: number; generatingText: boolean; uploadingPhoto: boolean; }
-
-const SEED_NAMES = ["Rahul Sharma","Priya Singh","Amit Kumar","Neha Gupta","Vikas Yadav","Sunita Verma","Rajesh Patel","Pooja Joshi","Deepak Nair","Anjali Mehta","Suresh Reddy","Kavita Iyer","Manish Tiwari","Rohit Agarwal","Anita Rao"];
-
-function randomReviewCount() { return Math.floor(Math.random() * 901) + 300; }
-
-function genRatingDist(total: number): Record<number, number> {
-  const pcts: Record<number,number> = { 5: 0.52, 4: 0.28, 3: 0.11, 2: 0.05, 1: 0.04 };
-  const dist: Record<number, number> = {};
-  let used = 0;
-  [1, 2, 3, 4].forEach(s => { dist[s] = Math.round(total * pcts[s]); used += dist[s]; });
-  dist[5] = Math.max(0, total - used);
-  return dist;
-}
-
-function calcAvgFromDist(dist: Record<number, number>): number {
-  const total = Object.values(dist).reduce((a, b) => a + b, 0);
-  if (!total) return 0;
-  const sum = Object.entries(dist).reduce((a, [star, cnt]) => a + Number(star) * cnt, 0);
-  return Math.round((sum / total) * 10) / 10;
-}
 
 const EMPTY_FORM = {
   name: "",
@@ -76,10 +56,6 @@ export default function AdminProducts() {
   const [showVerifyDialog, setShowVerifyDialog] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const billScanRef = useRef<HTMLInputElement>(null);
-  const reviewPhotoRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const [seedReviews, setSeedReviews] = useState<SeedReview[]>([]);
-  const [totalReviewCount, setTotalReviewCount] = useState(0);
-  const [showSeedSection, setShowSeedSection] = useState(false);
 
   /* ── Safe JSON parse from fetch response ─────── */
   async function safeJson(res: Response): Promise<any> {
@@ -247,9 +223,6 @@ export default function AdminProducts() {
   const openAdd = () => {
     setEditingId(null);
     setForm({ ...EMPTY_FORM, specs: defaultSpecs() });
-    setSeedReviews([]);
-    setTotalReviewCount(randomReviewCount());
-    setShowSeedSection(false);
     setShowDialog(true);
   };
 
@@ -326,49 +299,6 @@ export default function AdminProducts() {
     setForm((f) => ({ ...f, specs: f.specs.filter((_, i) => i !== idx) }));
   };
 
-  /* ── Seed review helpers ─────────────────────── */
-  const addSeedReview = () => {
-    const idx = seedReviews.length;
-    setSeedReviews(rs => [...rs, {
-      userName: SEED_NAMES[idx % SEED_NAMES.length],
-      rating: 5, text: "", imageUrl: "",
-      daysAgo: Math.floor(Math.random() * 90) + 1,
-      generatingText: false, uploadingPhoto: false,
-    }]);
-  };
-
-  async function generateReviewText(idx: number) {
-    if (!form.name.trim()) { toast.error("Enter product name first"); return; }
-    setSeedReviews(rs => rs.map((r, i) => i === idx ? { ...r, generatingText: true } : r));
-    try {
-      const rating = seedReviews[idx]?.rating || 5;
-      const res = await fetch("/api/generate-review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: form.name, brand: form.brand, category: form.category, rating }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-      setSeedReviews(rs => rs.map((r, i) => i === idx ? { ...r, text: data.text } : r));
-    } catch (e: any) {
-      toast.error("Review generation failed: " + e.message);
-    } finally {
-      setSeedReviews(rs => rs.map((r, i) => i === idx ? { ...r, generatingText: false } : r));
-    }
-  }
-
-  async function uploadReviewPhoto(file: File, idx: number) {
-    setSeedReviews(rs => rs.map((r, i) => i === idx ? { ...r, uploadingPhoto: true } : r));
-    try {
-      const url = await uploadToCloudinary(file);
-      setSeedReviews(rs => rs.map((r, i) => i === idx ? { ...r, imageUrl: url } : r));
-    } catch {
-      toast.error("Photo upload failed");
-    } finally {
-      setSeedReviews(rs => rs.map((r, i) => i === idx ? { ...r, uploadingPhoto: false } : r));
-    }
-  }
-
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Product name is required"); return; }
     if (!form.price || isNaN(Number(form.price))) { toast.error("Valid price is required"); return; }
@@ -409,27 +339,6 @@ export default function AdminProducts() {
         const newRef = await push(ref(db, "products"), data);
         savedProductId = newRef.key!;
         toast.success("Product added");
-      }
-
-      // Save seed review stats + seeded reviews
-      if (savedProductId && (totalReviewCount > 0 || seedReviews.some(r => r.text.trim()))) {
-        const count = totalReviewCount > 0 ? totalReviewCount : 0;
-        const dist = count > 0 ? genRatingDist(count) : {};
-        const avg = count > 0 ? calcAvgFromDist(dist) : 0;
-        if (count > 0) {
-          await update(ref(db, `products/${savedProductId}`), { reviewsCount: count, ratingDist: dist, rating: avg });
-        }
-        for (const sr of seedReviews.filter(r => r.text.trim())) {
-          const rRef = push(ref(db, `productReviews/${savedProductId}`));
-          await set(rRef, {
-            userName: sr.userName.trim() || SEED_NAMES[Math.floor(Math.random() * SEED_NAMES.length)],
-            rating: sr.rating,
-            comment: sr.text.trim(),
-            imageUrl: sr.imageUrl || null,
-            isSeeded: true,
-            createdAt: Date.now() - sr.daysAgo * 86400000,
-          });
-        }
       }
 
       setShowDialog(false);
@@ -872,175 +781,6 @@ export default function AdminProducts() {
               </div>
             </div>
           </div>
-
-            {/* ── Seed Reviews ──────────────────────────────────── */}
-            <div className="border border-amber-200 rounded-xl overflow-hidden">
-              <button
-                type="button"
-                className="w-full flex items-center justify-between px-4 py-3 bg-amber-50 hover:bg-amber-100 transition-colors"
-                onClick={() => setShowSeedSection(v => !v)}
-              >
-                <span className="flex items-center gap-2 font-bold text-amber-800 text-sm">
-                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  Seed Reviews
-                  <span className="text-xs font-normal text-amber-600">(Amazon-style rating bars + featured reviews)</span>
-                </span>
-                <ChevronDown className={`h-4 w-4 text-amber-600 transition-transform ${showSeedSection ? "rotate-180" : ""}`} />
-              </button>
-
-              {showSeedSection && (
-                <div className="p-4 space-y-4 bg-white border-t border-amber-100">
-                  {/* Total count */}
-                  <div className="flex items-end gap-3">
-                    <div className="flex-1 space-y-1">
-                      <Label className="text-sm">Total Review Count (shown to customers)</Label>
-                      <Input
-                        type="number" min={0}
-                        value={totalReviewCount}
-                        onChange={e => setTotalReviewCount(parseInt(e.target.value) || 0)}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setTotalReviewCount(randomReviewCount())}
-                      className="px-3 py-2 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 shrink-0"
-                    >
-                      🎲 Random
-                    </button>
-                  </div>
-
-                  {/* Distribution preview */}
-                  {totalReviewCount > 0 && (() => {
-                    const dist = genRatingDist(totalReviewCount);
-                    const avg = calcAvgFromDist(dist);
-                    return (
-                      <div className="bg-slate-50 rounded-xl p-3">
-                        <div className="flex items-center gap-3 mb-3">
-                          <p className="text-4xl font-black text-slate-900">{avg.toFixed(1)}</p>
-                          <div>
-                            <div className="flex gap-0.5">
-                              {[1,2,3,4,5].map(s => <Star key={s} className={`h-4 w-4 ${s <= Math.round(avg) ? "fill-yellow-400 text-yellow-400" : "text-gray-200 fill-transparent"}`} />)}
-                            </div>
-                            <p className="text-xs text-slate-400 mt-0.5">{totalReviewCount.toLocaleString("en-IN")} ratings</p>
-                          </div>
-                        </div>
-                        <div className="space-y-1.5">
-                          {[5,4,3,2,1].map(star => {
-                            const count = dist[star] || 0;
-                            const pct = totalReviewCount ? (count / totalReviewCount) * 100 : 0;
-                            return (
-                              <div key={star} className="flex items-center gap-2">
-                                <span className="text-xs w-3 text-slate-600">{star}</span>
-                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />
-                                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                  <div className="h-full bg-green-500 rounded-full" style={{ width: `${pct}%` }} />
-                                </div>
-                                <span className="text-[10px] text-slate-400 w-10 text-right">{count.toLocaleString("en-IN")}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Featured reviews */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-bold">Featured Reviews (with photo + AI text)</Label>
-                      {seedReviews.length < 3 && (
-                        <button
-                          type="button"
-                          onClick={addSeedReview}
-                          className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20"
-                        >
-                          <Plus className="h-3.5 w-3.5" /> Add Review
-                        </button>
-                      )}
-                    </div>
-
-                    {seedReviews.map((sr, idx) => (
-                      <div key={idx} className="border border-slate-200 rounded-xl p-3 space-y-3 bg-slate-50">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-400">Review #{idx + 1}</span>
-                          <button type="button" onClick={() => setSeedReviews(rs => rs.filter((_, i) => i !== idx))} className="text-slate-400 hover:text-red-500">
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs">Reviewer Name</Label>
-                            <Input
-                              className="text-sm bg-white"
-                              value={sr.userName}
-                              onChange={e => setSeedReviews(rs => rs.map((r, i) => i === idx ? { ...r, userName: e.target.value } : r))}
-                              placeholder="e.g. Rahul Sharma"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Rating</Label>
-                            <div className="flex gap-0.5 mt-1.5">
-                              {[1,2,3,4,5].map(s => (
-                                <button key={s} type="button" onClick={() => setSeedReviews(rs => rs.map((r, i) => i === idx ? { ...r, rating: s } : r))} className="p-0.5 hover:scale-110 transition-transform">
-                                  <Star className={`h-5 w-5 ${s <= sr.rating ? "fill-amber-400 text-amber-400" : "text-slate-300"}`} />
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-xs">Review Text</Label>
-                            <button
-                              type="button"
-                              onClick={() => generateReviewText(idx)}
-                              disabled={sr.generatingText}
-                              className="flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg disabled:opacity-60"
-                              style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", color: "#fff" }}
-                            >
-                              {sr.generatingText ? <><Loader2 className="h-3 w-3 animate-spin" /> Generating...</> : <><Sparkles className="h-3 w-3" /> Generate with AI</>}
-                            </button>
-                          </div>
-                          <Textarea
-                            rows={3}
-                            className="text-sm bg-white"
-                            value={sr.text}
-                            onChange={e => setSeedReviews(rs => rs.map((r, i) => i === idx ? { ...r, text: e.target.value } : r))}
-                            placeholder="Write a review or click Generate with AI..."
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <Label className="text-xs">Review Photo (optional)</Label>
-                          {sr.imageUrl ? (
-                            <div className="flex items-center gap-3 mt-1">
-                              <img src={sr.imageUrl} className="h-16 w-16 object-cover rounded-lg border border-slate-200" alt="Review" />
-                              <button type="button" onClick={() => setSeedReviews(rs => rs.map((r, i) => i === idx ? { ...r, imageUrl: "" } : r))} className="text-xs text-red-500 hover:text-red-700 font-medium">Remove</button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => reviewPhotoRefs.current[idx]?.click()}
-                              disabled={sr.uploadingPhoto}
-                              className="mt-1 flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed border-slate-200 text-xs text-slate-500 hover:border-primary hover:text-primary transition-colors disabled:opacity-60 w-full justify-center"
-                            >
-                              {sr.uploadingPhoto ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading...</> : <><Camera className="h-3.5 w-3.5" /> Upload Photo</>}
-                            </button>
-                          )}
-                          <input
-                            type="file" accept="image/*" className="hidden"
-                            ref={el => { reviewPhotoRefs.current[idx] = el; }}
-                            onChange={e => { const f = e.target.files?.[0]; if (f) uploadReviewPhoto(f, idx); e.target.value = ""; }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
