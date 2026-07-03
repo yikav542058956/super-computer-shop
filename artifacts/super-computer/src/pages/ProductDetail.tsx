@@ -10,9 +10,9 @@ import { toast } from "sonner";
 import {
   ShoppingCart, Heart, ShieldCheck, Truck, Star,
   Info, ChevronRight, Cpu, HardDrive, MemoryStick,
-  ChevronLeft, User, Package, Zap, Award, ArrowLeft,
+  ChevronLeft, User, Package, Zap, Award, ArrowLeft, Phone,
 } from "lucide-react";
-import { WhatsAppFloat } from "@/components/WhatsAppButton";
+import { WhatsAppProductButton } from "@/components/WhatsAppButton";
 import { formatINR } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -351,11 +351,6 @@ export default function ProductDetail() {
   const Shell = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <main className="flex-1 pb-16 md:pb-0">{children}</main>
-      <WhatsAppFloat
-        productName={product?.name}
-        productBrand={product?.brand}
-        productPrice={product?.discountPrice || product?.price}
-      />
       <MobileBottomNav />
     </div>
   );

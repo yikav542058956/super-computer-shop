@@ -340,6 +340,7 @@ export default function AdminSettings() {
     freeDeliveryAbove: "50000",
   });
   const [whatsapp, setWhatsapp] = useState({ number: "" });
+  const [calling, setCalling] = useState({ number: "" });
   const [delivery, setDelivery] = useState({
     localDistricts: "Kasganj, Etah, Kannauj, Aliganj, Soron, Patiyali, Ganj Dundwara",
     localCharge: "0",
@@ -356,6 +357,7 @@ export default function AdminSettings() {
         if (d.general) setGeneral(g => ({ ...g, ...d.general }));
         if (d.business) setBusiness(b => ({ ...b, taxPercent: String(d.business.taxPercent || 18), freeDeliveryAbove: String(d.business.freeDeliveryAbove || 50000) }));
         if (d.whatsappNumber) setWhatsapp({ number: d.whatsappNumber });
+        if (d.callingNumber) setCalling({ number: d.callingNumber });
         if (d.deliveryZones) setDelivery({
           localDistricts: d.deliveryZones.localDistricts || delivery.localDistricts,
           localCharge: String(d.deliveryZones.localCharge ?? 0),
@@ -403,6 +405,15 @@ export default function AdminSettings() {
     await set(ref(db, "settings/whatsappNumber"), digits);
     setSaving(null); flash("whatsapp");
     toast.success("WhatsApp number saved!");
+  };
+
+  const saveCalling = async () => {
+    const digits = calling.number.replace(/\D/g, "");
+    if (digits.length !== 10) { toast.error("Enter a valid 10-digit calling number"); return; }
+    setSaving("calling");
+    await set(ref(db, "settings/callingNumber"), digits);
+    setSaving(null); flash("calling");
+    toast.success("Calling number saved!");
   };
 
   const previewUrl = whatsapp.number.replace(/\D/g, "").length === 10
@@ -483,6 +494,60 @@ export default function AdminSettings() {
                   <a href={previewUrl} target="_blank" rel="noopener noreferrer">
                     <Button size="sm" variant="outline" className="border-green-400 text-green-700 hover:bg-green-50 gap-2 shrink-0">
                       <WhatsAppIcon size={16} />Test
+                    </Button>
+                  </a>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Calling Number */}
+          <Card className="border-2 border-blue-200 bg-blue-50/40">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-blue-800">
+                <Phone className="h-5 w-5" /> Calling Number
+              </CardTitle>
+              <CardDescription className="text-blue-700">
+                Save your support phone number — a "Call for More Info" button will appear on every product page.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-3 items-end">
+                <div className="flex-1 space-y-1.5">
+                  <Label className="font-medium">Phone Number (10 digits)</Label>
+                  <div className="flex gap-2">
+                    <div className="flex items-center px-3 bg-white border rounded-lg text-slate-600 font-bold text-sm shrink-0">
+                      🇮🇳 +91
+                    </div>
+                    <Input
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
+                      placeholder="9761809960"
+                      value={calling.number}
+                      onChange={(e) => setCalling({ number: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                      className="font-mono tracking-widest bg-white text-lg"
+                    />
+                  </div>
+                </div>
+                <Button onClick={saveCalling} disabled={saving === "calling"}
+                  className="h-11 gap-2 bg-blue-600 hover:bg-blue-700 shrink-0">
+                  {saved === "calling"
+                    ? <><CheckCircle className="h-4 w-4" />Saved!</>
+                    : saving === "calling" ? "Saving..."
+                    : <><Save className="h-4 w-4" />Save</>
+                  }
+                </Button>
+              </div>
+              {calling.number.length === 10 && (
+                <div className="bg-white rounded-xl border border-blue-200 p-4 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 mb-0.5">✅ Call button is active</p>
+                    <p className="text-xs text-slate-500">+91 {calling.number} — opens dialer on mobile, copies on desktop.</p>
+                  </div>
+                  <a href={`tel:+91${calling.number}`}>
+                    <Button size="sm" variant="outline" className="border-blue-400 text-blue-700 hover:bg-blue-50 gap-2 shrink-0">
+                      <Phone className="h-4 w-4" />Test
                     </Button>
                   </a>
                 </div>
