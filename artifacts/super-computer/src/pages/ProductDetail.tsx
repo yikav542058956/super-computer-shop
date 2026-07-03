@@ -1,8 +1,7 @@
 import { useParams, useLocation, Link } from "wouter";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ref, get, push, set, onValue } from "firebase/database";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
@@ -11,7 +10,7 @@ import { toast } from "sonner";
 import {
   ShoppingCart, Heart, ShieldCheck, Truck, Star,
   Info, ChevronRight, Cpu, HardDrive, MemoryStick,
-  ChevronLeft, Send, User, Package, Zap, Award, ArrowLeft,
+  ChevronLeft, User, Package, Zap, Award, ArrowLeft,
 } from "lucide-react";
 import { WhatsAppFloat } from "@/components/WhatsAppButton";
 import { formatINR } from "@/lib/utils";
@@ -104,28 +103,15 @@ function ImageCarousel({ images, productName }: { images: string[]; productName:
   );
 }
 
-/* ─── Star Rating Input ──────────────────────────────────────── */
-function StarRatingInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  const [hovered, setHovered] = useState(0);
+/* ─── Star Rating Display ────────────────────────────────────── */
+function StarRatingDisplay({ value }: { value: number }) {
   return (
     <div className="flex gap-1">
       {[1, 2, 3, 4, 5].map((star) => (
-        <button
+        <Star
           key={star}
-          type="button"
-          onClick={() => onChange(star)}
-          onMouseEnter={() => setHovered(star)}
-          onMouseLeave={() => setHovered(0)}
-          className="transition-transform hover:scale-110"
-        >
-          <Star
-            className={`h-7 w-7 transition-colors ${
-              star <= (hovered || value)
-                ? "fill-yellow-400 text-yellow-400"
-                : "text-gray-300 fill-transparent"
-            }`}
-          />
-        </button>
+          className={`h-4 w-4 ${star <= value ? "fill-yellow-400 text-yellow-400" : "text-gray-300 fill-transparent"}`}
+        />
       ))}
     </div>
   );
@@ -234,10 +220,7 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<any[]>([]);
-  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "", imageFile: null as File | null, imagePreview: "" });
-  const [submittingReview, setSubmittingReview] = useState(false);
   const [suggested, setSuggested] = useState<any[]>([]);
-  const [hasOrdered, setHasOrdered] = useState(false);
 
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
@@ -271,28 +254,6 @@ export default function ProductDetail() {
     });
     return () => unsubscribe();
   }, [id]);
-
-  // Check if current user has ordered this product (reset on every id/user change)
-  useEffect(() => {
-    setHasOrdered(false);
-    if (!currentUser || !id) return;
-    let cancelled = false;
-    get(ref(db, "orders")).then((snap) => {
-      if (cancelled || !snap.exists()) return;
-      let found = false;
-      snap.forEach((child) => {
-        if (found) return;
-        const order = child.val();
-        if (order.userId !== currentUser.uid) return;
-        const items: any[] = Array.isArray(order.items) ? order.items : Object.values(order.items || {});
-        if (items.some((item: any) => item.productId === id || item.id === id)) {
-          found = true;
-        }
-      });
-      if (!cancelled) setHasOrdered(found);
-    });
-    return () => { cancelled = true; };
-  }, [currentUser, id]);
 
   // Fetch suggested products (same brand or category, excluding current)
   useEffect(() => {
@@ -341,37 +302,6 @@ export default function ProductDetail() {
     });
   };
 
-  const handleSubmitReview = async () => {
-    if (!currentUser) { toast.error("Please login to write a review"); return; }
-    if (!hasOrdered) { toast.error("Only customers who ordered this product can write a review"); return; }
-    if (alreadyReviewed) { toast.error("You have already submitted a review for this product"); return; }
-    if (!reviewForm.comment.trim()) { toast.error("Please write your review before submitting"); return; }
-    setSubmittingReview(true);
-    try {
-      let imageUrl = "";
-      if (reviewForm.imageFile) {
-        const imgRef = storageRef(storage, `reviewImages/${id}/${currentUser.uid}_${Date.now()}`);
-        const snap = await uploadBytes(imgRef, reviewForm.imageFile);
-        imageUrl = await getDownloadURL(snap.ref);
-      }
-      const reviewRef = push(ref(db, `productReviews/${id}`));
-      await set(reviewRef, {
-        userId: currentUser.uid,
-        userName: userData?.name || currentUser.email?.split("@")[0] || "User",
-        rating: reviewForm.rating,
-        comment: reviewForm.comment.trim(),
-        imageUrl: imageUrl || null,
-        createdAt: Date.now(),
-      });
-      setReviewForm({ rating: 5, comment: "", imageFile: null, imagePreview: "" });
-      toast.success("Review submitted! ⭐");
-    } catch {
-      toast.error("Failed to submit review. Please try again.");
-    } finally {
-      setSubmittingReview(false);
-    }
-  };
-
   const hasDiscount = product?.discountPrice && product.discountPrice < product.price;
   const discountPct = hasDiscount
     ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
@@ -379,8 +309,6 @@ export default function ProductDetail() {
   const avgRating = reviews.length
     ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
     : null;
-
-  const alreadyReviewed = reviews.some((r) => r.userId === currentUser?.uid);
 
   /* ── Wrappers for loading / not-found (still no footer) ── */
   const Shell = ({ children }: { children: React.ReactNode }) => (
@@ -664,87 +592,6 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* Write Review */}
-            <div className="px-6 py-5 border-b border-gray-100">
-              {alreadyReviewed ? (
-                <div className="flex items-center gap-3 py-3 px-4 bg-green-50 rounded-2xl border border-green-100">
-                  <Star className="h-5 w-5 text-green-500 fill-green-500 shrink-0" />
-                  <p className="text-green-700 text-sm font-semibold">✓ You have already reviewed this product. Thank you!</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <h4 className="font-black text-gray-900 text-sm flex items-center gap-2">
-                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" /> Write Your Review
-                    <span className="text-[10px] font-semibold text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full">✓ Verified Buyer</span>
-                  </h4>
-
-                  {/* Star rating */}
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1.5">Your rating</p>
-                    <StarRatingInput value={reviewForm.rating} onChange={(v) => setReviewForm((f) => ({ ...f, rating: v }))} />
-                  </div>
-
-                  {/* Text area */}
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1.5">Your review</p>
-                    <textarea
-                      rows={4}
-                      placeholder="Share your experience — build quality, performance, delivery, and more..."
-                      value={reviewForm.comment}
-                      onChange={(e) => setReviewForm((f) => ({ ...f, comment: e.target.value }))}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 text-sm placeholder-gray-400 outline-none focus:border-green-500 focus:bg-white transition-all resize-none"
-                    />
-                  </div>
-
-                  {/* Image upload */}
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1.5">Add photo (optional)</p>
-                    {reviewForm.imagePreview ? (
-                      <div className="relative inline-block">
-                        <img
-                          src={reviewForm.imagePreview}
-                          alt="Preview"
-                          className="h-28 w-28 object-cover rounded-xl border-2 border-green-300"
-                        />
-                        <button
-                          onClick={() => setReviewForm((f) => ({ ...f, imageFile: null, imagePreview: "" }))}
-                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-600 transition-colors font-bold shadow"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="flex items-center gap-2 w-fit cursor-pointer bg-gray-50 border-2 border-dashed border-gray-200 hover:border-green-400 hover:bg-green-50 rounded-xl px-4 py-3 transition-all group">
-                        <span className="text-2xl">📷</span>
-                        <span className="text-sm text-slate-500 group-hover:text-green-600 font-medium">Select photo</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            setReviewForm((f) => {
-                              if (f.imagePreview) URL.revokeObjectURL(f.imagePreview);
-                              return { ...f, imageFile: file, imagePreview: URL.createObjectURL(file) };
-                            });
-                          }}
-                        />
-                      </label>
-                    )}
-                  </div>
-
-                  <Button
-                    onClick={handleSubmitReview}
-                    disabled={submittingReview || !reviewForm.comment.trim()}
-                    className="bg-green-500 hover:bg-green-400 text-black font-bold rounded-xl gap-2 text-sm px-6"
-                  >
-                    <Send className="h-3.5 w-3.5" />
-                    {submittingReview ? "Submitting..." : "Submit Review"}
-                  </Button>
-                </div>
-              )}
-            </div>
 
             {/* Reviews list */}
             <div className="divide-y divide-gray-50">

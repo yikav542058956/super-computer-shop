@@ -279,8 +279,8 @@ function PaymentSettings() {
           </CardTitle>
           <CardDescription className="text-slate-500">
             {gatewayEnabled
-              ? "COD advance ke liye ya backup ke liye ye UPI ID customers ko dikhti hai."
-              : "Gateway OFF hone par customers ko sirf ye UPI ID dikhegi — wo is par payment karenge."}
+              ? "This UPI ID is shown to customers for COD advance payments or as a backup option."
+              : "Gateway is OFF — customers will only see this UPI ID and pay manually."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -477,7 +477,7 @@ export default function AdminSettings() {
               {previewUrl && (
                 <div className="bg-white rounded-xl border border-green-200 p-4 flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate-800 mb-0.5">✅ WhatsApp button active hai</p>
+                    <p className="text-sm font-semibold text-slate-800 mb-0.5">✅ WhatsApp button is active</p>
                     <p className="text-xs text-slate-500">Customers can chat from any page or product.</p>
                   </div>
                   <a href={previewUrl} target="_blank" rel="noopener noreferrer">
@@ -577,7 +577,7 @@ export default function AdminSettings() {
                   <Input type="number" min="0" value={delivery.localCharge}
                     onChange={e => setDelivery(d => ({ ...d, localCharge: e.target.value }))}
                     className="bg-white" placeholder="0" />
-                  <p className="text-xs text-slate-500">0 = bilkul free delivery</p>
+                  <p className="text-xs text-slate-500">0 = completely free delivery</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="font-semibold flex items-center gap-1.5">
@@ -586,7 +586,7 @@ export default function AdminSettings() {
                   <Input type="number" min="0" value={delivery.otherCharge}
                     onChange={e => setDelivery(d => ({ ...d, otherCharge: e.target.value }))}
                     className="bg-white" placeholder="499" />
-                  <p className="text-xs text-slate-500">Dusre districts/states ke liye charge</p>
+                  <p className="text-xs text-slate-500">Charge for other districts / states</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 pt-1">

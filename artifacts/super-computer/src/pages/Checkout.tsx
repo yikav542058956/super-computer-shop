@@ -414,7 +414,7 @@ export default function Checkout() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
-                    { label: "Full Name", key: "name", placeholder: "Aapka naam", required: true },
+                    { label: "Full Name", key: "name", placeholder: "Your full name", required: true },
                     { label: "Phone Number", key: "phone", placeholder: "+91 XXXXX XXXXX", required: true },
                   ].map(({ label, key, placeholder, required }) => (
                     <div key={key} className="space-y-1">
@@ -436,7 +436,7 @@ export default function Checkout() {
                     <Input
                       value={address.street}
                       onChange={(e) => setAddress({ ...address, street: e.target.value })}
-                      placeholder="Gali number, landmark, area..."
+                      placeholder="Street, landmark, area..."
                       className="bg-gray-50 border-gray-200 rounded h-10 text-sm focus:border-green-500"
                     />
                   </div>

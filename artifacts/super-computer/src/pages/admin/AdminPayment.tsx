@@ -86,7 +86,7 @@ export default function AdminPayment() {
                     <p className="font-bold text-slate-800">Payment Gateway (Cashfree)</p>
                     <p className="text-xs text-slate-500">
                       {gatewayEnabled
-                        ? "✅ Gateway ON — customers online Cashfree se pay kar sakte hain"
+                        ? "✅ Gateway ON — customers can pay online via Cashfree"
                         : "⚠️ Gateway OFF — only manual UPI payment available"}
                     </p>
                   </div>
@@ -118,7 +118,7 @@ export default function AdminPayment() {
                 <CardDescription className="text-slate-500 flex items-start gap-1.5">
                   <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                   Copy the Production App ID and Secret Key from your Cashfree dashboard.
-                  Ye values securely Firebase mein store hoti hain.
+                  These values are stored securely in Firebase.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -171,8 +171,8 @@ export default function AdminPayment() {
               </CardTitle>
               <CardDescription className="text-slate-500">
                 {gatewayEnabled
-                  ? "COD advance ke liye ya backup ke liye ye UPI ID customers ko dikhti hai."
-                  : "Gateway OFF hone par customers ko sirf ye UPI ID dikhegi — wo is par payment karenge."}
+                  ? "This UPI ID is shown to customers for COD advance payments or as a backup option."
+                  : "Gateway is OFF — customers will only see this UPI ID and pay manually."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
