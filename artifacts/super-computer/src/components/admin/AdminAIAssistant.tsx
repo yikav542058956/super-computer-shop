@@ -3,9 +3,10 @@ import { useLocation } from "wouter";
 import { ref, push, set, remove, get, onValue, off } from "firebase/database";
 import { db } from "@/lib/firebase";
 import {
-  Sparkles, X, Mic, MicOff, Send, Loader2, RotateCcw,
+  X, Mic, MicOff, Send, Loader2, RotateCcw,
   Volume2, VolumeX, Phone, IndianRupee, AlertCircle,
   Menu, Plus, Trash2, MessageSquare, ChevronRight,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatINR } from "@/lib/utils";
@@ -538,169 +539,227 @@ export function AdminAIAssistant() {
 
   // ── Full-Screen Chat Page ─────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: "#0f0a1e" }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: "linear-gradient(180deg,#0d0520 0%,#0a0a1a 100%)" }}>
+      <style>{`
+        @keyframes eyeBlink {
+          0%,90%,100% { transform: scaleY(1); }
+          95% { transform: scaleY(0.08); }
+        }
+        @keyframes eyeGlow {
+          0%,100% { opacity:1; filter: drop-shadow(0 0 4px #22d3ee); }
+          50% { opacity:0.7; filter: drop-shadow(0 0 10px #22d3ee); }
+        }
+        @keyframes robotFloat {
+          0%,100% { transform: translateY(0px); }
+          50% { transform: translateY(-6px); }
+        }
+        @keyframes ringPulse {
+          0% { transform: scale(1); opacity:0.6; }
+          100% { transform: scale(2.2); opacity:0; }
+        }
+        @keyframes statusPulse {
+          0%,100% { opacity:1; }
+          50% { opacity:0.4; }
+        }
+        .robot-float { animation: robotFloat 3s ease-in-out infinite; }
+        .eye-blink { animation: eyeBlink 4s ease-in-out infinite, eyeGlow 2s ease-in-out infinite; transform-origin: center; }
+        .ring-pulse { animation: ringPulse 1.4s ease-out infinite; }
+        .ring-pulse-delay { animation: ringPulse 1.4s ease-out 0.5s infinite; }
+        .status-dot { animation: statusPulse 2s ease-in-out infinite; }
+      `}</style>
 
-      {/* ── History Drawer (slides in from left) ── */}
+      {/* ── History Drawer ── */}
       {drawerOpen && (
         <div className="absolute inset-0 z-10 flex" onClick={() => setDrawerOpen(false)}>
           <div
-            className="w-72 h-full flex flex-col overflow-hidden"
-            style={{ background: "#1a1030", borderRight: "1px solid rgba(124,58,237,0.25)" }}
+            className="w-[280px] h-full flex flex-col overflow-hidden"
+            style={{ background: "linear-gradient(180deg,#16082e,#0d0a24)", borderRight: "1px solid rgba(139,92,246,0.2)" }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Drawer header */}
-            <div className="flex items-center justify-between px-4 py-4 border-b border-purple-900/40">
-              <span className="text-sm font-bold text-white">Chat History</span>
+            <div className="flex items-center justify-between px-4 py-4" style={{ borderBottom: "1px solid rgba(139,92,246,0.15)" }}>
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-purple-400" />
+                <span className="text-sm font-bold text-white">Chat History</span>
+              </div>
               <button
                 onClick={() => { startNewChat(true); setOpen(true); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white active:scale-95 transition-all"
                 style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}
               >
-                <Plus className="h-3.5 w-3.5" /> Naya Chat
+                <Plus className="h-3.5 w-3.5" /> Naya
               </button>
             </div>
-
-            {/* Session list */}
-            <div className="flex-1 overflow-y-auto py-2">
+            <div className="flex-1 overflow-y-auto py-2 px-2">
               {sessions.length === 0 ? (
-                <div className="px-4 py-8 text-center text-purple-400 text-xs">
-                  Abhi koi chat nahi hai
+                <div className="px-4 py-10 text-center">
+                  <MessageSquare className="h-8 w-8 text-purple-800 mx-auto mb-2" />
+                  <p className="text-purple-500 text-xs">Abhi koi chat nahi hai</p>
                 </div>
               ) : sessions.map(s => (
                 <div
                   key={s.id}
                   onClick={() => loadSession(s)}
-                  className={`group flex items-center gap-2 px-3 py-3 mx-2 rounded-xl cursor-pointer transition-all mb-1 ${
-                    s.id === currentId ? "bg-purple-800/50 border border-purple-600/40" : "hover:bg-white/5"
+                  className={`group flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all mb-1 ${
+                    s.id === currentId ? "border border-purple-600/30" : "hover:bg-white/5"
                   }`}
+                  style={s.id === currentId ? { background: "rgba(124,58,237,0.15)" } : {}}
                 >
-                  <MessageSquare className="h-4 w-4 text-purple-400 shrink-0" />
+                  <div className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(124,58,237,0.2)" }}>
+                    <MessageSquare className="h-3.5 w-3.5 text-purple-400" />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-white truncate">{s.title}</p>
-                    <p className="text-[10px] text-purple-400 mt-0.5">
-                      {new Date(s.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                      {" · "}{s.messages.length} msgs
+                    <p className="text-xs font-semibold text-white truncate">{s.title}</p>
+                    <p className="text-[10px] text-purple-500 mt-0.5">
+                      {new Date(s.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · {s.messages.length} msgs
                     </p>
                   </div>
                   <button
                     onClick={e => deleteSession(s.id, e)}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-500/20 text-red-400 transition-all shrink-0"
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-red-400 transition-all shrink-0"
+                    style={{ background: "rgba(239,68,68,0.1)" }}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3 w-3" />
                   </button>
                 </div>
               ))}
             </div>
           </div>
-          {/* Backdrop */}
-          <div className="flex-1 bg-black/50" />
+          <div className="flex-1 bg-black/60 backdrop-blur-sm" />
         </div>
       )}
 
       {/* ── Header ── */}
-      <div
-        className="shrink-0 flex items-center gap-3 px-4 py-3"
-        style={{ background: "linear-gradient(135deg,#1a0a3e,#0f1a40)", borderBottom: "1px solid rgba(124,58,237,0.2)" }}
-      >
-        {/* Hamburger */}
+      <div className="shrink-0 flex items-center gap-2 px-3 py-2.5"
+        style={{ background: "rgba(13,5,32,0.95)", borderBottom: "1px solid rgba(139,92,246,0.15)", backdropFilter: "blur(12px)" }}>
+
+        {/* History button */}
         <button
           onClick={() => setDrawerOpen(d => !d)}
-          className="p-2 rounded-xl text-purple-300 hover:text-white hover:bg-white/10 transition-colors relative"
+          className="relative p-2 rounded-xl transition-all active:scale-95"
+          style={{ background: "rgba(139,92,246,0.12)" }}
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-5 w-5 text-purple-300" />
           {sessions.length > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-purple-500" />
+            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-violet-400 status-dot" />
           )}
         </button>
 
-        {/* Title */}
-        <div className="flex-1 flex items-center gap-2 min-w-0">
-          <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}>
-            <Sparkles className="h-4 w-4 text-white" />
+        {/* Robot avatar + title */}
+        <div className="flex-1 flex items-center gap-2.5 min-w-0">
+          <div className="relative shrink-0">
+            <div className="h-9 w-9 rounded-full overflow-hidden" style={{ boxShadow: "0 0 12px rgba(139,92,246,0.5)" }}>
+              <img src="/images/ai-fab-icon.png" alt="AI" className="h-full w-full object-cover" />
+            </div>
+            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#0d0520] status-dot"
+              style={{ background: listening ? "#4ade80" : loading ? "#f59e0b" : "#8b5cf6" }} />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold text-white leading-none">AI Assistant</p>
-            <p className="text-[10px] text-purple-400 mt-0.5 truncate">
-              {listening ? "🎙 Sun raha hoon..." : loading ? "Soch raha hoon..." : "Super Computer Store"}
+            <p className="text-[10px] mt-0.5 font-medium truncate"
+              style={{ color: listening ? "#4ade80" : loading ? "#f59e0b" : "#8b5cf6" }}>
+              {listening ? "🎙 Sun raha hoon..." : loading ? "⚡ Soch raha hoon..." : "Super Computer"}
             </p>
           </div>
         </div>
 
-        {/* Revert */}
-        {lastAction && (
-          <button
-            onClick={() => execAction("revert", {})}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-orange-300 border border-orange-500/30 hover:bg-orange-500/10 transition-colors"
-          >
-            <RotateCcw className="h-3.5 w-3.5" /> Revert
+        {/* Action buttons */}
+        <div className="flex items-center gap-1">
+          {lastAction && (
+            <button
+              onClick={() => execAction("revert", {})}
+              className="flex items-center gap-1 px-2 py-1.5 rounded-xl text-[11px] font-bold transition-all active:scale-95"
+              style={{ color: "#fb923c", background: "rgba(251,146,60,0.1)", border: "1px solid rgba(251,146,60,0.2)" }}
+            >
+              <RotateCcw className="h-3 w-3" /> Undo
+            </button>
+          )}
+          <button onClick={() => startNewChat(true)}
+            className="p-2 rounded-xl transition-all active:scale-95"
+            style={{ background: "rgba(139,92,246,0.12)" }}
+            title="Naya Chat">
+            <Plus className="h-4.5 w-4.5 text-purple-300 h-[18px] w-[18px]" />
           </button>
-        )}
-
-        {/* New chat shortcut */}
-        <button
-          onClick={() => startNewChat(true)}
-          className="p-2 rounded-xl text-purple-300 hover:text-white hover:bg-white/10 transition-colors"
-          title="Naya Chat"
-        >
-          <Plus className="h-5 w-5" />
-        </button>
-
-        {/* TTS toggle */}
-        <button
-          onClick={() => { setTtsEnabled(e => !e); window.speechSynthesis?.cancel(); }}
-          className="p-2 rounded-xl text-purple-300 hover:text-white hover:bg-white/10 transition-colors"
-          title="Voice toggle"
-        >
-          {ttsEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-        </button>
-
-        {/* Close */}
-        <button
-          onClick={handleClose}
-          className="p-2 rounded-xl text-purple-300 hover:text-white hover:bg-red-500/20 hover:text-red-400 transition-colors"
-        >
-          <X className="h-5 w-5" />
-        </button>
+          <button
+            onClick={() => { setTtsEnabled(e => !e); window.speechSynthesis?.cancel(); }}
+            className="p-2 rounded-xl transition-all active:scale-95"
+            style={{ background: ttsEnabled ? "rgba(139,92,246,0.25)" : "rgba(139,92,246,0.08)" }}
+            title="Voice">
+            {ttsEnabled
+              ? <Volume2 className="h-[18px] w-[18px] text-purple-300" />
+              : <VolumeX className="h-[18px] w-[18px] text-purple-600" />}
+          </button>
+          <button
+            onClick={handleClose}
+            className="p-2 rounded-xl transition-all active:scale-95"
+            style={{ background: "rgba(239,68,68,0.1)" }}>
+            <X className="h-[18px] w-[18px] text-red-400" />
+          </button>
+        </div>
       </div>
 
-      {/* ── Due bar ── */}
+      {/* ── Due alert bar ── */}
       {dues.length > 0 && (
         <div className="shrink-0 flex items-center justify-between px-4 py-2"
-          style={{ background: "rgba(180,83,9,0.15)", borderBottom: "1px solid rgba(180,83,9,0.2)" }}>
+          style={{ background: "rgba(180,83,9,0.12)", borderBottom: "1px solid rgba(180,83,9,0.2)" }}>
           <div className="flex items-center gap-2">
-            <IndianRupee className="h-3.5 w-3.5 text-amber-400" />
-            <span className="text-xs font-bold text-amber-300">Due: {formatINR(totalDue)} ({dues.length} customers)</span>
+            <div className="h-5 w-5 rounded-lg flex items-center justify-center" style={{ background: "rgba(251,191,36,0.15)" }}>
+              <IndianRupee className="h-3 w-3 text-amber-400" />
+            </div>
+            <span className="text-xs font-bold text-amber-300">Due: {formatINR(totalDue)} · {dues.length} customers</span>
           </div>
           {overdueCount > 0 && (
-            <span className="flex items-center gap-1 text-[11px] font-bold text-red-400">
+            <span className="flex items-center gap-1 text-[11px] font-bold text-red-400 px-2 py-0.5 rounded-full"
+              style={{ background: "rgba(239,68,68,0.1)" }}>
               <AlertCircle className="h-3 w-3" /> {overdueCount} overdue
             </span>
           )}
         </div>
       )}
 
-      {/* ── Messages area ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" style={{ minHeight: 0 }}>
-        {/* Empty state */}
+      {/* ── Messages ── */}
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3" style={{ minHeight: 0 }}>
+
+        {/* Empty state with animated robot */}
         {messages.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center h-full gap-6 pb-8">
-            <div className="h-20 w-20 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))", border: "2px solid rgba(124,58,237,0.4)" }}>
-              <Sparkles className="h-10 w-10 text-purple-400" />
+          <div className="flex flex-col items-center justify-center h-full gap-5 pb-6">
+            {/* Animated robot */}
+            <div className="relative robot-float">
+              {/* Glow rings */}
+              <div className="absolute inset-0 rounded-full" style={{ background: "radial-gradient(circle,rgba(139,92,246,0.3) 0%,transparent 70%)", transform: "scale(1.8)" }} />
+              {/* Robot container */}
+              <div className="relative h-24 w-24 rounded-full overflow-hidden"
+                style={{ boxShadow: "0 0 0 2px rgba(139,92,246,0.4), 0 0 30px rgba(139,92,246,0.3)", background: "linear-gradient(135deg,#2e1065,#1e1b4b)" }}>
+                <img src="/images/ai-fab-icon.png" alt="AI" className="h-full w-full object-cover" />
+              </div>
+              {/* Animated eye overlays */}
+              <div className="absolute rounded-full eye-blink"
+                style={{ width: 14, height: 14, top: "38%", left: "28%", background: "#22d3ee", boxShadow: "0 0 8px #22d3ee", transformOrigin: "center" }} />
+              <div className="absolute rounded-full eye-blink"
+                style={{ width: 14, height: 14, top: "38%", right: "28%", background: "#22d3ee", boxShadow: "0 0 8px #22d3ee", transformOrigin: "center", animationDelay: "0.1s" }} />
             </div>
-            <div className="text-center">
-              <p className="text-white font-bold text-lg">Kya puchhna hai?</p>
+
+            <div className="text-center px-4">
+              <p className="text-white font-bold text-lg">Kya puchhna hai? 🤖</p>
               <p className="text-purple-400 text-sm mt-1">Voice ya text — dono se baat karo</p>
             </div>
+
             {/* Quick chips */}
-            <div className="flex flex-wrap gap-2 justify-center max-w-sm">
-              {["Sabka due batao", "Overdue kaun hai?", "HP laptop add karo", "Offline sale banao", "Total revenue kitna hai?"].map(cmd => (
+            <div className="flex flex-wrap gap-2 justify-center max-w-xs">
+              {[
+                { icon: "💰", text: "Sabka due batao" },
+                { icon: "⚠️", text: "Overdue kaun hai?" },
+                { icon: "💻", text: "HP laptop add karo" },
+                { icon: "🧾", text: "Offline sale banao" },
+                { icon: "📊", text: "Total revenue kitna?" },
+              ].map(cmd => (
                 <button
-                  key={cmd}
-                  onClick={() => { voiceModeRef.current = false; sendMsg(cmd); }}
-                  className="px-3 py-2 rounded-full text-xs font-semibold border transition-all hover:scale-105 active:scale-95"
-                  style={{ borderColor: "rgba(124,58,237,0.4)", color: "#c4b5fd", background: "rgba(124,58,237,0.1)" }}
+                  key={cmd.text}
+                  onClick={() => { voiceModeRef.current = false; sendMsg(cmd.text); }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105 active:scale-95"
+                  style={{ borderColor: "rgba(139,92,246,0.35)", color: "#c4b5fd", background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)" }}
                 >
-                  {cmd}
+                  <span>{cmd.icon}</span>{cmd.text}
                 </button>
               ))}
             </div>
@@ -709,9 +768,14 @@ export function AdminAIAssistant() {
 
         {/* Initial loading */}
         {messages.length === 0 && loading && (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
-            <Loader2 className="h-8 w-8 text-purple-400 animate-spin" />
-            <p className="text-purple-400 text-sm">Connecting...</p>
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <div className="relative">
+              <div className="h-16 w-16 rounded-full overflow-hidden" style={{ boxShadow: "0 0 20px rgba(139,92,246,0.5)" }}>
+                <img src="/images/ai-fab-icon.png" alt="AI" className="h-full w-full object-cover" />
+              </div>
+              <div className="absolute inset-0 rounded-full ring-pulse" style={{ border: "2px solid rgba(139,92,246,0.6)" }} />
+            </div>
+            <p className="text-purple-400 text-sm font-medium">Connecting...</p>
           </div>
         )}
 
@@ -719,18 +783,19 @@ export function AdminAIAssistant() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
             {msg.role === "assistant" && (
-              <div className="flex items-center gap-1.5 mb-1 ml-1">
-                <div className="h-5 w-5 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}>
-                  <Sparkles className="h-2.5 w-2.5 text-white" />
+              <div className="flex items-center gap-1.5 mb-1.5 ml-1">
+                <div className="h-6 w-6 rounded-full overflow-hidden shrink-0"
+                  style={{ boxShadow: "0 0 6px rgba(139,92,246,0.5)" }}>
+                  <img src="/images/ai-fab-icon.png" alt="AI" className="h-full w-full object-cover" />
                 </div>
-                <span className="text-[10px] text-purple-400 font-medium">AI Assistant</span>
+                <span className="text-[10px] text-purple-400 font-semibold">AI Assistant</span>
               </div>
             )}
             <div
-              className="max-w-[85%] px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap leading-relaxed"
+              className="max-w-[85%] px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed"
               style={msg.role === "user"
-                ? { background: "linear-gradient(135deg,#7c3aed,#4f46e5)", color: "#fff", borderBottomRightRadius: 4 }
-                : { background: "rgba(255,255,255,0.07)", color: "#e2e8f0", borderBottomLeftRadius: 4, border: "1px solid rgba(124,58,237,0.15)" }
+                ? { background: "linear-gradient(135deg,#7c3aed,#4f46e5)", color: "#fff", borderRadius: "18px 18px 4px 18px" }
+                : { background: "rgba(255,255,255,0.06)", color: "#e2e8f0", borderRadius: "4px 18px 18px 18px", border: "1px solid rgba(139,92,246,0.15)" }
               }
             >
               {msg.content}
@@ -741,12 +806,12 @@ export function AdminAIAssistant() {
                 href={lnk.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-2 mt-1.5 rounded-xl text-xs font-bold shadow transition-all active:scale-95"
+                className="flex items-center gap-2 px-3 py-2.5 mt-1.5 rounded-xl text-xs font-bold transition-all active:scale-95"
                 style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", color: "#fff", maxWidth: "85%" }}
               >
                 <Phone className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{lnk.label}</span>
-                <ChevronRight className="h-3 w-3 shrink-0 ml-auto" />
+                <ChevronRight className="h-3 w-3 shrink-0 ml-auto opacity-70" />
               </a>
             ))}
           </div>
@@ -754,14 +819,16 @@ export function AdminAIAssistant() {
 
         {/* Typing indicator */}
         {loading && messages.length > 0 && (
-          <div className="flex items-start gap-2">
-            <div className="h-5 w-5 rounded-full flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}>
-              <Sparkles className="h-2.5 w-2.5 text-white" />
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-full overflow-hidden shrink-0"
+              style={{ boxShadow: "0 0 6px rgba(139,92,246,0.5)" }}>
+              <img src="/images/ai-fab-icon.png" alt="AI" className="h-full w-full object-cover" />
             </div>
-            <div className="px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-1" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(124,58,237,0.15)" }}>
-              <span className="h-2 w-2 rounded-full bg-purple-400 animate-bounce" />
-              <span className="h-2 w-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: "0.15s" }} />
-              <span className="h-2 w-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: "0.3s" }} />
+            <div className="px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-1.5"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(139,92,246,0.15)" }}>
+              <span className="h-2 w-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="h-2 w-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="h-2 w-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
           </div>
         )}
@@ -771,61 +838,66 @@ export function AdminAIAssistant() {
 
       {/* ── Mic error ── */}
       {micError && (
-        <div className="shrink-0 mx-4 mb-2 px-3 py-2 rounded-xl text-xs text-red-300 font-medium"
-          style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }}>
-          ⚠️ {micError}
+        <div className="shrink-0 mx-3 mb-2 px-3 py-2 rounded-xl text-xs text-red-300 font-medium flex items-center gap-2"
+          style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}>
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {micError}
         </div>
       )}
 
-      {/* ── Bottom input area ── */}
-      <div
-        className="shrink-0 px-4 pt-3 pb-5"
-        style={{ background: "rgba(15,10,30,0.95)", borderTop: "1px solid rgba(124,58,237,0.15)" }}
-      >
-        {/* Voice call button — centered, large */}
-        <div className="flex justify-center mb-4">
+      {/* ── Bottom input ── */}
+      <div className="shrink-0 px-3 pt-3 pb-safe-5"
+        style={{ background: "rgba(10,6,26,0.97)", borderTop: "1px solid rgba(139,92,246,0.12)", paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}>
+
+        {/* Mic button */}
+        <div className="flex justify-center mb-3">
           <div className="relative flex items-center justify-center">
-            {/* Ripple rings when listening */}
             {listening && (
               <>
-                <div className="absolute h-20 w-20 rounded-full animate-ping" style={{ background: "rgba(124,58,237,0.2)" }} />
-                <div className="absolute h-24 w-24 rounded-full animate-ping" style={{ background: "rgba(124,58,237,0.1)", animationDelay: "0.3s" }} />
+                <div className="absolute h-20 w-20 rounded-full ring-pulse"
+                  style={{ border: "2px solid rgba(139,92,246,0.5)" }} />
+                <div className="absolute h-28 w-28 rounded-full ring-pulse-delay"
+                  style={{ border: "2px solid rgba(139,92,246,0.25)" }} />
               </>
             )}
             <button
               onClick={listening ? () => stopMic() : startMic}
-              className="relative h-16 w-16 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-95"
+              className="relative h-14 w-14 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-2xl"
               style={listening
-                ? { background: "linear-gradient(135deg,#dc2626,#b91c1c)", boxShadow: "0 0 0 4px rgba(220,38,38,0.3), 0 8px 32px rgba(220,38,38,0.4)" }
-                : { background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 0 0 4px rgba(124,58,237,0.2), 0 8px 32px rgba(124,58,237,0.4)" }
+                ? { background: "linear-gradient(135deg,#dc2626,#b91c1c)", boxShadow: "0 0 0 3px rgba(220,38,38,0.25), 0 8px 24px rgba(220,38,38,0.4)" }
+                : { background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 0 0 3px rgba(124,58,237,0.2), 0 8px 24px rgba(124,58,237,0.4)" }
               }
             >
               {listening
-                ? <MicOff className="h-7 w-7 text-white" />
-                : <Mic className="h-7 w-7 text-white" />
+                ? <MicOff className="h-6 w-6 text-white" />
+                : <Mic className="h-6 w-6 text-white" />
               }
             </button>
           </div>
         </div>
 
-        {/* Listening status text */}
-        <p className="text-center text-xs font-medium mb-3" style={{ color: listening ? "#4ade80" : "#6b7280" }}>
-          {listening ? "🎙 Sun raha hoon... (band karne ke liye dabao)" : loading ? "Jawab aa raha hai..." : "Mic dabao aur bolna shuru karo"}
+        {/* Status text */}
+        <p className="text-center text-[11px] font-semibold mb-3"
+          style={{ color: listening ? "#4ade80" : loading ? "#f59e0b" : "#6b7280" }}>
+          {listening ? "🎙 Sun raha hoon… band karne ke liye dabao"
+            : loading ? "⚡ Jawab aa raha hai…"
+            : "Mic dabao ya neeche type karo"}
         </p>
 
-        {/* Text input row */}
+        {/* Text input */}
         <div className="flex items-center gap-2">
-          <div
-            className="flex-1 flex items-center gap-2 rounded-2xl px-4 py-2.5 border transition-colors"
-            style={{ background: "rgba(255,255,255,0.05)", borderColor: listening ? "rgba(74,222,128,0.4)" : "rgba(124,58,237,0.25)" }}
-          >
+          <div className="flex-1 flex items-center gap-2 rounded-2xl px-4 py-2.5 transition-all"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: `1px solid ${listening ? "rgba(74,222,128,0.35)" : "rgba(139,92,246,0.2)"}`,
+            }}>
+            <Zap className="h-4 w-4 shrink-0 text-purple-600" />
             <input
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && input.trim()) { e.preventDefault(); voiceModeRef.current = false; sendMsg(input); } }}
-              placeholder="Ya type karke bhi poochh sakte ho..."
-              className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 outline-none"
+              placeholder="Type karo..."
+              className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 outline-none"
               disabled={loading}
               style={{ caretColor: "#7c3aed" }}
             />
@@ -833,8 +905,8 @@ export function AdminAIAssistant() {
           <button
             onClick={() => { if (input.trim()) { voiceModeRef.current = false; sendMsg(input); } }}
             disabled={!input.trim() || loading}
-            className="h-10 w-10 rounded-2xl flex items-center justify-center text-white transition-all disabled:opacity-30 shrink-0 active:scale-95"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}
+            className="h-10 w-10 rounded-2xl flex items-center justify-center text-white transition-all disabled:opacity-25 shrink-0 active:scale-90"
+            style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 4px 12px rgba(124,58,237,0.4)" }}
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
