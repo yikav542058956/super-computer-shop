@@ -4,16 +4,17 @@ import { ref, push, set, remove, get, onValue, off } from "firebase/database";
 import { db } from "@/lib/firebase";
 import {
   Sparkles, X, Mic, MicOff, Send, Loader2, RotateCcw,
-  ChevronDown, Volume2, VolumeX, ExternalLink, IndianRupee,
-  AlertCircle, Phone
+  ChevronDown, Volume2, VolumeX, Phone, IndianRupee, AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatINR } from "@/lib/utils";
 
-interface Message {
+const ADMIN_TOKEN = "sc-admin-ai-2026";
+
+interface ChatMessage {
   role: "user" | "assistant";
   content: string;
-  links?: { label: string; url: string; type: "whatsapp" | "navigate" | "link" }[];
+  links?: { label: string; url: string }[];
 }
 
 interface LastAction {
@@ -42,38 +43,35 @@ declare global {
 }
 
 function buildWhatsAppLink(phone: string, message: string) {
-  const cleaned = phone.replace(/\D/g, "").replace(/^0+/, "");
+  const cleaned = phone.replace(/\D/g, "");
   const num = cleaned.startsWith("91") ? cleaned : `91${cleaned}`;
   return `https://wa.me/${num}?text=${encodeURIComponent(message)}`;
 }
 
 export function AdminAIAssistant() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: "Namaste! 👋 Main hoon Super Computer ka AI assistant.\n\nMujhe bolo — mujhe poori store ki jankari hai: dues, customers, orders, products sab!\n\nBoliye ya mic press karo...",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [micError, setMicError] = useState("");
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [lastAction, setLastAction] = useState<LastAction | null>(null);
   const [minimized, setMinimized] = useState(false);
-  const [, setLocation] = useLocation();
-
-  // Admin data loaded from Firebase
   const [dues, setDues] = useState<LedgerEntry[]>([]);
   const [adminStats, setAdminStats] = useState({ totalOrders: 0, totalProducts: 0, totalRevenue: 0 });
+  const [, setLocation] = useLocation();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const pendingContextRef = useRef<any>({});
-  const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const pendingCtx = useRef<any>({});
+  const loadingRef = useRef(false);
 
-  // ── Load Firebase data ────────────────────────────────────────
+  // keep loadingRef in sync so voice callbacks see latest value
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
+
+  // ── Firebase listeners ────────────────────────────────────────
   useEffect(() => {
     const ledgerRef = ref(db, "ledger");
     const handleLedger = (snap: any) => {
@@ -82,125 +80,57 @@ export function AdminAIAssistant() {
           .map(([id, v]: any) => ({ id, ...v }))
           .filter((e: LedgerEntry) => e.status === "pending");
         setDues(entries);
-      } else {
-        setDues([]);
-      }
+      } else setDues([]);
     };
     onValue(ledgerRef, handleLedger);
 
-    // One-time fetch for stats
-    Promise.all([
-      get(ref(db, "orders")),
-      get(ref(db, "products")),
-    ]).then(([ordersSnap, productsSnap]) => {
+    Promise.all([get(ref(db, "orders")), get(ref(db, "products"))]).then(([os, ps]) => {
       let totalOrders = 0, totalRevenue = 0;
-      if (ordersSnap.exists()) {
-        const orders = Object.values(ordersSnap.val()) as any[];
+      if (os.exists()) {
+        const orders = Object.values(os.val()) as any[];
         totalOrders = orders.length;
         totalRevenue = orders.reduce((s: number, o: any) => s + (Number(o.finalAmount) || 0), 0);
       }
-      const totalProducts = productsSnap.exists() ? Object.keys(productsSnap.val()).length : 0;
-      setAdminStats({ totalOrders, totalProducts, totalRevenue });
+      setAdminStats({ totalOrders, totalProducts: ps.exists() ? Object.keys(ps.val()).length : 0, totalRevenue });
     });
 
     return () => off(ledgerRef, "value", handleLedger);
   }, []);
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, []);
-
-  useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
-
-  // ── Auto-start voice when panel opens ────────────────────────
   useEffect(() => {
-    if (open && !minimized) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-        startListening();
-      }, 400);
-    } else if (!open) {
-      stopListening();
-      window.speechSynthesis?.cancel();
-    }
-  }, [open, minimized]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-  // ── Text-to-Speech ────────────────────────────────────────────
+  // ── Text-to-speech ────────────────────────────────────────────
   const speak = useCallback((text: string) => {
     if (!ttsEnabled || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    // Strip markdown-like syntax for cleaner speech
-    const clean = text
-      .replace(/https?:\/\/\S+/g, "")
-      .replace(/[✅❌⚠️🎉👋📊💬🔔]/g, "")
-      .replace(/\*+/g, "")
-      .replace(/\n+/g, ". ")
-      .trim()
-      .slice(0, 300);
-    const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.lang = "hi-IN";
-    utterance.rate = 1.05;
-    utterance.pitch = 1;
-    // Prefer Hindi voice if available
+    const clean = text.replace(/https?:\/\/\S+/g, "").replace(/[✅❌⚠️🎉👋📊💬🔔📱↩️]/g, "").replace(/\n+/g, ". ").slice(0, 250);
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = "hi-IN"; u.rate = 1.05;
     const voices = window.speechSynthesis.getVoices();
-    const hiVoice = voices.find(v => v.lang.startsWith("hi")) || voices.find(v => v.lang.startsWith("en-IN"));
-    if (hiVoice) utterance.voice = hiVoice;
-    speechSynthRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
+    const v = voices.find(v => v.lang.startsWith("hi")) || voices.find(v => v.lang.startsWith("en-IN"));
+    if (v) u.voice = v;
+    window.speechSynthesis.speak(u);
   }, [ttsEnabled]);
 
-  const addMessage = useCallback((role: "user" | "assistant", content: string, links?: Message["links"]) => {
+  // ── Core: add message ─────────────────────────────────────────
+  const addMsg = useCallback((role: "user" | "assistant", content: string, links?: ChatMessage["links"]) => {
     setMessages(prev => [...prev, { role, content, links }]);
     if (role === "assistant") speak(content);
   }, [speak]);
 
-  // ── Voice Recognition ─────────────────────────────────────────
-  const startListening = useCallback(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
-    try {
-      if (recognitionRef.current) recognitionRef.current.abort();
-      const recognition = new SR();
-      recognition.lang = "hi-IN";
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-      recognitionRef.current = recognition;
-      recognition.onstart = () => setListening(true);
-      recognition.onend = () => setListening(false);
-      recognition.onerror = () => setListening(false);
-      recognition.onresult = (e: any) => {
-        const transcript = e.results[0][0].transcript.trim();
-        setListening(false);
-        if (transcript) {
-          setInput(transcript);
-          // Auto-send after a short pause
-          setTimeout(() => sendMessageRef.current(transcript), 100);
-        }
-      };
-      recognition.start();
-    } catch { setListening(false); }
-  }, []);
-
-  const stopListening = useCallback(() => {
-    recognitionRef.current?.abort();
-    setListening(false);
-  }, []);
-
-  // Keep sendMessage in a ref so the voice callback can access latest version
-  const sendMessageRef = useRef<(text: string) => void>(() => {});
-
+  // ── Build context for AI ──────────────────────────────────────
   const buildContext = useCallback(() => {
     const totalDue = dues.reduce((s, d) => s + d.amount, 0);
     const overdue = dues.filter(d => d.dueDate && new Date(d.dueDate) < new Date());
     return {
-      storeInfo: { name: "Super Computer", location: "India" },
       stats: adminStats,
       dues: {
         total: totalDue,
         count: dues.length,
         overdueCount: overdue.length,
         entries: dues.map(d => ({
-          id: d.id,
           customer: d.customerName,
           phone: d.phone || "",
           amount: d.amount,
@@ -210,192 +140,187 @@ export function AdminAIAssistant() {
           isOverdue: d.dueDate ? new Date(d.dueDate) < new Date() : false,
         })),
       },
-      adminPanelRoutes: {
-        dashboard: "/admin/dashboard",
-        products: "/admin/products",
-        orders: "/admin/orders",
-        offlineSale: "/admin/offline-sale",
-        ledger: "/admin/ledger",
-      },
     };
   }, [dues, adminStats]);
 
-  const sendMessage = useCallback(async (text?: string) => {
-    const userText = (text || input).trim();
-    if (!userText || loading) return;
+  // ── Send message to AI ────────────────────────────────────────
+  const sendMsg = useCallback(async (text: string) => {
+    const userText = text.trim();
+    if (!userText || loadingRef.current) return;
     setInput("");
     window.speechSynthesis?.cancel();
-    addMessage("user", userText);
+    addMsg("user", userText);
     setLoading(true);
 
-    const context = { ...buildContext(), ...pendingContextRef.current };
-
     try {
-      const chatMessages: Message[] = [
-        ...messages.filter(m => m.role === "user" || m.role === "assistant").slice(-10),
-        { role: "user", content: userText },
-      ];
-
+      const history = messages.slice(-12).map(m => ({ role: m.role, content: m.content }));
       const res = await fetch("/api/admin-ai", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-ai-token": import.meta.env.VITE_ADMIN_AI_TOKEN || "super-computer-admin",
-        },
-        body: JSON.stringify({ messages: chatMessages, context }),
+        headers: { "Content-Type": "application/json", "x-admin-ai-token": ADMIN_TOKEN },
+        body: JSON.stringify({ messages: [...history, { role: "user", content: userText }], context: { ...buildContext(), ...pendingCtx.current } }),
       });
-
       const data = await res.json();
       const aiMsg: string = data.message || "Kuch error hua, dobara try karo.";
-      const links: Message["links"] = [];
+      const links: ChatMessage["links"] = [];
 
-      // Build WhatsApp links if AI returned them
-      if (data.whatsappLinks && Array.isArray(data.whatsappLinks)) {
+      if (Array.isArray(data.whatsappLinks)) {
         for (const wl of data.whatsappLinks) {
-          if (wl.phone) {
-            links.push({
-              label: `📱 WhatsApp: ${wl.customerName || wl.phone}`,
-              url: buildWhatsAppLink(wl.phone, wl.message || ""),
-              type: "whatsapp",
-            });
-          }
+          if (wl.phone) links.push({ label: `📱 WhatsApp — ${wl.customerName || wl.phone}`, url: buildWhatsAppLink(wl.phone, wl.message || "") });
         }
       }
-
-      addMessage("assistant", aiMsg, links.length > 0 ? links : undefined);
+      addMsg("assistant", aiMsg, links.length ? links : undefined);
 
       if (data.action && data.action !== "none" && !data.needsMoreInfo) {
-        await executeAction(data.action, data.data || {});
+        await execAction(data.action, data.data || {});
       } else if (data.needsMoreInfo && data.data) {
-        pendingContextRef.current = { ...pendingContextRef.current, ...data.data, pendingAction: data.action };
+        pendingCtx.current = { ...pendingCtx.current, ...data.data, pendingAction: data.action };
       }
     } catch {
-      addMessage("assistant", "Network error. API se connect nahi hua, please retry.");
+      addMsg("assistant", "Network error. API se connect nahi hua — please retry.");
     } finally {
       setLoading(false);
-      // Resume listening after response
-      setTimeout(() => {
-        if (open && !minimized) startListening();
-      }, 800);
     }
-  }, [input, loading, messages, addMessage, buildContext, open, minimized, startListening]);
+  }, [messages, addMsg, buildContext]);
 
-  // Keep ref in sync
-  useEffect(() => { sendMessageRef.current = sendMessage; }, [sendMessage]);
+  // ── Voice recognition (started by user gesture) ───────────────
+  const startMic = useCallback(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { setMicError("Yeh browser voice support nahi karta. Chrome use karein."); return; }
+    setMicError("");
+    try {
+      if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch { /* ignore */ } }
+      const rec = new SR();
+      rec.lang = "hi-IN";
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      recognitionRef.current = rec;
 
-  const executeAction = useCallback(async (action: string, data: any) => {
+      rec.onstart = () => setListening(true);
+      rec.onend = () => setListening(false);
+      rec.onerror = (e: any) => {
+        setListening(false);
+        if (e.error === "not-allowed" || e.error === "permission-denied") {
+          setMicError("Mic ka permission do — browser settings mein allow karein.");
+        } else if (e.error === "no-speech") {
+          // silent, just restart
+        } else if (e.error !== "aborted") {
+          setMicError(`Mic error: ${e.error}`);
+        }
+      };
+      rec.onresult = (e: any) => {
+        const transcript = e.results[0][0].transcript.trim();
+        setListening(false);
+        if (transcript) sendMsg(transcript);
+      };
+      rec.start();
+    } catch (err: any) {
+      setListening(false);
+      setMicError("Mic start nahi hua: " + err.message);
+    }
+  }, [sendMsg]);
+
+  const stopMic = useCallback(() => {
+    try { recognitionRef.current?.abort(); } catch { /* ignore */ }
+    setListening(false);
+  }, []);
+
+  // ── Firebase actions ──────────────────────────────────────────
+  const execAction = useCallback(async (action: string, data: any) => {
     try {
       switch (action) {
-        case "navigate": {
-          const path = data.path || "/admin/dashboard";
-          setLocation(path);
-          pendingContextRef.current = {};
-          break;
-        }
+        case "navigate": setLocation(data.path || "/admin/dashboard"); pendingCtx.current = {}; break;
 
         case "add_product": {
           if (!data.name) break;
-          let specs = data.specs || {};
-          let price = data.price;
-
-          if (!price || Object.keys(specs).length === 0) {
+          let { specs = {}, price, brand, category } = data;
+          if (!price || !Object.keys(specs).length) {
             try {
-              const specRes = await fetch("/api/fetch-specs", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: data.name, brand: data.brand }),
-              });
-              const specData = await specRes.json();
-              if (specData.mrp) price = specData.mrp;
-              if (specData.specs) specs = specData.specs;
-              if (!data.brand && specData.brand) data.brand = specData.brand;
-              if (!data.category && specData.category) data.category = specData.category;
-            } catch { /* spec fetch optional */ }
+              const r = await fetch("/api/fetch-specs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: data.name, brand }) });
+              const s = await r.json();
+              if (s.mrp) price = s.mrp;
+              if (s.specs) specs = s.specs;
+              if (!brand && s.brand) brand = s.brand;
+              if (!category && s.category) category = s.category;
+            } catch { /* optional */ }
           }
-
-          const productRef = push(ref(db, "products"));
-          await set(productRef, {
-            name: data.name, brand: data.brand || "", category: data.category || "Laptops",
-            price: Number(price) || 0, discountPrice: Number(price) || 0,
-            stock: 1, description: "", specs, images: [], status: "active",
-            isFeatured: false, isNewArrival: true,
-            createdAt: Date.now(), updatedAt: Date.now(), addedByAI: true,
-          });
-          setLastAction({ type: "add_product", firebasePath: "products", key: productRef.key!, description: `"${data.name}" added` });
-          pendingContextRef.current = {};
-          addMessage("assistant", `✅ "${data.name}" catalog mein add ho gaya!\nPrice: ${formatINR(Number(price))}\nBrand: ${data.brand || "—"}`);
-          toast.success(`AI: "${data.name}" added!`);
+          const pRef = push(ref(db, "products"));
+          await set(pRef, { name: data.name, brand: brand || "", category: category || "Laptops", price: Number(price) || 0, discountPrice: Number(price) || 0, stock: 1, description: "", specs, images: [], status: "active", isFeatured: false, isNewArrival: true, createdAt: Date.now(), updatedAt: Date.now(), addedByAI: true });
+          setLastAction({ type: "add_product", firebasePath: "products", key: pRef.key!, description: `"${data.name}" added` });
+          pendingCtx.current = {};
+          addMsg("assistant", `✅ "${data.name}" catalog mein add ho gaya!\nPrice: ${formatINR(Number(price))}\nBrand: ${brand || "—"}`);
+          toast.success(`"${data.name}" added!`);
           break;
         }
 
         case "create_sale": {
           if (!data.customerName || !data.productName || !data.amount) break;
-          const saleRef = push(ref(db, "orders"));
-          const gstRate = Number(data.gstRate) || 0;
-          const subtotal = Number(data.amount);
-          const gstAmount = Math.round((subtotal * gstRate) / 100);
-          const finalAmount = subtotal + gstAmount;
-          await set(saleRef, {
-            source: "offline", orderStatus: "delivered", paymentStatus: "paid",
-            paymentMethod: data.paymentMethod || "cash",
-            finalAmount, subtotal, gstAmount, gstRate, deliveryCharge: 0,
-            createdAt: Date.now(), updatedAt: Date.now(), addedByAI: true,
-            address: { name: data.customerName, phone: data.phone || "", city: "Walk-in", state: "", pincode: "", address: "In-store / Offline sale" },
-            items: [{ name: data.productName, qty: Number(data.qty) || 1, price: subtotal }],
-            statusHistory: [{ status: "delivered", timestamp: Date.now(), note: "Added by AI assistant" }],
-          });
-          setLastAction({ type: "create_sale", firebasePath: "orders", key: saleRef.key!, description: `Sale: ${data.customerName}` });
-          pendingContextRef.current = {};
-          addMessage("assistant", `✅ Sale record ho gaya!\nCustomer: ${data.customerName}\nProduct: ${data.productName}\nAmount: ${formatINR(finalAmount)}`);
-          toast.success(`AI: Sale recorded for ${data.customerName}!`);
+          const sRef = push(ref(db, "orders"));
+          const sub = Number(data.amount), gstR = Number(data.gstRate) || 0, gstA = Math.round((sub * gstR) / 100), final = sub + gstA;
+          await set(sRef, { source: "offline", orderStatus: "delivered", paymentStatus: "paid", paymentMethod: data.paymentMethod || "cash", finalAmount: final, subtotal: sub, gstAmount: gstA, gstRate: gstR, deliveryCharge: 0, createdAt: Date.now(), updatedAt: Date.now(), addedByAI: true, address: { name: data.customerName, phone: data.phone || "", city: "Walk-in", state: "", pincode: "", address: "In-store / Offline sale" }, items: [{ name: data.productName, qty: Number(data.qty) || 1, price: sub }], statusHistory: [{ status: "delivered", timestamp: Date.now(), note: "Added by AI assistant" }] });
+          setLastAction({ type: "create_sale", firebasePath: "orders", key: sRef.key!, description: `Sale: ${data.customerName}` });
+          pendingCtx.current = {};
+          addMsg("assistant", `✅ Sale record ho gaya!\nCustomer: ${data.customerName}\nProduct: ${data.productName}\nAmount: ${formatINR(final)}`);
+          toast.success(`Sale recorded for ${data.customerName}!`);
           break;
         }
 
         case "revert": {
-          if (!lastAction) { addMessage("assistant", "Koi recent action nahi mila jo revert kar sakein."); break; }
-          if (lastAction.firebasePath && lastAction.key) {
-            await remove(ref(db, `${lastAction.firebasePath}/${lastAction.key}`));
-          }
-          addMessage("assistant", `↩️ Revert ho gaya! "${lastAction.description}" delete kar diya.`);
+          if (!lastAction) { addMsg("assistant", "Koi recent action nahi mila jo revert kar sakein."); break; }
+          if (lastAction.firebasePath && lastAction.key) await remove(ref(db, `${lastAction.firebasePath}/${lastAction.key}`));
+          addMsg("assistant", `↩️ "${lastAction.description}" delete ho gaya!`);
           toast.success("Last action reverted");
           setLastAction(null);
           break;
         }
-
-        default:
-          pendingContextRef.current = {};
       }
     } catch (e: any) {
-      addMessage("assistant", `Action mein error: ${e.message}`);
+      addMsg("assistant", `Action mein error: ${e.message}`);
     }
-  }, [lastAction, addMessage]);
+  }, [lastAction, addMsg, setLocation]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  // ── Open button click — start mic immediately (user gesture) ──
+  const handleOpen = () => {
+    setOpen(true);
+    // Send self-test greeting
+    setTimeout(async () => {
+      setLoading(true);
+      try {
+        const ctx = buildContext();
+        const res = await fetch("/api/admin-ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-admin-ai-token": ADMIN_TOKEN },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: "__SELFTEST__" }],
+            context: ctx,
+          }),
+        });
+        const data = await res.json();
+        addMsg("assistant", data.message || "Namaste! Main ready hoon. Kya puchna hai?");
+      } catch {
+        addMsg("assistant", "Namaste! 👋 Bolo kya karna hai — dues, sale, product sab handle kar sakta hoon!");
+      } finally {
+        setLoading(false);
+        // Start mic after greeting loads — still within reasonable gesture lifetime
+        startMic();
+      }
+    }, 100);
   };
 
   const totalDue = dues.reduce((s, d) => s + d.amount, 0);
   const overdueCount = dues.filter(d => d.dueDate && new Date(d.dueDate) < new Date()).length;
 
-  const quickCommands = [
-    "Sabka due amount batao",
-    "Kaun overdue hai?",
-    "HP laptop add karo",
-    "Offline sale banao",
-  ];
-
-  // ── Closed button ─────────────────────────────────────────────
+  // ── Closed FAB ────────────────────────────────────────────────
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex flex-col items-center justify-center h-16 w-16 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 group"
-        style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", boxShadow: "0 8px 32px rgba(124,58,237,0.45)" }}
-        title="AI Assistant — Voice + Chat"
+        onClick={handleOpen}
+        className="fixed bottom-6 right-6 z-50 h-16 w-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 relative"
+        style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 8px 32px rgba(124,58,237,0.5)" }}
+        title="AI Assistant"
       >
-        <Sparkles className="h-6 w-6 text-white" />
+        <Sparkles className="h-7 w-7 text-white" />
         {dues.length > 0 && (
-          <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center shadow">
+          <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white">
             {dues.length}
           </span>
         )}
@@ -407,52 +332,36 @@ export function AdminAIAssistant() {
   return (
     <div
       className="fixed bottom-6 right-6 z-50 flex flex-col rounded-2xl overflow-hidden"
-      style={{
-        width: 370,
-        maxHeight: minimized ? 56 : 560,
-        background: "#fff",
-        border: "1.5px solid rgba(124,58,237,0.2)",
-        boxShadow: "0 24px 64px rgba(0,0,0,0.22)",
-        transition: "max-height 0.3s cubic-bezier(.4,0,.2,1)",
-      }}
+      style={{ width: 370, maxHeight: minimized ? 56 : 570, background: "#fff", border: "1.5px solid rgba(124,58,237,0.2)", boxShadow: "0 24px 64px rgba(0,0,0,0.22)", transition: "max-height 0.3s cubic-bezier(.4,0,.2,1)" }}
     >
-      {/* ── Header ── */}
+      {/* Header */}
       <div
-        className="flex items-center justify-between px-4 py-3 shrink-0 cursor-pointer select-none"
-        style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
-        onClick={() => setMinimized(m => !m)}
+        className="flex items-center justify-between px-4 py-3 shrink-0 select-none"
+        style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setMinimized(m => !m)}>
           <Sparkles className="h-4 w-4 text-white" />
           <span className="text-sm font-bold text-white">AI Assistant</span>
-          {loading && <Loader2 className="h-3.5 w-3.5 text-purple-200 animate-spin ml-1" />}
-          {listening && (
-            <span className="flex items-center gap-1 text-[11px] font-semibold text-green-300 animate-pulse ml-1">
-              <span className="h-2 w-2 rounded-full bg-green-400 inline-block" /> Sun raha hoon...
+          {loading && <Loader2 className="h-3.5 w-3.5 text-purple-200 animate-spin" />}
+          {listening && !loading && (
+            <span className="flex items-center gap-1 text-[11px] font-semibold text-green-300 animate-pulse">
+              <span className="h-2 w-2 rounded-full bg-green-400" /> Sun raha hoon...
             </span>
           )}
         </div>
-        <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-0.5">
           {lastAction && (
-            <button
-              onClick={() => executeAction("revert", {})}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold text-purple-200 hover:text-white hover:bg-white/10 transition-colors"
-              title={`Revert: ${lastAction.description}`}
-            >
+            <button onClick={() => execAction("revert", {})} className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold text-purple-200 hover:text-white hover:bg-white/10 transition-colors" title={`Revert: ${lastAction.description}`}>
               <RotateCcw className="h-3 w-3" /> Revert
             </button>
           )}
-          <button
-            onClick={() => { setTtsEnabled(e => !e); window.speechSynthesis?.cancel(); }}
-            className="p-1.5 text-purple-200 hover:text-white transition-colors"
-            title={ttsEnabled ? "Mute voice" : "Unmute voice"}
-          >
+          <button onClick={() => { setTtsEnabled(e => !e); window.speechSynthesis?.cancel(); }} className="p-1.5 text-purple-200 hover:text-white transition-colors" title="Toggle voice">
             {ttsEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
           </button>
           <button onClick={() => setMinimized(m => !m)} className="p-1.5 text-purple-200 hover:text-white transition-colors">
             <ChevronDown className={`h-4 w-4 transition-transform ${minimized ? "rotate-180" : ""}`} />
           </button>
-          <button onClick={() => { setOpen(false); setMinimized(false); stopListening(); window.speechSynthesis?.cancel(); }} className="p-1.5 text-purple-200 hover:text-white transition-colors">
+          <button onClick={() => { setOpen(false); stopMic(); window.speechSynthesis?.cancel(); }} className="p-1.5 text-purple-200 hover:text-white transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -460,14 +369,12 @@ export function AdminAIAssistant() {
 
       {!minimized && (
         <>
-          {/* ── Due summary bar ── */}
+          {/* Due bar */}
           {dues.length > 0 && (
             <div className="shrink-0 px-3 py-2 bg-amber-50 border-b border-amber-100 flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
                 <IndianRupee className="h-3.5 w-3.5 text-amber-600" />
-                <span className="text-xs font-bold text-amber-800">
-                  Total due: {formatINR(totalDue)} ({dues.length} customers)
-                </span>
+                <span className="text-xs font-bold text-amber-800">Total due: {formatINR(totalDue)} ({dues.length} customers)</span>
               </div>
               {overdueCount > 0 && (
                 <span className="flex items-center gap-1 text-[11px] font-bold text-red-600">
@@ -477,48 +384,41 @@ export function AdminAIAssistant() {
             </div>
           )}
 
-          {/* ── Messages ── */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2" style={{ minHeight: 0, maxHeight: 340 }}>
+          {/* Mic error */}
+          {micError && (
+            <div className="shrink-0 px-3 py-2 bg-red-50 border-b border-red-100 text-xs text-red-700 font-medium">
+              ⚠️ {micError}
+            </div>
+          )}
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2" style={{ minHeight: 0, maxHeight: 360 }}>
+            {messages.length === 0 && loading && (
+              <div className="flex justify-center pt-8">
+                <div className="flex flex-col items-center gap-2 text-slate-400 text-sm">
+                  <Loader2 className="h-6 w-6 animate-spin text-purple-400" />
+                  <span>Connecting...</span>
+                </div>
+              </div>
+            )}
             {messages.map((msg, i) => (
               <div key={i} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
                 <div
-                  className={`max-w-[87%] px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap leading-relaxed ${
-                    msg.role === "user"
-                      ? "text-white rounded-br-sm"
-                      : "text-slate-800 rounded-bl-sm"
-                  }`}
-                  style={{
-                    background: msg.role === "user"
-                      ? "linear-gradient(135deg, #7c3aed, #4f46e5)"
-                      : "#f1f5f9",
-                  }}
+                  className={`max-w-[87%] px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap leading-relaxed ${msg.role === "user" ? "text-white rounded-br-sm" : "text-slate-800 rounded-bl-sm"}`}
+                  style={{ background: msg.role === "user" ? "linear-gradient(135deg,#7c3aed,#4f46e5)" : "#f1f5f9" }}
                 >
                   {msg.content}
                 </div>
-                {/* Action links (WhatsApp, navigate) */}
-                {msg.links && msg.links.length > 0 && (
-                  <div className="flex flex-col gap-1.5 mt-1.5 max-w-[87%] w-full">
-                    {msg.links.map((lnk, j) => (
-                      <a
-                        key={j}
-                        href={lnk.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:opacity-90 active:scale-95 ${
-                          lnk.type === "whatsapp"
-                            ? "bg-green-500 text-white shadow"
-                            : "bg-purple-100 text-purple-700"
-                        }`}
-                      >
-                        {lnk.type === "whatsapp" ? <Phone className="h-3.5 w-3.5" /> : <ExternalLink className="h-3.5 w-3.5" />}
-                        {lnk.label}
-                      </a>
-                    ))}
-                  </div>
-                )}
+                {msg.links?.map((lnk, j) => (
+                  <a key={j} href={lnk.url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-2 mt-1.5 rounded-xl text-xs font-bold bg-green-500 text-white shadow hover:bg-green-600 transition-colors active:scale-95"
+                  >
+                    <Phone className="h-3.5 w-3.5" />{lnk.label}
+                  </a>
+                ))}
               </div>
             ))}
-            {loading && (
+            {loading && messages.length > 0 && (
               <div className="flex justify-start">
                 <div className="px-3 py-2 rounded-2xl rounded-bl-sm bg-slate-100 text-slate-400 text-sm flex items-center gap-1">
                   <span className="animate-bounce">●</span>
@@ -530,13 +430,11 @@ export function AdminAIAssistant() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* ── Quick commands (first visit) ── */}
-          {messages.length <= 1 && (
+          {/* Quick commands */}
+          {messages.length <= 1 && !loading && (
             <div className="shrink-0 px-3 pb-2 flex flex-wrap gap-1.5">
-              {quickCommands.map(cmd => (
-                <button
-                  key={cmd}
-                  onClick={() => sendMessage(cmd)}
+              {["Sabka due batao", "Kaun overdue hai?", "HP laptop add karo", "Offline sale banao"].map(cmd => (
+                <button key={cmd} onClick={() => sendMsg(cmd)}
                   className="px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors hover:bg-purple-50"
                   style={{ borderColor: "rgba(124,58,237,0.3)", color: "#7c3aed" }}
                 >
@@ -546,37 +444,33 @@ export function AdminAIAssistant() {
             </div>
           )}
 
-          {/* ── Input row ── */}
+          {/* Input */}
           <div className="shrink-0 p-3 border-t border-slate-100 flex items-center gap-2">
-            <div className={`flex-1 flex items-center gap-2 rounded-xl px-3 py-2 border transition-colors ${
-              listening ? "bg-green-50 border-green-300" : "bg-slate-50 border-slate-200 focus-within:border-purple-300"
-            }`}>
+            <div className={`flex-1 flex items-center gap-2 rounded-xl px-3 py-2 border transition-colors ${listening ? "bg-green-50 border-green-300" : "bg-slate-50 border-slate-200 focus-within:border-purple-300"}`}>
               <input
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={listening ? "🎙 Sun raha hoon..." : "Type karo ya mic dabao..."}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (input.trim()) sendMsg(input); } }}
+                placeholder={listening ? "🎙 Bol raha hoon..." : "Type karo ya mic dabao..."}
                 className="flex-1 bg-transparent text-sm text-slate-800 placeholder-slate-400 outline-none"
                 disabled={loading}
+                autoFocus
               />
             </div>
+            {/* Mic button — user gesture here starts recognition */}
             <button
-              onClick={listening ? stopListening : startListening}
-              className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all ${
-                listening
-                  ? "bg-red-500 text-white shadow-lg scale-110 animate-pulse"
-                  : "bg-slate-100 text-slate-600 hover:bg-purple-100 hover:text-purple-600"
-              }`}
-              title={listening ? "Stop listening" : "Start voice"}
+              onClick={listening ? stopMic : startMic}
+              className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all ${listening ? "bg-red-500 text-white shadow-lg animate-pulse scale-110" : "bg-slate-100 text-slate-600 hover:bg-purple-100 hover:text-purple-600"}`}
+              title={listening ? "Mic band karo" : "Voice se bolo"}
             >
               {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </button>
             <button
-              onClick={() => sendMessage()}
+              onClick={() => { if (input.trim()) sendMsg(input); }}
               disabled={!input.trim() || loading}
               className="h-10 w-10 rounded-xl flex items-center justify-center text-white transition-all disabled:opacity-40"
-              style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+              style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </button>

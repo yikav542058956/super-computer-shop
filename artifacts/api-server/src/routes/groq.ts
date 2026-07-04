@@ -155,8 +155,7 @@ Base specs on publicly known specifications for this exact model. If unsure, set
 /* ── 4. Admin AI Chat assistant ──────────────────────────────── */
 router.post("/admin-ai", async (req, res) => {
   const token = req.headers["x-admin-ai-token"];
-  const expected = process.env["SESSION_SECRET"] || "super-computer-admin";
-  if (token !== expected) { res.status(401).json({ error: "Unauthorized" }); return; }
+  if (token !== "sc-admin-ai-2026") { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const { messages, context } = req.body as { messages: any[]; context?: any };
   if (!messages || !Array.isArray(messages)) { res.status(400).json({ error: "messages required" }); return; }
@@ -233,6 +232,20 @@ Rules:
       { role: "system", content: systemPrompt },
       ...messages,
     ];
+    // Self-test greeting — AI introduces itself with live store data
+    const isInit = messages.length === 1 && messages[0].content === "__SELFTEST__";
+    if (isInit) {
+      const ctx = req.body.context as any;
+      const dueCount = ctx?.dues?.count ?? 0;
+      const overdueCount = ctx?.dues?.overdueCount ?? 0;
+      const totalDue = ctx?.dues?.total ?? 0;
+      const greeting = dueCount > 0
+        ? `Namaste! 👋 Main hoon Super Computer AI.\n\n📊 Store summary:\n• ${ctx?.stats?.totalOrders ?? 0} orders, ${ctx?.stats?.totalProducts ?? 0} products\n• 💰 ${dueCount} customers ka due pending — कुल ₹${totalDue.toLocaleString("en-IN")}${overdueCount > 0 ? ` (${overdueCount} overdue ⚠️)` : ""}\n\nBoliye ya mic se poochiye — kya karna hai?`
+        : `Namaste! 👋 Main hoon Super Computer AI.\n\n📊 Store: ${ctx?.stats?.totalOrders ?? 0} orders, ${ctx?.stats?.totalProducts ?? 0} products. Koi due nahi abhi ✅\n\nBoliye — product add, sale record, ya kuch aur?`;
+      res.json({ message: greeting, action: "none", whatsappLinks: [], needsMoreInfo: false });
+      return;
+    }
+
     const raw = await groqChat(TEXT_MODEL, allMessages, 700);
     const parsed = extractJSON(raw);
     res.json(parsed);
