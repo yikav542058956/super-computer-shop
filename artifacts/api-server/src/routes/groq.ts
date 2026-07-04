@@ -152,6 +152,61 @@ Base specs on publicly known specifications for this exact model. If unsure, set
   } catch (e: any) { res.status(502).json({ error: e.message }); }
 });
 
+/* ── 4. Admin AI Chat assistant ──────────────────────────────── */
+router.post("/admin-ai", async (req, res) => {
+  // Basic guard: require a custom header set by the frontend (defense-in-depth against open abuse)
+  const token = req.headers["x-admin-ai-token"];
+  const expected = process.env["SESSION_SECRET"] || "super-computer-admin";
+  if (token !== expected) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const { messages, context } = req.body as { messages: any[]; context?: any };
+  if (!messages || !Array.isArray(messages)) { res.status(400).json({ error: "messages required" }); return; }
+
+  const systemPrompt = `You are an intelligent admin assistant for "Super Computer" — a laptop and computer store in India.
+You help the store admin via voice or text commands. You understand Hindi-English mixed (Hinglish) commands.
+
+You can help with these actions (return JSON):
+1. add_product — collect name, brand, price, category, specs and add a product
+2. create_sale — record an offline sale (collect customer name, phone, product, amount)
+3. navigate — go to a page in the admin panel
+4. fetch_info — explain data or answer a question
+5. revert — undo the last action (if revertable)
+6. none — just answer conversationally
+
+Context available:
+${context ? JSON.stringify(context, null, 2) : "No context provided"}
+
+IMPORTANT: Always respond with a JSON object in this format:
+{
+  "message": "The conversational response shown to the admin (in the same language they used — Hindi/English/Hinglish)",
+  "action": "none" | "add_product" | "create_sale" | "navigate" | "fetch_info" | "revert",
+  "data": { /* action-specific data if action is not none */ },
+  "needsMoreInfo": true | false,
+  "nextQuestion": "If you need more info, what to ask next"
+}
+
+For add_product action, data should be: { name, brand, category, price, specs: {} }
+For create_sale action, data should be: { customerName, phone, address, productName, amount, qty, paymentMethod, gstRate }
+For navigate action, data should be: { path: "/admin/products" | "/admin/orders" | "/admin/offline-sale" | "/admin/dashboard" | ... }
+
+Extract information from the conversation. Ask one question at a time. Be concise and friendly.
+If the admin says "add HP product" — ask which HP model. Then fetch specs automatically.
+If they say "revert" or "wapas karo" — suggest reverting the last action.
+Always respond in the same language mix the admin used.`;
+
+  try {
+    const allMessages = [
+      { role: "system", content: systemPrompt },
+      ...messages,
+    ];
+    const raw = await groqChat(TEXT_MODEL, allMessages, 500);
+    const parsed = extractJSON(raw);
+    res.json(parsed);
+  } catch (e: any) {
+    res.status(502).json({ error: e.message, message: "Sorry, AI error occurred. Please try again.", action: "none", needsMoreInfo: false });
+  }
+});
+
 /* ── 4. Generate a realistic customer review text ─────────────── */
 router.post("/generate-review", async (req, res) => {
   const { name, brand, category, rating } = req.body as any;

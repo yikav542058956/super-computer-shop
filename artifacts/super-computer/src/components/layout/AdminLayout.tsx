@@ -19,7 +19,9 @@ import {
   BookOpen,
   CreditCard,
   ShoppingBag,
+  Sparkles,
 } from "lucide-react";
+import { AdminAIAssistant } from "@/components/admin/AdminAIAssistant";
 
 export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const [location, setLocation] = useLocation();
@@ -74,6 +76,21 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                 </Link>
               );
             })}
+
+            {/* AI Assistant button in sidebar */}
+            <div className="pt-2 mt-2 border-t border-slate-800">
+              <div
+                className="flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors hover:bg-purple-900/50 group"
+                style={{ background: "rgba(124,58,237,0.15)" }}
+                title="AI Voice Assistant — click the floating button (bottom right)"
+              >
+                <Sparkles className="h-5 w-5 text-purple-400 group-hover:text-purple-300" />
+                <div className="flex-1 min-w-0">
+                  <span className="font-medium text-sm text-purple-300 group-hover:text-purple-200">AI Assistant</span>
+                  <p className="text-[10px] text-purple-500 leading-tight">Bottom-right button</p>
+                </div>
+              </div>
+            </div>
           </nav>
         </div>
         <div className="p-4 border-t border-slate-800">
@@ -99,6 +116,9 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           {children}
         </div>
       </main>
+
+      {/* Floating AI Assistant — visible on all admin pages */}
+      <AdminAIAssistant />
     </div>
   );
 };
