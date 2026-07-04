@@ -28,7 +28,7 @@ interface Product {
   images?: string[]; brand?: string; category?: string; gstRate?: number;
 }
 
-const STEPS = ["ग्राहक", "Product", "Payment", "Bill"] as const;
+const STEPS = ["Customer", "Product", "Payment", "Bill"] as const;
 type Step = 0 | 1 | 2 | 3;
 
 function genBillNo(): string {
@@ -381,13 +381,13 @@ function SaleDetailDialog({ sale, open, onClose }: { sale: any; open: boolean; o
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-orange-600" />
-            Sale ka Vivaran — {sale.billNo || sale.id?.slice(-8).toUpperCase()}
+            Sale Details — {sale.billNo || sale.id?.slice(-8).toUpperCase()}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           {/* Customer */}
           <div className="bg-slate-50 rounded-xl p-3 space-y-1.5">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Grahak (Customer)</p>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Customer</p>
             <p className="font-bold text-slate-800">{customerName}</p>
             {phone !== "—" && <p className="text-sm text-slate-600 flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />{phone}</p>}
             {addr !== "—" && <p className="text-sm text-slate-600 flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{addr}</p>}
@@ -421,24 +421,24 @@ function SaleDetailDialog({ sale, open, onClose }: { sale: any; open: boolean; o
               <div className="flex justify-between text-purple-700"><span>GST</span><span>+{formatINR(sale.gstAmount)}</span></div>
             )}
             <div className="flex justify-between font-black text-base border-t pt-2">
-              <span>Kul Total</span>
+              <span>Grand Total</span>
               <span className="text-orange-700">{formatINR(sale.finalAmount || sale.grandTotal)}</span>
             </div>
             <div className="flex justify-between text-green-700 font-semibold">
-              <span>Diya gaya</span>
+              <span>Amount Paid</span>
               <span>{formatINR(sale.amountPaid)}</span>
             </div>
             {sale.change > 0 && (
-              <div className="flex justify-between text-slate-500"><span>Wapas diya</span><span>{formatINR(sale.change)}</span></div>
+              <div className="flex justify-between text-slate-500"><span>Change Returned</span><span>{formatINR(sale.change)}</span></div>
             )}
             {(sale.dueAmount > 0) && (
               <div className="flex justify-between bg-red-50 border border-red-200 rounded-lg px-2 py-1.5">
-                <span className="text-red-700 font-bold">⚠ Baaki Bacha (Due)</span>
+                <span className="text-red-700 font-bold">⚠ Balance Due</span>
                 <span className="text-red-700 font-bold">{formatINR(sale.dueAmount)}</span>
               </div>
             )}
             <div className="flex justify-between text-slate-500 text-xs">
-              <span>Payment tarika</span>
+              <span>Payment Method</span>
               <span className="capitalize">{sale.paymentMethod || "Cash"}</span>
             </div>
           </div>
@@ -446,7 +446,7 @@ function SaleDetailDialog({ sale, open, onClose }: { sale: any; open: boolean; o
           {/* Status */}
           <div className="flex items-center gap-3">
             <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${isPaid ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-              {isPaid ? "✅ Poora Paid" : "⚠ Partial / Due Hai"}
+              {isPaid ? "✅ Fully Paid" : "⚠ Partial / Due"}
             </span>
             {sale.dueDate && (
               <span className="text-xs text-red-600 flex items-center gap-1">
@@ -516,7 +516,7 @@ function SalesHistory() {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-        <span className="ml-3 text-slate-500">Records load ho rahe hain...</span>
+        <span className="ml-3 text-slate-500">Loading records...</span>
       </div>
     );
   }
@@ -527,16 +527,16 @@ function SalesHistory() {
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white border rounded-xl p-3 text-center shadow-sm">
           <p className="text-2xl font-black text-slate-800">{sales.length}</p>
-          <p className="text-xs text-slate-500 mt-0.5">Kul Sales</p>
+          <p className="text-xs text-slate-500 mt-0.5">Total Sales</p>
         </div>
         <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
           <p className="text-2xl font-black text-green-700">{formatINR(totalRevenue)}</p>
-          <p className="text-xs text-green-600 mt-0.5">Kul Vasool</p>
+          <p className="text-xs text-green-600 mt-0.5">Total Collected</p>
         </div>
         <div className={`border rounded-xl p-3 text-center ${pendingCount > 0 ? "bg-red-50 border-red-200" : "bg-slate-50"}`}>
           <p className={`text-2xl font-black ${pendingCount > 0 ? "text-red-700" : "text-slate-400"}`}>{formatINR(totalPending)}</p>
           <p className={`text-xs mt-0.5 ${pendingCount > 0 ? "text-red-600" : "text-slate-400"}`}>
-            {pendingCount > 0 ? `${pendingCount} customer baaki` : "Koi baaki nahi"}
+            {pendingCount > 0 ? `${pendingCount} customer(s) pending` : "No Pending"}
           </p>
         </div>
       </div>
@@ -546,7 +546,7 @@ function SalesHistory() {
         <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Naam, phone, product se dhundho..."
+            placeholder="Search by name, phone, product..."
             className="pl-9"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -563,7 +563,7 @@ function SalesHistory() {
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              {f === "all" ? "Sab" : f === "paid" ? "✅ Paid" : "⚠ Baaki Hai"}
+              {f === "all" ? "All" : f === "paid" ? "✅ Paid" : "⚠ Due"}
             </button>
           ))}
         </div>
@@ -573,9 +573,9 @@ function SalesHistory() {
       {filtered.length === 0 ? (
         <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed">
           <Package className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500 font-semibold">Koi record nahi mila</p>
+          <p className="text-slate-500 font-semibold">No records found</p>
           <p className="text-slate-400 text-sm mt-1">
-            {sales.length === 0 ? "Abhi tak koi offline sale nahi hua" : "Search ya filter badlo"}
+            {sales.length === 0 ? "No offline sales yet" : "Try a different search or filter"}
           </p>
         </div>
       ) : (
@@ -611,7 +611,7 @@ function SalesHistory() {
                       <p className="text-sm text-slate-600 mt-0.5 truncate">
                         📦 {firstItem.name}
                         {firstItem.qty > 1 ? ` × ${firstItem.qty}` : ""}
-                        {items.length > 1 ? ` + ${items.length - 1} aur` : ""}
+                        {items.length > 1 ? ` + ${items.length - 1} more` : ""}
                       </p>
                     )}
                     <div className="flex items-center gap-3 mt-1.5 flex-wrap">
@@ -630,10 +630,10 @@ function SalesHistory() {
                   {/* Right: Amount + Status */}
                   <div className="text-right shrink-0">
                     <p className="font-black text-base text-orange-700">{formatINR(sale.finalAmount || sale.grandTotal || 0)}</p>
-                    <p className="text-xs text-green-700">Diya: {formatINR(sale.amountPaid || 0)}</p>
+                    <p className="text-xs text-green-700">Paid: {formatINR(sale.amountPaid || 0)}</p>
                     {(sale.dueAmount || 0) > 0 ? (
                       <span className="inline-block mt-1 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full">
-                        ⚠ {formatINR(sale.dueAmount)} baaki
+                        ⚠ {formatINR(sale.dueAmount)} due
                       </span>
                     ) : (
                       <span className="inline-block mt-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">
@@ -653,7 +653,7 @@ function SalesHistory() {
 
                 <div className="mt-2 flex justify-end">
                   <span className="text-xs text-orange-600 font-medium flex items-center gap-1">
-                    <Eye className="h-3 w-3" /> Poori detail dekho
+                    <Eye className="h-3 w-3" /> View Details
                   </span>
                 </div>
               </div>
@@ -776,9 +776,9 @@ export default function AdminOfflineSale() {
 
   const handleSave = async () => {
     const productName = selectedProduct?.name || searchQuery.trim();
-    if (!cust.name.trim()) { toast.error("Grahak ka naam zaroori hai"); setStep(0); return; }
-    if (!productName) { toast.error("Koi product chuniye"); setStep(1); return; }
-    if (!salePrice || grandTotal <= 0) { toast.error("Sale amount sahi bharein"); setStep(2); return; }
+    if (!cust.name.trim()) { toast.error("Customer name is required"); setStep(0); return; }
+    if (!productName) { toast.error("Please select a product"); setStep(1); return; }
+    if (!salePrice || grandTotal <= 0) { toast.error("Enter a valid sale amount"); setStep(2); return; }
 
     setSaving(true);
     try {
@@ -843,10 +843,10 @@ export default function AdminOfflineSale() {
       }
 
       setSavedBill({ ...billData, orderId: orderRef.key, productName });
-      toast.success(`✅ Sale save ho gaya! Bill #${currentBillNo}`);
+      toast.success(`✅ Sale saved! Bill #${currentBillNo}`);
       setStep(3);
     } catch (e: any) {
-      toast.error("Save nahi hua: " + e.message);
+      toast.error("Could not save: " + e.message);
     } finally {
       setSaving(false);
     }
@@ -910,11 +910,11 @@ export default function AdminOfflineSale() {
               <ShoppingBag className="h-5 w-5 text-orange-600" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Offline / Dukaan Sale</h1>
+              <h1 className="text-xl font-bold">Offline / In-Store Sale</h1>
               <p className="text-slate-500 text-xs">
                 {view === "new"
                   ? `Bill #${currentBillNo} · ${new Date().toLocaleDateString("en-IN")}`
-                  : "Sab pichli sales ke records"}
+                  : "All past sale records"}
               </p>
             </div>
           </div>
@@ -926,7 +926,7 @@ export default function AdminOfflineSale() {
                 view === "new" ? "bg-orange-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-800"
               }`}
             >
-              <Plus className="h-3.5 w-3.5" /> Naya Sale
+              <Plus className="h-3.5 w-3.5" /> New Sale
             </button>
             <button
               onClick={() => setView("history")}
@@ -977,15 +977,15 @@ export default function AdminOfflineSale() {
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <User className="h-5 w-5 text-orange-500" /> Grahak ki Jankari
+                    <User className="h-5 w-5 text-orange-500" /> Customer Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label>Grahak ka Naam <span className="text-red-500">*</span></Label>
+                    <Label>Customer Name <span className="text-red-500">*</span></Label>
                     <Input
                       autoFocus
-                      placeholder="jaise: Ramesh Kumar"
+                      placeholder="e.g. Ramesh Kumar"
                       value={cust.name}
                       onChange={e => setCust(c => ({ ...c, name: e.target.value }))}
                     />
@@ -993,7 +993,7 @@ export default function AdminOfflineSale() {
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Mobile Number</Label>
                     <Input
-                      placeholder="10 ank ka mobile number"
+                      placeholder="10-digit mobile number"
                       inputMode="numeric"
                       maxLength={10}
                       value={cust.phone}
@@ -1001,9 +1001,9 @@ export default function AdminOfflineSale() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Pata (optional)</Label>
+                    <Label className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Address (optional)</Label>
                     <Textarea
-                      placeholder="Gali, Mohalla, Shehar..."
+                      placeholder="Street, Area, City..."
                       rows={2}
                       value={cust.address}
                       onChange={e => setCust(c => ({ ...c, address: e.target.value }))}
@@ -1018,7 +1018,7 @@ export default function AdminOfflineSale() {
               <Card className="border-2 border-orange-100">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <Package className="h-5 w-5 text-orange-500" /> Product Chuniye
+                    <Package className="h-5 w-5 text-orange-500" /> Select Product
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -1027,7 +1027,7 @@ export default function AdminOfflineSale() {
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input
                         autoFocus
-                        placeholder="Naam ya brand se search karo..."
+                        placeholder="Search by name or brand..."
                         className="pl-9 pr-9"
                         value={searchQuery}
                         disabled={!!selectedProduct}
@@ -1062,12 +1062,12 @@ export default function AdminOfflineSale() {
                         ) : (
                           <div className="p-4 text-center">
                             <p className="text-sm text-slate-500 mb-3">
-                              "<strong>{searchQuery}</strong>" catalog mein nahi mila
+                              "<strong>{searchQuery}</strong>" not found in catalog
                             </p>
                             <Button size="sm"
                               onClick={() => { setAddProductInitialName(searchQuery); setAddProductOpen(true); setShowDropdown(false); }}
                               className="gap-1.5 bg-orange-600 hover:bg-orange-700">
-                              <Plus className="h-3.5 w-3.5" /> Catalog mein add karo
+                              <Plus className="h-3.5 w-3.5" /> Add to Catalog
                             </Button>
                           </div>
                         )}
@@ -1092,13 +1092,13 @@ export default function AdminOfflineSale() {
                   )}
 
                   <div className="space-y-1.5">
-                    <Label>Quantity (Kitna)</Label>
+                    <Label>Quantity</Label>
                     <Input type="number" min="1" value={qty} onChange={e => setQty(e.target.value)} className="w-28" />
                   </div>
 
                   <Button variant="outline" size="sm" onClick={() => { setAddProductInitialName(""); setAddProductOpen(true); }}
                     className="gap-1.5 border-orange-300 text-orange-700 hover:bg-orange-50 w-full">
-                    <Plus className="h-3.5 w-3.5" /> Naya Product Catalog mein Add Karo
+                    <Plus className="h-3.5 w-3.5" /> Add New Product to Catalog
                   </Button>
                 </CardContent>
               </Card>
@@ -1110,7 +1110,7 @@ export default function AdminOfflineSale() {
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <IndianRupee className="h-5 w-5 text-orange-500" /> Daam aur GST
+                      <IndianRupee className="h-5 w-5 text-orange-500" /> Price & GST
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -1126,7 +1126,7 @@ export default function AdminOfflineSale() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                        <Label>Sale Daam (₹) <span className="text-red-500">*</span></Label>
+                        <Label>Sale Price (₹) <span className="text-red-500">*</span></Label>
                         <Input
                           autoFocus
                           type="number" min="0"
@@ -1134,7 +1134,7 @@ export default function AdminOfflineSale() {
                           value={salePrice}
                           onChange={e => setSalePrice(e.target.value)}
                         />
-                        <p className="text-[10px] text-slate-400">Asal sale price (catalog se alag ho sakta hai)</p>
+                        <p className="text-[10px] text-slate-400">Actual sale price (may differ from catalog)</p>
                       </div>
                       <div className="space-y-1.5 col-span-2 sm:col-span-1">
                         <Label>Quantity</Label>
@@ -1147,7 +1147,7 @@ export default function AdminOfflineSale() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Percent className="h-4 w-4 text-purple-600" />
-                          <Label className="text-purple-800 font-semibold">GST Lagana Hai?</Label>
+                          <Label className="text-purple-800 font-semibold">Apply GST?</Label>
                         </div>
                         <Switch checked={gstEnabled} onCheckedChange={setGstEnabled} />
                       </div>
@@ -1174,7 +1174,7 @@ export default function AdminOfflineSale() {
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <CreditCard className="h-5 w-5 text-orange-500" /> Payment Vivaran
+                      <CreditCard className="h-5 w-5 text-orange-500" /> Payment Details
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -1192,17 +1192,17 @@ export default function AdminOfflineSale() {
                       )}
                       <div className="h-px bg-slate-200" />
                       <div className="flex justify-between font-black text-base text-slate-900">
-                        <span>KUL TOTAL</span>
+                        <span>GRAND TOTAL</span>
                         <span className="text-orange-700">{formatINR(grandTotal)}</span>
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label>Payment Tarika</Label>
+                      <Label>Payment Method</Label>
                       <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="cash">💵 Nakit (Cash)</SelectItem>
+                          <SelectItem value="cash">💵 Cash</SelectItem>
                           <SelectItem value="upi">📱 UPI</SelectItem>
                           <SelectItem value="card">💳 Card / Swipe</SelectItem>
                           <SelectItem value="emi">🏦 EMI / Finance</SelectItem>
@@ -1212,14 +1212,14 @@ export default function AdminOfflineSale() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label>Grahak ne kitna diya? (₹)</Label>
+                      <Label>Amount Paid by Customer (₹)</Label>
                       <Input
                         type="number" min="0"
-                        placeholder={`Total: ${grandTotal} — kitna diya?`}
+                        placeholder={`Total: ${grandTotal} — amount paid?`}
                         value={amountPaid}
                         onChange={e => setAmountPaid(e.target.value)}
                       />
-                      <p className="text-[10px] text-slate-400">Khali chhod do agar poora payment ho gaya</p>
+                      <p className="text-[10px] text-slate-400">Leave blank if fully paid</p>
                     </div>
 
                     {amountPaid && (
@@ -1228,18 +1228,18 @@ export default function AdminOfflineSale() {
                       }`}>
                         {change > 0 && (
                           <div className="flex justify-between text-green-700 font-bold">
-                            <span>🔄 Grahak ko Wapas Karo</span>
+                            <span>🔄 Change to Return</span>
                             <span>{formatINR(change)}</span>
                           </div>
                         )}
                         {dueAmount > 0 && (
                           <div className="flex justify-between text-red-700 font-bold">
-                            <span>⚠️ Baaki Bacha (Due Amount)</span>
+                            <span>⚠️ Balance Due</span>
                             <span>{formatINR(dueAmount)}</span>
                           </div>
                         )}
                         {dueAmount === 0 && change === 0 && (
-                          <p className="text-green-700 font-bold">✅ Exact payment — Koi baaki nahi!</p>
+                          <p className="text-green-700 font-bold">✅ Exact payment — No balance!</p>
                         )}
                       </div>
                     )}
@@ -1256,14 +1256,14 @@ export default function AdminOfflineSale() {
                           min={new Date().toISOString().split("T")[0]}
                         />
                         <p className="text-[10px] text-red-500">
-                          ₹{dueAmount.toLocaleString("en-IN")} bacha hua — Ledger mein automatically save ho jayega
+                          ₹{dueAmount.toLocaleString("en-IN")} remaining — will be saved to ledger automatically
                         </p>
                       </div>
                     )}
 
                     <div className="space-y-1.5">
                       <Label>Notes (optional)</Label>
-                      <Textarea placeholder="Warranty, accessories, koi baat..." rows={2}
+                      <Textarea placeholder="Warranty, accessories, any notes..." rows={2}
                         value={notes} onChange={e => setNotes(e.target.value)} />
                     </div>
                   </CardContent>
@@ -1276,40 +1276,40 @@ export default function AdminOfflineSale() {
               <div className="space-y-4">
                 <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-5 text-center">
                   <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
-                  <h2 className="text-xl font-black text-green-800">Sale Save Ho Gaya! 🎉</h2>
+                  <h2 className="text-xl font-black text-green-800">Sale Saved! 🎉</h2>
                   <p className="text-green-600 text-sm mt-1">Bill #{currentBillNo}</p>
                 </div>
 
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-slate-700 flex items-center gap-2">
-                      <FileText className="h-4 w-4" /> Bill Vivaran
+                      <FileText className="h-4 w-4" /> Bill Summary
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
-                    <div className="flex justify-between"><span className="text-slate-500">Grahak</span><span className="font-semibold">{cust.name}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Customer</span><span className="font-semibold">{cust.name}</span></div>
                     {cust.phone && <div className="flex justify-between"><span className="text-slate-500">Phone</span><span>{cust.phone}</span></div>}
                     <div className="flex justify-between"><span className="text-slate-500">Product</span><span className="font-semibold text-right max-w-[60%]">{savedBill.productName}</span></div>
                     <div className="flex justify-between"><span className="text-slate-500">Quantity</span><span>{quantity}</span></div>
                     <div className="h-px bg-slate-100" />
                     <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span>{formatINR(subtotal)}</span></div>
                     {gstEnabled && <div className="flex justify-between text-purple-700"><span>GST ({gstRate}%)</span><span>+{formatINR(gstAmount)}</span></div>}
-                    <div className="flex justify-between font-black text-base"><span>Kul Total</span><span className="text-orange-700">{formatINR(grandTotal)}</span></div>
+                    <div className="flex justify-between font-black text-base"><span>Grand Total</span><span className="text-orange-700">{formatINR(grandTotal)}</span></div>
                     <div className="h-px bg-slate-100" />
-                    <div className="flex justify-between"><span className="text-slate-500">Diya Gaya</span><span className="text-green-700 font-bold">{formatINR(paid || grandTotal)}</span></div>
-                    {change > 0 && <div className="flex justify-between"><span className="text-slate-500">Wapas Diya</span><span>{formatINR(change)}</span></div>}
+                    <div className="flex justify-between"><span className="text-slate-500">Amount Paid</span><span className="text-green-700 font-bold">{formatINR(paid || grandTotal)}</span></div>
+                    {change > 0 && <div className="flex justify-between"><span className="text-slate-500">Change Returned</span><span>{formatINR(change)}</span></div>}
                     {dueAmount > 0 && (
                       <div className="flex justify-between bg-red-50 rounded-lg px-2 py-1.5">
-                        <span className="text-red-700 font-bold">⚠ Baaki Bacha</span>
+                        <span className="text-red-700 font-bold">⚠ Balance Due</span>
                         <span className="text-red-700 font-bold">{formatINR(dueAmount)}</span>
                       </div>
                     )}
                     {dueAmount > 0 && (
                       <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
-                        💰 {formatINR(dueAmount)} — {cust.name} ke ledger mein save ho gaya{dueDate ? ` | Due: ${new Date(dueDate).toLocaleDateString("en-IN")}` : ""}
+                        💰 {formatINR(dueAmount)} — saved to {cust.name}'s ledger{dueDate ? ` | Due: ${new Date(dueDate).toLocaleDateString("en-IN")}` : ""}
                       </div>
                     )}
-                    <div className="flex justify-between"><span className="text-slate-500">Payment Tarika</span><span className="capitalize">{paymentMethod}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Payment Method</span><span className="capitalize">{paymentMethod}</span></div>
                   </CardContent>
                 </Card>
 
@@ -1318,7 +1318,7 @@ export default function AdminOfflineSale() {
                     <Download className="h-4 w-4" /> PDF Download
                   </Button>
                   <Button onClick={startNew} className="gap-2 h-12 bg-orange-600 hover:bg-orange-700">
-                    <Plus className="h-4 w-4" /> Naya Sale
+                    <Plus className="h-4 w-4" /> New Sale
                   </Button>
                 </div>
 
@@ -1327,7 +1327,7 @@ export default function AdminOfflineSale() {
                   onClick={() => setView("history")}
                   className="w-full gap-2 border-slate-200 text-slate-600"
                 >
-                  <History className="h-4 w-4" /> Sab Records Dekho
+                  <History className="h-4 w-4" /> View All Records
                 </Button>
               </div>
             )}
@@ -1341,7 +1341,7 @@ export default function AdminOfflineSale() {
                   disabled={step === 0}
                   className="gap-2"
                 >
-                  ← Wapas
+                  ← Back
                 </Button>
                 {step < 2 ? (
                   <Button
@@ -1349,7 +1349,7 @@ export default function AdminOfflineSale() {
                     disabled={!canGoNext()}
                     className="gap-2 bg-orange-600 hover:bg-orange-700 flex-1"
                   >
-                    Aage <ChevronRight className="h-4 w-4" />
+                    Next <ChevronRight className="h-4 w-4" />
                   </Button>
                 ) : (
                   <Button
@@ -1357,7 +1357,7 @@ export default function AdminOfflineSale() {
                     disabled={saving || !canGoNext()}
                     className="gap-2 bg-green-600 hover:bg-green-700 flex-1 h-12 font-bold text-base"
                   >
-                    {saving ? <><Loader2 className="h-5 w-5 animate-spin" /> Save ho raha hai...</> : <><CheckCircle className="h-5 w-5" /> Sale Save Karo</>}
+                    {saving ? <><Loader2 className="h-5 w-5 animate-spin" /> Saving...</> : <><CheckCircle className="h-5 w-5" /> Save Sale</>}
                   </Button>
                 )}
               </div>
