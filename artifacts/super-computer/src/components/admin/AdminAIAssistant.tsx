@@ -522,7 +522,7 @@ export function AdminAIAssistant() {
     return (
       <button
         onClick={handleOpen}
-        className="fixed z-50 bottom-6 right-6 h-16 w-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 relative"
+        className="fixed z-50 bottom-20 md:bottom-6 right-4 md:right-6 h-16 w-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 relative"
         style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 8px 32px rgba(124,58,237,0.5)" }}
         title="AI Assistant — Click to talk"
       >
