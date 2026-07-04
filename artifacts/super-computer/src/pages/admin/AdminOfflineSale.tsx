@@ -1,6 +1,6 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ref, push, set, get, update } from "firebase/database";
+import { ref, push, set, get } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,16 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import {
   ShoppingBag, Plus, Loader2, CheckCircle, Search, X, Package,
-  ImageIcon, ChevronRight, User, Phone, MapPin, CreditCard,
-  FileText, Download, IndianRupee, RotateCcw, AlertCircle, Percent,
+  ChevronRight, User, Phone, MapPin, CreditCard,
+  FileText, Download, IndianRupee, AlertCircle, Percent,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatINR } from "@/lib/utils";
 import jsPDF from "jspdf";
+import AddProductDialog, { type SavedProduct } from "@/components/admin/AddProductDialog";
 
 /* ─── Types ───────────────────────────────────────── */
 interface Product {
@@ -191,8 +191,7 @@ export default function AdminOfflineSale() {
 
   /* Add Product Dialog */
   const [addProductOpen, setAddProductOpen] = useState(false);
-  const [newProd, setNewProd] = useState({ name: "", brand: "", price: "", category: "", gstRate: "18", imageUrl: "" });
-  const [addingProd, setAddingProd] = useState(false);
+  const [addProductInitialName, setAddProductInitialName] = useState("");
 
   /* ── Step 2: Payment ──────────────── */
   const [salePrice, setSalePrice] = useState("");  // actual sale price (can differ from product price)
@@ -264,30 +263,19 @@ export default function AdminOfflineSale() {
   const change = Math.max(0, paid - grandTotal);
   const dueAmount = Math.max(0, grandTotal - paid);
 
-  /* ── Add New Product ──────────────── */
-  const handleAddProduct = async () => {
-    if (!newProd.name.trim() || !newProd.price) { toast.error("Name and price required"); return; }
-    setAddingProd(true);
-    try {
-      const newRef = push(ref(db, "products"));
-      const prod: Product = {
-        id: newRef.key!,
-        name: newProd.name.trim(),
-        brand: newProd.brand.trim(),
-        price: Number(newProd.price),
-        discountPrice: Number(newProd.price),
-        category: newProd.category.trim() || "Laptops",
-        gstRate: Number(newProd.gstRate) || 0,
-        images: newProd.imageUrl ? [newProd.imageUrl] : [],
-      };
-      await set(newRef, { ...prod, status: "active", createdAt: Date.now() });
-      setProducts(prev => [...prev, prod]);
-      selectProduct(prod);
-      setAddProductOpen(false);
-      setNewProd({ name: "", brand: "", price: "", category: "", gstRate: "18", imageUrl: "" });
-      toast.success("✅ Product added to catalog!");
-    } catch { toast.error("Failed to add product"); }
-    finally { setAddingProd(false); }
+  /* ── Product added from dialog ────── */
+  const handleProductSaved = (prod: SavedProduct) => {
+    const newProdItem: Product = {
+      id: prod.id,
+      name: prod.name,
+      brand: prod.brand,
+      category: prod.category,
+      price: prod.price,
+      discountPrice: prod.discountPrice,
+      images: prod.images,
+    };
+    setProducts(prev => [...prev, newProdItem]);
+    selectProduct(newProdItem);
   };
 
   /* ── Save Sale & Generate Bill ────── */
@@ -554,7 +542,7 @@ export default function AdminOfflineSale() {
                           "<strong>{searchQuery}</strong>" catalog mein nahi mila
                         </p>
                         <Button size="sm"
-                          onClick={() => { setNewProd(n => ({ ...n, name: searchQuery })); setAddProductOpen(true); setShowDropdown(false); }}
+                          onClick={() => { setAddProductInitialName(searchQuery); setAddProductOpen(true); setShowDropdown(false); }}
                           className="gap-1.5 bg-orange-600 hover:bg-orange-700">
                           <Plus className="h-3.5 w-3.5" /> Catalog mein add karo
                         </Button>
@@ -586,7 +574,7 @@ export default function AdminOfflineSale() {
                 <Input type="number" min="1" value={qty} onChange={e => setQty(e.target.value)} className="w-28" />
               </div>
 
-              <Button variant="outline" size="sm" onClick={() => setAddProductOpen(true)}
+              <Button variant="outline" size="sm" onClick={() => { setAddProductInitialName(""); setAddProductOpen(true); }}
                 className="gap-1.5 border-orange-300 text-orange-700 hover:bg-orange-50 w-full">
                 <Plus className="h-3.5 w-3.5" /> Naya Product Catalog mein Add Karo
               </Button>
@@ -849,66 +837,13 @@ export default function AdminOfflineSale() {
         )}
       </div>
 
-      {/* ── Add Product Dialog ────────────────── */}
-      <Dialog open={addProductOpen} onOpenChange={setAddProductOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-orange-700">
-              <Package className="h-5 w-5" /> Product Catalog mein Add Karo
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Product Name <span className="text-red-500">*</span></Label>
-              <Input placeholder="e.g. HP Pavilion 15 i5 13th Gen" value={newProd.name}
-                onChange={e => setNewProd(p => ({ ...p, name: e.target.value }))} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Brand</Label>
-                <Input placeholder="HP, Dell, Asus..." value={newProd.brand}
-                  onChange={e => setNewProd(p => ({ ...p, brand: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Category</Label>
-                <Input placeholder="Laptops" value={newProd.category}
-                  onChange={e => setNewProd(p => ({ ...p, category: e.target.value }))} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Price (₹) <span className="text-red-500">*</span></Label>
-                <Input type="number" min="0" placeholder="45000" value={newProd.price}
-                  onChange={e => setNewProd(p => ({ ...p, price: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>GST Rate</Label>
-                <Select value={newProd.gstRate} onValueChange={v => setNewProd(p => ({ ...p, gstRate: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">No GST</SelectItem>
-                    <SelectItem value="5">5%</SelectItem>
-                    <SelectItem value="12">12%</SelectItem>
-                    <SelectItem value="18">18%</SelectItem>
-                    <SelectItem value="28">28%</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5" /> Image URL (optional)</Label>
-              <Input placeholder="https://..." value={newProd.imageUrl}
-                onChange={e => setNewProd(p => ({ ...p, imageUrl: e.target.value }))} />
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setAddProductOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddProduct} disabled={addingProd} className="bg-orange-600 hover:bg-orange-700 gap-2">
-              {addingProd ? <><Loader2 className="h-4 w-4 animate-spin" />Adding...</> : <><Plus className="h-4 w-4" />Add to Catalog</>}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* ── Add Product Dialog (full-featured, same as Products page) ── */}
+      <AddProductDialog
+        open={addProductOpen}
+        onOpenChange={setAddProductOpen}
+        initialName={addProductInitialName}
+        onSaved={handleProductSaved}
+      />
     </AdminLayout>
   );
 }
