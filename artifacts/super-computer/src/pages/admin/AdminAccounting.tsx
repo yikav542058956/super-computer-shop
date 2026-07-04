@@ -146,6 +146,86 @@ function printSaleInvoice(sale: any) {
   w.document.close();
 }
 
+/* ─── Normalize offline order into local-sale shape ────── */
+function normalizeOfflineOrder(order: any) {
+  const n = (v: any, fallback = 0): number => {
+    const x = Number(v);
+    return isFinite(x) ? x : fallback;
+  };
+
+  // ── AdminOfflineSale format (has order.customer + order.item) ──
+  if (order.customer) {
+    const total   = n(order.grandTotal ?? order.finalAmount);
+    // Prefer explicit amountPaid; fall back to paidAmount; fall back to total if paymentStatus=paid
+    const paid    = order.amountPaid != null
+      ? n(order.amountPaid)
+      : order.paidAmount != null
+        ? n(order.paidAmount)
+        : order.paymentStatus === "paid" ? total : 0;
+    // Due must be consistent with total and paid; never go negative
+    const due     = order.dueAmount != null
+      ? Math.max(0, n(order.dueAmount))
+      : Math.max(0, total - paid);
+    return {
+      id:           order.id,
+      _fromOrder:   true,
+      billNo:       order.billNo ?? null,
+      clientName:   String(order.customer?.name  ?? "Unknown"),
+      clientPhone:  String(order.customer?.phone ?? ""),
+      clientAddress:String(order.customer?.address ?? ""),
+      productName:  String(order.item?.name  ?? ""),
+      productBrand: String(order.item?.brand ?? ""),
+      qty:          Math.max(1, n(order.item?.qty, 1)),
+      mrp:          total,
+      sellPrice:    total,
+      totalSaleValue: total,
+      amountPaid:   paid,
+      dueAmount:    due,
+      dueDate:      order.dueDate ?? null,
+      discountType: "flat"  as const,
+      discountValue: 0,
+      discountAmount: 0,
+      notes:        String(order.notes ?? ""),
+      paymentMethod:String(order.paymentMethod ?? ""),
+      createdAt:    n(order.createdAt, Date.now()),
+    };
+  }
+
+  // ── Legacy AdminOrders format (has order.address + order.items[]) ──
+  const items: any[] = Array.isArray(order.items) ? order.items : Object.values(order.items ?? {});
+  const first  = items[0] ?? {};
+  const total  = n(order.finalAmount);
+  // Legacy records were always marked paid=delivered; honour paidAmount/refundAmount if present
+  const refund = n(order.refundAmount);
+  const paid   = order.paidAmount != null
+    ? n(order.paidAmount)
+    : order.paymentStatus === "refunded" ? 0 : total - refund;
+  const due    = Math.max(0, total - paid - refund);
+  return {
+    id:           order.id,
+    _fromOrder:   true,
+    billNo:       null,
+    clientName:   String(order.address?.name ?? "Unknown"),
+    clientPhone:  String(order.address?.phone ?? ""),
+    clientAddress:String(order.address?.address ?? order.address?.city ?? ""),
+    productName:  String(first.name ?? ""),
+    productBrand: String(first.brand ?? ""),
+    qty:          Math.max(1, n(first.qty, 1)),
+    mrp:          total,
+    sellPrice:    total,
+    totalSaleValue: total,
+    amountPaid:   paid,
+    dueAmount:    due,
+    dueDate:      null,
+    discountType: "flat"  as const,
+    discountValue: 0,
+    discountAmount: 0,
+    notes:        String(order.notes ?? ""),
+    paymentMethod:String(order.paymentMethod ?? ""),
+    createdAt:    n(order.createdAt, Date.now()),
+  };
+}
+
 /* ─── Default sale form ─────────────────────────────────── */
 const defaultSaleForm = {
   clientName: "", clientPhone: "", clientAddress: "",
@@ -237,21 +317,32 @@ export default function AdminAccounting() {
   const totalAdvance = customerList.filter((c) => c.balance < 0).reduce((s, c) => s + Math.abs(c.balance), 0);
   const outstandingCount = customerList.filter((c) => c.balance > 0).length;
 
+  /* ── Merge local_sales + offline orders into one list ── */
+  const allLocalSales = useMemo(() => {
+    const offlineOrders = orders
+      .filter((o) => o.source === "offline")
+      .map(normalizeOfflineOrder);
+    // Deduplicate: local_sales should take precedence; offline orders add extras
+    const localIds = new Set(localSales.map((s) => s.id));
+    const uniqueOffline = offlineOrders.filter((o) => !localIds.has(o.id));
+    return [...localSales, ...uniqueOffline].sort((a, b) => b.createdAt - a.createdAt);
+  }, [localSales, orders]);
+
   /* ── Local sales derived ── */
   const filteredSales = useMemo(() => {
     const q = salesSearch.toLowerCase();
-    if (!q) return localSales;
-    return localSales.filter(
+    if (!q) return allLocalSales;
+    return allLocalSales.filter(
       (s) =>
         s.clientName?.toLowerCase().includes(q) ||
         s.clientPhone?.includes(q) ||
         s.productName?.toLowerCase().includes(q)
     );
-  }, [localSales, salesSearch]);
+  }, [allLocalSales, salesSearch]);
 
-  const totalSaleRevenue = localSales.reduce((s, sale) => s + (sale.totalSaleValue || 0), 0);
-  const totalDueFromSales = localSales.reduce((s, sale) => s + (Math.max(sale.dueAmount || 0, 0)), 0);
-  const totalCollected = localSales.reduce((s, sale) => s + (sale.amountPaid || 0), 0);
+  const totalSaleRevenue = allLocalSales.reduce((s, sale) => s + (sale.totalSaleValue || 0), 0);
+  const totalDueFromSales = allLocalSales.reduce((s, sale) => s + (Math.max(sale.dueAmount || 0, 0)), 0);
+  const totalCollected = allLocalSales.reduce((s, sale) => s + (sale.amountPaid || 0), 0);
 
   /* ── Sale form calculations ── */
   const selectedProduct = products[saleForm.productId];
@@ -388,7 +479,7 @@ export default function AdminAccounting() {
           onClick={() => setTab("sales")}
           className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${tab === "sales" ? "bg-white shadow text-primary" : "text-slate-500 hover:text-slate-800"}`}
         >
-          <span className="flex items-center gap-2"><ShoppingBag className="h-4 w-4" /> Local Sales {localSales.length > 0 && <span className="bg-primary/10 text-primary text-xs px-1.5 rounded-full">{localSales.length}</span>}</span>
+          <span className="flex items-center gap-2"><ShoppingBag className="h-4 w-4" /> Local Sales {allLocalSales.length > 0 && <span className="bg-primary/10 text-primary text-xs px-1.5 rounded-full">{allLocalSales.length}</span>}</span>
         </button>
       </div>
 
@@ -464,7 +555,7 @@ export default function AdminAccounting() {
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
               <p className="text-xs text-blue-500 font-semibold">Total Sales</p>
-              <p className="font-black text-blue-700 text-lg">{localSales.length}</p>
+              <p className="font-black text-blue-700 text-lg">{allLocalSales.length}</p>
             </div>
             <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-center">
               <p className="text-xs text-green-500 font-semibold">Collected</p>
