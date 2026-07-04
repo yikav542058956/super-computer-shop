@@ -12,6 +12,7 @@ import {
   Search, Download, Plus, TrendingUp, TrendingDown, Printer,
   IndianRupee, Users, Loader2, ChevronRight, AlertCircle, BookOpen,
   ShoppingBag, Receipt, Calendar, Phone, MapPin, Tag, Package,
+  CheckCircle, FileText, Clock,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 import { toast } from "sonner";
