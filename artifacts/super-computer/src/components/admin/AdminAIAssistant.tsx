@@ -522,11 +522,11 @@ export function AdminAIAssistant() {
     return (
       <button
         onClick={handleOpen}
-        className="h-16 w-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 relative"
-        style={{ position: "fixed", bottom: 80, right: 20, zIndex: 50, background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 8px 32px rgba(124,58,237,0.5)" }}
+        className="h-16 w-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 relative overflow-hidden"
+        style={{ position: "fixed", bottom: 80, right: 20, zIndex: 50, background: "linear-gradient(135deg,#3b0764,#1e1b4b)", boxShadow: "0 0 0 2px rgba(139,92,246,0.5), 0 8px 32px rgba(124,58,237,0.6)" }}
         title="AI Assistant — Click to talk"
       >
-        <Sparkles className="h-7 w-7 text-white" />
+        <img src="/images/ai-fab-icon.png" alt="AI" className="h-14 w-14 object-contain" style={{ filter: "drop-shadow(0 0 8px rgba(167,139,250,0.8))" }} />
         {dues.length > 0 && (
           <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white">
             {dues.length}
