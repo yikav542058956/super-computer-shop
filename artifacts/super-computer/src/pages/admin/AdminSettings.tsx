@@ -13,6 +13,7 @@ import {
   Settings, MessageCircle, Store, Phone, Mail, Percent, Truck, Save, CheckCircle,
   ShieldCheck, Trash2, UserPlus, MapPin, CreditCard, Eye, EyeOff, Smartphone,
   AlertTriangle, Info, Database, Download, Upload, RotateCcw, PackageX, Search,
+  FileText, Building2,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -652,6 +653,185 @@ function PaymentSettings() {
   );
 }
 
+/* ── Bill Template Settings ─────────────────────────────────── */
+const DEFAULT_STORE_INFO = {
+  storeName: "Super Computer",
+  tagline: "Laptop & Computer Store | Authorized Reseller",
+  phone: "9761809960",
+  altPhone: "",
+  email: "info@supercomputer.in",
+  address: "Mirehachi, Kasganj Road, Distt. Etah, UP - 207001",
+  gstin: "",
+  billFooter: "Warranty claims — please keep this bill. No returns after 7 days.",
+};
+
+function BillTemplateSettings() {
+  const [info, setInfo] = useState({ ...DEFAULT_STORE_INFO });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    get(ref(db, "settings/storeInfo"))
+      .then((snap) => { if (snap.exists()) setInfo(i => ({ ...i, ...snap.val() })); })
+      .catch(() => toast.error("Could not load bill template settings"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    if (!info.storeName.trim()) { toast.error("Store name is required"); return; }
+    if (!info.phone.trim()) { toast.error("Phone number is required"); return; }
+    setSaving(true);
+    try {
+      await set(ref(db, "settings/storeInfo"), info);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      toast.success("✅ Bill template settings saved!");
+    } catch { toast.error("Failed to save settings"); }
+    finally { setSaving(false); }
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-16 text-slate-400">
+      <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-200 border-t-primary" />
+    </div>
+  );
+
+  return (
+    <div className="space-y-5">
+      {/* Preview Card */}
+      <div className="rounded-2xl overflow-hidden border-2 border-purple-200 shadow-lg">
+        <div className="px-5 py-4 text-white" style={{ background: "linear-gradient(135deg,#7c3aed 0%,#4f46e5 100%)" }}>
+          <p className="text-xl font-black tracking-tight">⚡ {info.storeName || "Store Name"}</p>
+          <p className="text-purple-200 text-xs mt-0.5">{info.tagline || "Your tagline here"}</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-purple-100">
+            {info.phone && <span>📞 {info.phone}</span>}
+            {info.altPhone && <span>📞 {info.altPhone}</span>}
+            {info.email && <span>✉ {info.email}</span>}
+          </div>
+          {info.address && <p className="text-xs text-purple-200 mt-1">📍 {info.address}</p>}
+          {info.gstin && <p className="text-xs text-purple-300 mt-1 font-mono">GSTIN: {info.gstin}</p>}
+        </div>
+        <div className="bg-purple-50 px-5 py-2 text-center text-xs text-purple-600 font-semibold">
+          Bill / Invoice Preview — Yahi dikhega customer ke bill par
+        </div>
+      </div>
+
+      {/* Form */}
+      <Card className="border-2 border-purple-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-purple-800">
+            <Building2 className="h-5 w-5" /> Store / Dukaan Ki Jankari
+          </CardTitle>
+          <CardDescription className="text-slate-500">
+            Yeh sab details bill aur invoice par print hogi. Sahi se bharo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label className="font-semibold">Dukaan / Store Ka Naam *</Label>
+              <Input
+                value={info.storeName}
+                onChange={e => setInfo(i => ({ ...i, storeName: e.target.value }))}
+                placeholder="e.g. Super Computer"
+                className="text-base font-bold bg-white"
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label className="font-semibold">Tagline (optional)</Label>
+              <Input
+                value={info.tagline}
+                onChange={e => setInfo(i => ({ ...i, tagline: e.target.value }))}
+                placeholder="e.g. Laptop & Computer Store | Authorized Reseller"
+                className="bg-white"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="font-semibold flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5" /> Phone Number *
+              </Label>
+              <Input
+                value={info.phone}
+                onChange={e => setInfo(i => ({ ...i, phone: e.target.value }))}
+                placeholder="9761809960"
+                inputMode="tel"
+                className="bg-white font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="font-semibold flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5" /> Alt Phone (optional)
+              </Label>
+              <Input
+                value={info.altPhone}
+                onChange={e => setInfo(i => ({ ...i, altPhone: e.target.value }))}
+                placeholder="Second number (optional)"
+                inputMode="tel"
+                className="bg-white font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="font-semibold flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5" /> Email
+              </Label>
+              <Input
+                value={info.email}
+                onChange={e => setInfo(i => ({ ...i, email: e.target.value }))}
+                placeholder="info@supercomputer.in"
+                type="email"
+                className="bg-white"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="font-semibold">GSTIN (optional)</Label>
+              <Input
+                value={info.gstin}
+                onChange={e => setInfo(i => ({ ...i, gstin: e.target.value.toUpperCase() }))}
+                placeholder="e.g. 09XXXXX1234X1ZX"
+                className="bg-white font-mono tracking-widest"
+                maxLength={15}
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label className="font-semibold flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" /> Address (bill par aayega)
+              </Label>
+              <Textarea
+                value={info.address}
+                onChange={e => setInfo(i => ({ ...i, address: e.target.value }))}
+                placeholder="Mirehachi, Kasganj Road, Distt. Etah, UP - 207001"
+                rows={2}
+                className="bg-white resize-none"
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label className="font-semibold">Bill Footer Message</Label>
+              <Textarea
+                value={info.billFooter}
+                onChange={e => setInfo(i => ({ ...i, billFooter: e.target.value }))}
+                placeholder="e.g. Warranty claims — please keep this bill. No returns after 7 days."
+                rows={2}
+                className="bg-white resize-none"
+              />
+              <p className="text-[11px] text-slate-400">Bill ke sabse neeche print hoga</p>
+            </div>
+          </div>
+
+          <Button onClick={handleSave} disabled={saving} className="gap-2 w-full h-12 text-base font-bold bg-purple-600 hover:bg-purple-700">
+            {saved
+              ? <><CheckCircle className="h-5 w-5" /> Settings Saved!</>
+              : saving
+                ? "Saving..."
+                : <><Save className="h-5 w-5" /> Save Bill Template Settings</>
+            }
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 /* ── Main Settings Page ─────────────────────────────────────── */
 export default function AdminSettings() {
   const [general, setGeneral] = useState({
@@ -772,23 +952,31 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid grid-cols-5 w-full h-11 bg-slate-100">
-          <TabsTrigger value="general" className="gap-1.5 text-xs sm:text-sm font-semibold">
-            <Store className="h-4 w-4 hidden sm:block" /> General
+        <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full h-auto bg-slate-100 gap-0.5 p-1">
+          <TabsTrigger value="general" className="gap-1 text-xs font-semibold py-2">
+            <Store className="h-3.5 w-3.5 hidden sm:block" /> General
           </TabsTrigger>
-          <TabsTrigger value="delivery" className="gap-1.5 text-xs sm:text-sm font-semibold">
-            <Truck className="h-4 w-4 hidden sm:block" /> Delivery
+          <TabsTrigger value="bill" className="gap-1 text-xs font-semibold py-2">
+            <FileText className="h-3.5 w-3.5 hidden sm:block" /> Bill
           </TabsTrigger>
-          <TabsTrigger value="admin" className="gap-1.5 text-xs sm:text-sm font-semibold">
-            <ShieldCheck className="h-4 w-4 hidden sm:block" /> Admin
+          <TabsTrigger value="delivery" className="gap-1 text-xs font-semibold py-2">
+            <Truck className="h-3.5 w-3.5 hidden sm:block" /> Delivery
           </TabsTrigger>
-          <TabsTrigger value="seo" className="gap-1.5 text-xs sm:text-sm font-semibold">
-            <Search className="h-4 w-4 hidden sm:block" /> SEO
+          <TabsTrigger value="admin" className="gap-1 text-xs font-semibold py-2">
+            <ShieldCheck className="h-3.5 w-3.5 hidden sm:block" /> Admin
           </TabsTrigger>
-          <TabsTrigger value="data" className="gap-1.5 text-xs sm:text-sm font-semibold">
-            <Database className="h-4 w-4 hidden sm:block" /> Data
+          <TabsTrigger value="seo" className="gap-1 text-xs font-semibold py-2">
+            <Search className="h-3.5 w-3.5 hidden sm:block" /> SEO
+          </TabsTrigger>
+          <TabsTrigger value="data" className="gap-1 text-xs font-semibold py-2">
+            <Database className="h-3.5 w-3.5 hidden sm:block" /> Data
           </TabsTrigger>
         </TabsList>
+
+        {/* ── Bill Template Tab ── */}
+        <TabsContent value="bill">
+          <BillTemplateSettings />
+        </TabsContent>
 
         {/* ── General Tab ── */}
         <TabsContent value="general" className="space-y-5">
