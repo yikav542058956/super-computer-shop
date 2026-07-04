@@ -69,6 +69,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
+    <>
     <div className="flex h-[100dvh] bg-slate-100 overflow-hidden">
 
       {/* ── Desktop Sidebar ─────────────────────────────────── */}
@@ -187,8 +188,10 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         })}
       </nav>
 
-      {/* Floating AI — always visible */}
-      <AdminAIAssistant />
     </div>
+
+    {/* Floating AI — outside overflow-hidden so fixed positioning works */}
+    <AdminAIAssistant />
+    </>
   );
 };
