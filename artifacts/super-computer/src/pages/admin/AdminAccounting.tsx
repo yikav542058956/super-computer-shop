@@ -147,6 +147,15 @@ function printSaleInvoice(sale: any) {
   w.document.close();
 }
 
+/* ─── Parse dueDate: handles both ms timestamp and "YYYY-MM-DD" string ─── */
+function parseDueDate(v: any): number | null {
+  if (v == null) return null;
+  const num = Number(v);
+  if (isFinite(num) && num > 1_000_000_000) return num; // already a ms timestamp
+  const d = new Date(v); // try ISO date string e.g. "2026-07-11"
+  return isNaN(d.getTime()) ? null : d.getTime();
+}
+
 /* ─── Normalize offline order into local-sale shape ────── */
 function normalizeOfflineOrder(order: any) {
   const n = (v: any, fallback = 0): number => {
@@ -157,13 +166,11 @@ function normalizeOfflineOrder(order: any) {
   // ── AdminOfflineSale format (has order.customer + order.item) ──
   if (order.customer) {
     const total   = n(order.grandTotal ?? order.finalAmount);
-    // Prefer explicit amountPaid; fall back to paidAmount; fall back to total if paymentStatus=paid
     const paid    = order.amountPaid != null
       ? n(order.amountPaid)
       : order.paidAmount != null
         ? n(order.paidAmount)
         : order.paymentStatus === "paid" ? total : 0;
-    // Due must be consistent with total and paid; never go negative
     const due     = order.dueAmount != null
       ? Math.max(0, n(order.dueAmount))
       : Math.max(0, total - paid);
@@ -182,7 +189,7 @@ function normalizeOfflineOrder(order: any) {
       totalSaleValue: total,
       amountPaid:   paid,
       dueAmount:    due,
-      dueDate:      order.dueDate ?? null,
+      dueDate:      parseDueDate(order.dueDate), // always a ms timestamp or null
       discountType: "flat"  as const,
       discountValue: 0,
       discountAmount: 0,
@@ -196,14 +203,17 @@ function normalizeOfflineOrder(order: any) {
   const items: any[] = Array.isArray(order.items) ? order.items : Object.values(order.items ?? {});
   const first  = items[0] ?? {};
   const total  = n(order.finalAmount ?? order.grandTotal);
-  // Honour paidAmount OR amountPaid (AdminOfflineSale uses amountPaid); fall back to full total
   const refund = n(order.refundAmount);
-  const paid   = order.paidAmount != null
-    ? n(order.paidAmount)
-    : order.amountPaid != null
-      ? n(order.amountPaid)
-      : order.paymentStatus === "refunded" ? 0 : total - refund;
-  // Honour explicit dueAmount if saved (AdminOfflineSale always saves it); derive otherwise
+  // Prefer amountPaid (written by recordPayment) over paidAmount (older field) when both exist
+  // and an updatedAt exists (meaning recordPayment has run); otherwise keep original precedence
+  const hasBeenUpdated = order.updatedAt != null && order.updatedAt !== order.createdAt;
+  const paid   = hasBeenUpdated && order.amountPaid != null
+    ? n(order.amountPaid)
+    : order.paidAmount != null
+      ? n(order.paidAmount)
+      : order.amountPaid != null
+        ? n(order.amountPaid)
+        : order.paymentStatus === "refunded" ? 0 : total - refund;
   const due    = order.dueAmount != null
     ? Math.max(0, n(order.dueAmount))
     : Math.max(0, total - paid - refund);
@@ -222,7 +232,7 @@ function normalizeOfflineOrder(order: any) {
     totalSaleValue: total,
     amountPaid:   paid,
     dueAmount:    due,
-    dueDate:      order.dueDate ?? null,
+    dueDate:      parseDueDate(order.dueDate), // always a ms timestamp or null
     discountType: "flat"  as const,
     discountValue: 0,
     discountAmount: 0,
@@ -246,7 +256,7 @@ const defaultSaleForm = {
 
 /* ─── Main Component ────────────────────────────────────── */
 export default function AdminAccounting() {
-  const [tab, setTab] = useState<"ledger" | "sales">("ledger");
+  const [tab, setTab] = useState<"ledger" | "sales" | "dues">("ledger");
 
   /* Ledger state */
   const [ledger, setLedger] = useState<Record<string, any>>({});
@@ -267,6 +277,17 @@ export default function AdminAccounting() {
   const [savingSale, setSavingSale] = useState(false);
   const [selectedSale, setSelectedSale] = useState<any | null>(null);
   const [salesSearch, setSalesSearch] = useState("");
+
+  /* Date filter — shared across Sales & Dues tabs */
+  const [salesDateFilter, setSalesDateFilter] = useState<"all" | "today" | "yesterday" | "week" | "custom">("all");
+  const [salesCustomFrom, setSalesCustomFrom] = useState("");
+  const [salesCustomTo, setSalesCustomTo] = useState("");
+
+  /* Record-payment dialog */
+  const [payDialog, setPayDialog] = useState(false);
+  const [payingEntry, setPayingEntry] = useState<any>(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
     const unsub1 = onValue(ref(db, "ledger"), (snap) => {
@@ -334,17 +355,46 @@ export default function AdminAccounting() {
     return [...localSales, ...uniqueOffline].sort((a, b) => b.createdAt - a.createdAt);
   }, [localSales, orders]);
 
+  /* ── Date filter helper ── */
+  const applyDateFilter = (list: any[], dateFilter: string, customFrom: string, customTo: string) => {
+    const now = new Date();
+    const sod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const eod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
+    let fromTs: number | null = null, toTs: number | null = null;
+    if (dateFilter === "today") { fromTs = sod(now); toTs = eod(now); }
+    else if (dateFilter === "yesterday") { const y = new Date(now); y.setDate(now.getDate() - 1); fromTs = sod(y); toTs = eod(y); }
+    else if (dateFilter === "week") { const w = new Date(now); w.setDate(now.getDate() - 6); fromTs = sod(w); toTs = eod(now); }
+    else if (dateFilter === "custom" && customFrom && customTo) { fromTs = new Date(customFrom).getTime(); toTs = eod(new Date(customTo)); }
+    if (fromTs === null) return list;
+    return list.filter(s => { const ts = s.createdAt || 0; return ts >= fromTs! && ts <= toTs!; });
+  };
+
   /* ── Local sales derived ── */
   const filteredSales = useMemo(() => {
+    const dated = applyDateFilter(allLocalSales, salesDateFilter, salesCustomFrom, salesCustomTo);
     const q = salesSearch.toLowerCase();
-    if (!q) return allLocalSales;
-    return allLocalSales.filter(
+    if (!q) return dated;
+    return dated.filter(
       (s) =>
         s.clientName?.toLowerCase().includes(q) ||
         s.clientPhone?.includes(q) ||
         s.productName?.toLowerCase().includes(q)
     );
-  }, [allLocalSales, salesSearch]);
+  }, [allLocalSales, salesSearch, salesDateFilter, salesCustomFrom, salesCustomTo]);
+
+  /* ── Dues derived (all sales with outstanding balance) ── */
+  const dueSales = useMemo(() => {
+    const now = Date.now();
+    return allLocalSales
+      .filter(s => (Number(s.dueAmount) || 0) > 0)
+      .sort((a, b) => {
+        const aOver = a.dueDate && Number(a.dueDate) < now ? 0 : 1;
+        const bOver = b.dueDate && Number(b.dueDate) < now ? 0 : 1;
+        if (aOver !== bOver) return aOver - bOver;
+        return (Number(a.dueDate) || 9e15) - (Number(b.dueDate) || 9e15);
+      });
+  }, [allLocalSales]);
+  const totalDues = useMemo(() => dueSales.reduce((s, x) => s + (Number(x.dueAmount) || 0), 0), [dueSales]);
 
   const totalSaleRevenue = allLocalSales.reduce((s, sale) => s + (sale.totalSaleValue || 0), 0);
   const totalDueFromSales = allLocalSales.reduce((s, sale) => s + (Math.max(sale.dueAmount || 0, 0)), 0);
@@ -444,6 +494,37 @@ export default function AdminAccounting() {
     finally { setAdding(false); }
   };
 
+  /* ── Record a payment against an outstanding sale ── */
+  const recordPayment = async () => {
+    if (!payingEntry || !payAmount || Number(payAmount) <= 0) {
+      toast.error("Enter a valid payment amount"); return;
+    }
+    const payment = Math.min(Number(payAmount), Number(payingEntry.dueAmount || 0));
+    if (payment <= 0) { toast.error("Due amount is already zero"); return; }
+    const newAmountPaid = Number(payingEntry.amountPaid || 0) + payment;
+    const newDue = Math.max(0, Number(payingEntry.dueAmount || 0) - payment);
+    const newStatus = newDue === 0 ? "paid" : "partial";
+    setPaying(true);
+    try {
+      const path = payingEntry._fromOrder ? `orders/${payingEntry.id}` : `local_sales/${payingEntry.id}`;
+      await update(ref(db, path), {
+        amountPaid: newAmountPaid,
+        paidAmount: newAmountPaid, // keep both fields in sync so legacy reads stay correct
+        dueAmount: newDue,
+        paymentStatus: newStatus,
+        updatedAt: Date.now(),
+      });
+      toast.success(`✅ ₹${payment.toLocaleString("en-IN")} received from ${payingEntry.clientName || payingEntry.clientName}!`);
+      setPayDialog(false);
+      setPayingEntry(null);
+      setPayAmount("");
+    } catch (e: any) {
+      toast.error("Failed to record payment: " + e.message);
+    } finally {
+      setPaying(false);
+    }
+  };
+
   const exportCSV = () => {
     const rows = [
       ["Customer", "Phone", "Email", "Total Outstanding (Dr)", "Total Paid (Cr)", "Net Balance", "Orders", "Order Value"],
@@ -486,6 +567,15 @@ export default function AdminAccounting() {
           className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${tab === "sales" ? "bg-white shadow text-primary" : "text-slate-500 hover:text-slate-800"}`}
         >
           <span className="flex items-center gap-2"><ShoppingBag className="h-4 w-4" /> Local Sales {allLocalSales.length > 0 && <span className="bg-primary/10 text-primary text-xs px-1.5 rounded-full">{allLocalSales.length}</span>}</span>
+        </button>
+        <button
+          onClick={() => setTab("dues")}
+          className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${tab === "dues" ? "bg-white shadow text-red-600" : "text-slate-500 hover:text-slate-800"}`}
+        >
+          <span className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" /> Dues
+            {dueSales.length > 0 && <span className="bg-red-100 text-red-600 text-xs px-1.5 rounded-full">{dueSales.length}</span>}
+          </span>
         </button>
       </div>
 
@@ -573,16 +663,35 @@ export default function AdminAccounting() {
             </div>
           </div>
 
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input placeholder="Search by client name, phone, or product..." value={salesSearch} onChange={(e) => setSalesSearch(e.target.value)} className="pl-10" />
+          {/* Search + Date filter */}
+          <div className="space-y-2 mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input placeholder="Search by client name, phone, or product..." value={salesSearch} onChange={(e) => setSalesSearch(e.target.value)} className="pl-10" />
+            </div>
+            <div className="flex gap-1 flex-wrap items-center">
+              <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              {(["all", "today", "yesterday", "week", "custom"] as const).map(f => (
+                <button key={f} onClick={() => setSalesDateFilter(f)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${salesDateFilter === f ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+                  {f === "all" ? "All Time" : f === "today" ? "Today" : f === "yesterday" ? "Yesterday" : f === "week" ? "This Week" : "Custom"}
+                </button>
+              ))}
+              {salesDateFilter === "custom" && (
+                <>
+                  <Input type="date" value={salesCustomFrom} onChange={e => setSalesCustomFrom(e.target.value)} className="h-7 text-xs w-32 px-2" />
+                  <span className="text-slate-400 text-xs">→</span>
+                  <Input type="date" value={salesCustomTo} onChange={e => setSalesCustomTo(e.target.value)} className="h-7 text-xs w-32 px-2" />
+                </>
+              )}
+            </div>
           </div>
 
           {filteredSales.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-xl border border-dashed">
               <ShoppingBag className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-              <p className="text-slate-500 font-semibold mb-1">No local sales yet</p>
-              <p className="text-slate-400 text-sm">Click "Record Sale" to add your first local sale</p>
+              <p className="text-slate-500 font-semibold mb-1">No sales found</p>
+              <p className="text-slate-400 text-sm">{salesDateFilter !== "all" ? "Try a different date filter" : `Click "Record Sale" to add your first local sale`}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -598,6 +707,7 @@ export default function AdminAccounting() {
                     <p className="font-bold text-sm">{sale.clientName}</p>
                     <p className="text-xs text-slate-500 truncate">{sale.productName} × {sale.qty} • {new Date(sale.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
                     {sale.clientPhone && <p className="text-xs text-slate-400">📞 {sale.clientPhone}</p>}
+                    {sale.billNo && <p className="text-xs text-slate-400">Bill: {sale.billNo}</p>}
                   </div>
                   <div className="text-right shrink-0 space-y-1">
                     <p className="font-black text-slate-900">{formatINR(sale.totalSaleValue)}</p>
@@ -610,6 +720,86 @@ export default function AdminAccounting() {
                   <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
                 </div>
               ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ══════════════════════════ DUES TAB ══════════════════════════ */}
+      {tab === "dues" && (
+        <>
+          <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+            <h1 className="text-xl font-bold flex items-center gap-2 text-red-700"><AlertCircle className="h-5 w-5" /> Outstanding Dues</h1>
+          </div>
+
+          {/* Dues summary */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+              <p className="text-xs text-red-500 font-semibold">Total Outstanding</p>
+              <p className="font-black text-red-700 text-2xl">{formatINR(totalDues)}</p>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+              <p className="text-xs text-amber-600 font-semibold">Customers with Due</p>
+              <p className="font-black text-amber-700 text-2xl">{dueSales.length}</p>
+            </div>
+          </div>
+
+          {dueSales.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-xl border border-dashed">
+              <CheckCircle className="h-10 w-10 text-green-300 mx-auto mb-3" />
+              <p className="text-slate-500 font-semibold">All dues cleared!</p>
+              <p className="text-slate-400 text-sm mt-1">No outstanding payments.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {dueSales.map((sale) => {
+                const now = Date.now();
+                const dueDateTs = sale.dueDate ? Number(sale.dueDate) : null;
+                const isOverdue = dueDateTs && dueDateTs < now;
+                const dueDateStr = dueDateTs
+                  ? new Date(dueDateTs).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                  : null;
+                return (
+                  <div key={sale.id} className={`bg-white rounded-xl border shadow-sm p-4 ${isOverdue ? "border-red-300 border-l-4 border-l-red-500" : "border-l-4 border-l-amber-400"}`}>
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-full bg-red-50 text-red-600 font-black flex items-center justify-center text-sm flex-shrink-0">
+                        {(sale.clientName || "?").charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold text-slate-800">{sale.clientName}</p>
+                          {isOverdue && <span className="text-xs bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full">⚠ Overdue</span>}
+                        </div>
+                        {sale.clientPhone && <p className="text-xs text-slate-500 mt-0.5">📞 {sale.clientPhone}</p>}
+                        <p className="text-xs text-slate-500 truncate mt-0.5">📦 {sale.productName}</p>
+                        <div className="flex items-center gap-3 mt-1.5 flex-wrap text-xs text-slate-400">
+                          <span>Sale: {new Date(sale.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                          {sale.billNo && <span>Bill: {sale.billNo}</span>}
+                          {dueDateStr && (
+                            <span className={`flex items-center gap-1 ${isOverdue ? "text-red-600 font-bold" : "text-amber-600"}`}>
+                              <Clock className="h-3 w-3" /> Due by: {dueDateStr}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 space-y-1">
+                        <p className="text-xs text-slate-500">Total: {formatINR(sale.totalSaleValue)}</p>
+                        <p className="text-xs text-green-700">Paid: {formatINR(sale.amountPaid || 0)}</p>
+                        <p className="font-black text-red-700 text-base">{formatINR(sale.dueAmount)}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex justify-end">
+                      <Button
+                        size="sm"
+                        className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
+                        onClick={() => { setPayingEntry(sale); setPayAmount(""); setPayDialog(true); }}
+                      >
+                        <IndianRupee className="h-3.5 w-3.5" /> Record Payment
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </>
@@ -992,8 +1182,90 @@ export default function AdminAccounting() {
           )}
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setSelectedSale(null)}>Close</Button>
+            {selectedSale?.dueAmount > 0 && (
+              <Button
+                className="gap-2 bg-green-600 hover:bg-green-700"
+                onClick={() => { setPayingEntry(selectedSale); setPayAmount(""); setPayDialog(true); setSelectedSale(null); }}
+              >
+                <IndianRupee className="h-4 w-4" /> Record Payment
+              </Button>
+            )}
             <Button onClick={() => selectedSale && printSaleInvoice(selectedSale)} className="gap-2">
               <Printer className="h-4 w-4" /> Print Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ══ Record Payment Dialog ══ */}
+      <Dialog open={payDialog} onOpenChange={(o) => { if (!o) { setPayDialog(false); setPayingEntry(null); setPayAmount(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IndianRupee className="h-5 w-5 text-green-600" /> Record Payment
+            </DialogTitle>
+          </DialogHeader>
+          {payingEntry && (
+            <div className="space-y-4 py-1">
+              {/* Customer summary */}
+              <div className="bg-slate-50 rounded-xl p-3 space-y-1">
+                <p className="font-bold text-slate-800">{payingEntry.clientName}</p>
+                {payingEntry.clientPhone && <p className="text-xs text-slate-500">📞 {payingEntry.clientPhone}</p>}
+                <p className="text-xs text-slate-500 truncate">📦 {payingEntry.productName}</p>
+              </div>
+              {/* Amount breakdown */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-2.5">
+                  <p className="text-[10px] text-blue-500 font-semibold">Total</p>
+                  <p className="font-black text-blue-700 text-sm">{formatINR(payingEntry.totalSaleValue)}</p>
+                </div>
+                <div className="bg-green-50 border border-green-100 rounded-xl p-2.5">
+                  <p className="text-[10px] text-green-500 font-semibold">Paid So Far</p>
+                  <p className="font-black text-green-700 text-sm">{formatINR(payingEntry.amountPaid || 0)}</p>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded-xl p-2.5">
+                  <p className="text-[10px] text-red-500 font-semibold">Still Due</p>
+                  <p className="font-black text-red-700 text-sm">{formatINR(payingEntry.dueAmount)}</p>
+                </div>
+              </div>
+              {/* Payment input */}
+              <div>
+                <Label>Payment Received Now (₹) *</Label>
+                <Input
+                  autoFocus
+                  type="number" min="1" max={payingEntry.dueAmount}
+                  placeholder={`Max: ${payingEntry.dueAmount}`}
+                  value={payAmount}
+                  onChange={e => setPayAmount(e.target.value)}
+                  className="mt-1"
+                />
+                {payAmount && Number(payAmount) > 0 && (
+                  <div className={`mt-2 rounded-xl p-2.5 text-center text-sm font-bold ${Number(payAmount) >= payingEntry.dueAmount ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                    {Number(payAmount) >= payingEntry.dueAmount
+                      ? "✅ Fully settled after this payment"
+                      : `Remaining: ${formatINR(Math.max(0, payingEntry.dueAmount - Number(payAmount)))}`}
+                  </div>
+                )}
+              </div>
+              {/* Quick fill buttons */}
+              <div className="flex gap-2">
+                <button onClick={() => setPayAmount(String(payingEntry.dueAmount))}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-green-100 text-green-700 hover:bg-green-200 transition-all">
+                  Full Amount ({formatINR(payingEntry.dueAmount)})
+                </button>
+                {payingEntry.dueAmount > 0 && (
+                  <button onClick={() => setPayAmount(String(Math.round(payingEntry.dueAmount / 2)))}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">
+                    Half ({formatINR(Math.round(payingEntry.dueAmount / 2))})
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPayDialog(false); setPayingEntry(null); setPayAmount(""); }}>Cancel</Button>
+            <Button onClick={recordPayment} disabled={paying || !payAmount || Number(payAmount) <= 0} className="gap-2 bg-green-600 hover:bg-green-700">
+              {paying ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</> : <><CheckCircle className="h-4 w-4" /> Confirm Payment</>}
             </Button>
           </DialogFooter>
         </DialogContent>

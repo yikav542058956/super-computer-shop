@@ -473,6 +473,9 @@ function SalesHistory() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "paid" | "partial">("all");
   const [selectedSale, setSelectedSale] = useState<any>(null);
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "week" | "custom">("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
 
   useEffect(() => {
     const unsub = onValue(ref(db, "orders"), (snap) => {
@@ -490,6 +493,15 @@ function SalesHistory() {
   }, []);
 
   const filtered = useMemo(() => {
+    const now = new Date();
+    const sod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const eod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
+    let fromTs: number | null = null, toTs: number | null = null;
+    if (dateFilter === "today") { fromTs = sod(now); toTs = eod(now); }
+    else if (dateFilter === "yesterday") { const y = new Date(now); y.setDate(now.getDate() - 1); fromTs = sod(y); toTs = eod(y); }
+    else if (dateFilter === "week") { const w = new Date(now); w.setDate(now.getDate() - 6); fromTs = sod(w); toTs = eod(now); }
+    else if (dateFilter === "custom" && customFrom && customTo) { fromTs = new Date(customFrom).getTime(); toTs = eod(new Date(customTo)); }
+
     return sales.filter(s => {
       const name = (s.address?.name || s.customerName || "").toLowerCase();
       const phone = (s.address?.phone || s.phone || "").toLowerCase();
@@ -504,9 +516,11 @@ function SalesHistory() {
         : filterStatus === "paid"
         ? (s.paymentStatus === "paid" || due === 0)
         : (s.paymentStatus === "partial" || due > 0);
-      return matchSearch && matchStatus;
+      const ts = s.createdAt || 0;
+      const matchDate = fromTs === null || (ts >= fromTs && ts <= toTs!);
+      return matchSearch && matchStatus && matchDate;
     });
-  }, [sales, search, filterStatus]);
+  }, [sales, search, filterStatus, dateFilter, customFrom, customTo]);
 
   const totalPending = useMemo(() => sales.reduce((sum, s) => sum + (Number(s.dueAmount) || 0), 0), [sales]);
   const pendingCount = useMemo(() => sales.filter(s => (s.dueAmount || 0) > 0).length, [sales]);
@@ -542,30 +556,55 @@ function SalesHistory() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[180px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Search by name, phone, product..."
-            className="pl-9"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+      <div className="space-y-2">
+        {/* Search + Status */}
+        <div className="flex gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[180px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search by name, phone, product..."
+              className="pl-9"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-1">
+            {(["all", "paid", "partial"] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilterStatus(f)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  filterStatus === f
+                    ? f === "all" ? "bg-orange-600 text-white" : f === "paid" ? "bg-green-600 text-white" : "bg-red-600 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {f === "all" ? "All" : f === "paid" ? "✅ Paid" : "⚠ Due"}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-1">
-          {(["all", "paid", "partial"] as const).map(f => (
+        {/* Date Filter */}
+        <div className="flex gap-1 flex-wrap items-center">
+          <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+          {(["all", "today", "yesterday", "week", "custom"] as const).map(f => (
             <button
               key={f}
-              onClick={() => setFilterStatus(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                filterStatus === f
-                  ? f === "all" ? "bg-orange-600 text-white" : f === "paid" ? "bg-green-600 text-white" : "bg-red-600 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              onClick={() => setDateFilter(f)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                dateFilter === f ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              {f === "all" ? "All" : f === "paid" ? "✅ Paid" : "⚠ Due"}
+              {f === "all" ? "All Time" : f === "today" ? "Today" : f === "yesterday" ? "Yesterday" : f === "week" ? "This Week" : "Custom"}
             </button>
           ))}
+          {dateFilter === "custom" && (
+            <>
+              <Input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="h-7 text-xs w-32 px-2" />
+              <span className="text-slate-400 text-xs">→</span>
+              <Input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className="h-7 text-xs w-32 px-2" />
+            </>
+          )}
         </div>
       </div>
 
