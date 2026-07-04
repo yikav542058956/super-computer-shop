@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash, Upload, ImageIcon, Loader2, X, Search, ScanLine, CheckCircle, AlertCircle, Cpu, Camera, Sparkles } from "lucide-react";
+import { Plus, Edit, Trash, Upload, ImageIcon, Loader2, X, Search, ScanLine, CheckCircle, AlertCircle, Cpu, Camera, Sparkles, Calendar } from "lucide-react";
 // Camera & Sparkles used for bill scan & AI description
 import { formatINR } from "@/lib/utils";
 import { toast } from "sonner";
@@ -359,17 +359,34 @@ export default function AdminProducts() {
     }
   };
 
-  const filtered = products.filter(
-    (p) =>
-      !search ||
-      p.name?.toLowerCase().includes(search.toLowerCase()) ||
-      p.brand?.toLowerCase().includes(search.toLowerCase()) ||
-      p.category?.toLowerCase().includes(search.toLowerCase())
-  );
+  type DateFilter = "all" | "today" | "yesterday" | "custom";
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+
+  function getRange(filter: DateFilter): [number, number] | null {
+    const now = new Date();
+    const sod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const eod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
+    if (filter === "today") return [sod(now), eod(now)];
+    if (filter === "yesterday") { const y = new Date(now); y.setDate(now.getDate() - 1); return [sod(y), eod(y)]; }
+    if (filter === "custom" && customFrom && customTo) return [new Date(customFrom).getTime(), eod(new Date(customTo))];
+    return null;
+  }
+
+  const range = getRange(dateFilter);
+
+  const filtered = products.filter((p) => {
+    const q = search.toLowerCase();
+    const matchQ = !q || p.name?.toLowerCase().includes(q) || p.brand?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q);
+    const ts = p.createdAt || 0;
+    const matchDate = !range || (ts >= range[0] && ts <= range[1]);
+    return matchQ && matchDate;
+  });
 
   return (
     <AdminLayout>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <h1 className="text-2xl font-bold">Products</h1>
         <div className="flex gap-2 w-full sm:w-auto flex-wrap">
           <div className="relative flex-1 sm:flex-none sm:w-56">
@@ -378,6 +395,24 @@ export default function AdminProducts() {
           </div>
           <Button onClick={openAdd}><Plus className="mr-2 h-4 w-4" /> Add Product</Button>
         </div>
+      </div>
+
+      {/* Date filter */}
+      <div className="flex gap-1.5 flex-wrap items-center mb-5">
+        <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+        {(["all", "today", "yesterday", "custom"] as DateFilter[]).map(f => (
+          <button key={f} onClick={() => setDateFilter(f)}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${dateFilter === f ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+            {f === "all" ? "All Time" : f === "today" ? "Today" : f === "yesterday" ? "Yesterday" : "Custom"}
+          </button>
+        ))}
+        {dateFilter === "custom" && (
+          <>
+            <Input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="h-7 text-xs w-36 px-2" />
+            <span className="text-slate-400 text-xs">→</span>
+            <Input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className="h-7 text-xs w-36 px-2" />
+          </>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden">

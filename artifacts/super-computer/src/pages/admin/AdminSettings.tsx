@@ -935,6 +935,20 @@ export default function AdminSettings() {
     toast.success("SEO settings saved! Changes apply live on the site.");
   };
 
+  // Due Alert Days
+  const [dueAlertDays, setDueAlertDays] = useState("3");
+  useEffect(() => {
+    get(ref(db, "settings/dueAlertDays")).then(snap => { if (snap.exists()) setDueAlertDays(String(snap.val())); });
+  }, []);
+  const saveDueAlertDays = async () => {
+    const v = parseInt(dueAlertDays);
+    if (isNaN(v) || v < 0) { toast.error("Enter a valid number (0 or more days)"); return; }
+    setSaving("dueAlertDays");
+    await set(ref(db, "settings/dueAlertDays"), v);
+    setSaving(null); flash("dueAlertDays");
+    toast.success("Due alert days saved!");
+  };
+
   const previewUrl = whatsapp.number.replace(/\D/g, "").length === 10
     ? `https://wa.me/91${whatsapp.number.replace(/\D/g, "")}?text=${encodeURIComponent("Hi! I need help from SuperComputer.")}`
     : null;
@@ -1031,6 +1045,48 @@ export default function AdminSettings() {
                   </a>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Due Alert Days */}
+          <Card className="border-2 border-red-200 bg-red-50/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-red-800">
+                <AlertTriangle className="h-5 w-5" /> Due Alert Window
+              </CardTitle>
+              <CardDescription className="text-red-700">
+                Dashboard will alert you when a customer's due date is within this many days.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-3 items-end">
+                <div className="flex-1 space-y-1.5">
+                  <Label className="font-medium">Alert Days Before Due Date</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="90"
+                      placeholder="e.g. 3"
+                      value={dueAlertDays}
+                      onChange={e => setDueAlertDays(e.target.value)}
+                      className="bg-white w-28 font-mono text-lg"
+                    />
+                    <span className="text-slate-500 text-sm">days</span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Set to <strong>0</strong> to only show overdue customers. Set to <strong>7</strong> to alert 1 week before.
+                  </p>
+                </div>
+                <Button onClick={saveDueAlertDays} disabled={saving === "dueAlertDays"}
+                  className="h-11 gap-2 bg-red-600 hover:bg-red-700 shrink-0">
+                  {saved === "dueAlertDays"
+                    ? <><CheckCircle className="h-4 w-4" />Saved!</>
+                    : saving === "dueAlertDays" ? "Saving..."
+                    : <><Save className="h-4 w-4" />Save</>
+                  }
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

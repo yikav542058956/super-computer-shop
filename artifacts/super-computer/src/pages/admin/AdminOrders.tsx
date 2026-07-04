@@ -14,7 +14,7 @@ import {
   Eye, Search, Download, Printer, CheckCircle, XCircle,
   TrendingUp, ShoppingCart, IndianRupee, Clock, Loader2,
   Banknote, Smartphone, RefreshCw, Package, MapPin, User,
-  FileText, AlertCircle, ChevronDown, Plus,
+  FileText, AlertCircle, Plus, Calendar,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 import { toast } from "sonner";
@@ -59,7 +59,6 @@ function StatCard({ icon: Icon, label, value, color }: any) {
 }
 
 function printInvoice(order: any) {
-  const gstRate = order.gstRate || 0.18;
   const items = Array.isArray(order.items) ? order.items : Object.values(order.items || {});
   const html = `<!DOCTYPE html>
 <html>
@@ -99,7 +98,6 @@ function printInvoice(order: any) {
       <p>Date: ${new Date(order.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
     </div>
   </div>
-
   <div class="grid">
     <div class="info">
       <p class="section-title">Bill To</p>
@@ -116,7 +114,6 @@ function printInvoice(order: any) {
       <p><strong>Payment Status:</strong> <span class="badge ${order.paymentStatus === "paid" ? "paid" : "pending"}">${order.paymentStatus?.toUpperCase()}</span></p>
     </div>
   </div>
-
   <table>
     <thead><tr>
       <th>#</th><th>Product</th><th>Price</th><th>Qty</th><th>Amount</th>
@@ -133,7 +130,6 @@ function printInvoice(order: any) {
       `).join("")}
     </tbody>
   </table>
-
   <table class="totals">
     <tr><td>Subtotal:</td><td style="text-align:right">${formatINR(order.subtotal || order.totalAmount)}</td></tr>
     ${order.discountAmount > 0 ? `<tr><td>Discount:</td><td style="text-align:right;color:#16a34a">− ${formatINR(order.discountAmount)}</td></tr>` : ""}
@@ -141,9 +137,7 @@ function printInvoice(order: any) {
     <tr><td>Delivery:</td><td style="text-align:right">${order.deliveryCharge === 0 ? "FREE" : formatINR(order.deliveryCharge || 0)}</td></tr>
     ${order.extraCharges > 0 ? `<tr><td>${order.extraChargesNote || "Extra Charges"}:</td><td style="text-align:right">${formatINR(order.extraCharges)}</td></tr>` : ""}
     <tr class="total"><td>Total:</td><td style="text-align:right">${formatINR(order.finalAmount)}</td></tr>
-    ${order.paymentMethod === "cod" ? `<tr><td style="color:#92400e">Advance Received:</td><td style="text-align:right;color:#92400e">${order.advanceReceived ? formatINR(order.advanceAmount || 0) : "Pending"}</td></tr>` : ""}
   </table>
-
   <div style="clear:both"></div>
   <div class="footer">
     <p>Thank you for shopping with Super Computer! 🙏</p>
@@ -152,17 +146,12 @@ function printInvoice(order: any) {
 </body>
 </html>`;
   const w = window.open("", "_blank");
-  if (w) {
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 500);
-  }
+  if (w) { w.document.write(html); w.document.close(); w.focus(); setTimeout(() => w.print(), 500); }
 }
 
 function exportCSV(orders: any[]) {
   const rows = [
-    ["Order ID", "Date", "Customer", "Phone", "City", "Items", "Subtotal", "GST", "Delivery", "Total", "Payment Method", "Payment Status", "Order Status", "Advance Received", "Notes"],
+    ["Order ID", "Date", "Customer", "Phone", "City", "Items", "Subtotal", "GST", "Delivery", "Total", "Payment Method", "Payment Status", "Order Status", "Notes"],
     ...orders.map((o) => {
       const items = Array.isArray(o.items) ? o.items : Object.values(o.items || {});
       return [
@@ -179,7 +168,6 @@ function exportCSV(orders: any[]) {
         o.paymentMethod,
         o.paymentStatus,
         o.orderStatus,
-        o.advanceReceived ? "Yes" : "No",
         o.notes || "",
       ];
     }),
@@ -193,15 +181,29 @@ function exportCSV(orders: any[]) {
   toast.success("CSV exported successfully!");
 }
 
+type DateFilter = "all" | "today" | "yesterday" | "custom";
+
+function getDateRange(filter: DateFilter, from: string, to: string): [number, number] | null {
+  const now = new Date();
+  const sod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const eod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
+  if (filter === "today") return [sod(now), eod(now)];
+  if (filter === "yesterday") { const y = new Date(now); y.setDate(now.getDate() - 1); return [sod(y), eod(y)]; }
+  if (filter === "custom" && from && to) return [new Date(from).getTime(), eod(new Date(to))];
+  return null;
+}
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const [selected, setSelected] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
-
   const [editStatus, setEditStatus] = useState("");
   const [editPayStatus, setEditPayStatus] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -209,7 +211,6 @@ export default function AdminOrders() {
   const [editExtraNote, setEditExtraNote] = useState("");
   const [editAdvanceReceived, setEditAdvanceReceived] = useState(false);
   const [editPaidAmount, setEditPaidAmount] = useState("");
-
   const [refundDialog, setRefundDialog] = useState(false);
   const [refundAmount, setRefundAmount] = useState("");
   const [refundNote, setRefundNote] = useState("");
@@ -236,37 +237,33 @@ export default function AdminOrders() {
     setEditPaidAmount(order.paidAmount ? String(order.paidAmount) : "");
   };
 
+  const range = useMemo(() => getDateRange(dateFilter, customFrom, customTo), [dateFilter, customFrom, customTo]);
+
   const filtered = useMemo(() => orders.filter((o) => {
     const q = search.toLowerCase();
     const matchQ = !q || o.address?.name?.toLowerCase().includes(q) || o.id?.toLowerCase().includes(q) || o.address?.phone?.includes(q) || o.address?.city?.toLowerCase().includes(q);
     const matchS = statusFilter === "all" || o.orderStatus === statusFilter;
     const matchP = paymentFilter === "all" || o.paymentMethod === paymentFilter;
-    return matchQ && matchS && matchP;
-  }), [orders, search, statusFilter, paymentFilter]);
+    const ts = o.createdAt || 0;
+    const matchDate = !range || (ts >= range[0] && ts <= range[1]);
+    return matchQ && matchS && matchP && matchDate;
+  }), [orders, search, statusFilter, paymentFilter, range]);
 
   const stats = useMemo(() => {
-    const total = orders.length;
-    const revenue = orders.filter((o) => o.paymentStatus === "paid").reduce((s, o) => s + (o.finalAmount || 0), 0);
-    const pending = orders.filter((o) => ["pending", "payment_pending"].includes(o.orderStatus)).length;
-    const advancePending = orders.filter((o) => o.paymentMethod === "cod" && !o.advanceReceived && !["cancelled", "refunded"].includes(o.orderStatus)).length;
-    const thisMonthRevenue = orders.filter((o) => {
-      const d = new Date(o.createdAt);
-      const now = new Date();
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    }).reduce((s, o) => s + (o.finalAmount || 0), 0);
-    return { total, revenue, pending, advancePending, thisMonthRevenue };
-  }, [orders]);
+    const total = filtered.length;
+    const revenue = filtered.filter((o) => o.paymentStatus === "paid").reduce((s, o) => s + (o.finalAmount || 0), 0);
+    const pending = filtered.filter((o) => ["pending", "payment_pending"].includes(o.orderStatus)).length;
+    const advancePending = filtered.filter((o) => o.paymentMethod === "cod" && !o.advanceReceived && !["cancelled", "refunded"].includes(o.orderStatus)).length;
+    return { total, revenue, pending, advancePending };
+  }, [filtered]);
 
   const saveOrder = async () => {
     if (!selected) return;
     setSaving(true);
     try {
       const updates: any = {
-        orderStatus: editStatus,
-        paymentStatus: editPayStatus,
-        notes: editNotes,
-        advanceReceived: editAdvanceReceived,
-        updatedAt: Date.now(),
+        orderStatus: editStatus, paymentStatus: editPayStatus,
+        notes: editNotes, advanceReceived: editAdvanceReceived, updatedAt: Date.now(),
       };
       if (editExtraCharge) {
         updates.extraCharges = Number(editExtraCharge);
@@ -274,22 +271,15 @@ export default function AdminOrders() {
         updates.finalAmount = (selected.finalAmount || 0) + Number(editExtraCharge) - (selected.extraCharges || 0);
       }
       if (editPaidAmount) updates.paidAmount = Number(editPaidAmount);
-      if (editAdvanceReceived && selected.paymentMethod === "cod") {
-        updates.paidAmount = selected.advanceAmount || 0;
-      }
+      if (editAdvanceReceived && selected.paymentMethod === "cod") { updates.paidAmount = selected.advanceAmount || 0; }
       const history = [...(selected.statusHistory || [])];
       if (editStatus !== selected.orderStatus || editPayStatus !== selected.paymentStatus) {
         history.push({ status: editStatus, paymentStatus: editPayStatus, timestamp: Date.now(), note: `Admin updated: ${editStatus}` });
       }
       updates.statusHistory = history;
       await update(ref(db, `orders/${selected.id}`), updates);
-      toast.success("Order updated!");
-      setSelected(null);
-    } catch {
-      toast.error("Update failed");
-    } finally {
-      setSaving(false);
-    }
+      toast.success("Order updated!"); setSelected(null);
+    } catch { toast.error("Update failed"); } finally { setSaving(false); }
   };
 
   const handleRefund = async () => {
@@ -297,21 +287,13 @@ export default function AdminOrders() {
     setRefunding(true);
     try {
       await update(ref(db, `orders/${selected.id}`), {
-        paymentStatus: "refunded",
-        orderStatus: "refunded",
-        refundAmount: Number(refundAmount),
-        refundNote,
-        refundDate: Date.now(),
-        updatedAt: Date.now(),
+        paymentStatus: "refunded", orderStatus: "refunded",
+        refundAmount: Number(refundAmount), refundNote,
+        refundDate: Date.now(), updatedAt: Date.now(),
       });
       toast.success(`Refund of ${formatINR(Number(refundAmount))} recorded!`);
-      setRefundDialog(false);
-      setSelected(null);
-    } catch {
-      toast.error("Refund failed");
-    } finally {
-      setRefunding(false);
-    }
+      setRefundDialog(false); setSelected(null);
+    } catch { toast.error("Refund failed"); } finally { setRefunding(false); }
   };
 
   const orderItems = (order: any): any[] => {
@@ -322,24 +304,40 @@ export default function AdminOrders() {
   return (
     <AdminLayout>
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <StatCard icon={ShoppingCart} label="Total Orders" value={stats.total} color="bg-blue-100 text-blue-600" />
-        <StatCard icon={IndianRupee} label="Total Revenue" value={formatINR(stats.revenue)} color="bg-green-100 text-green-600" />
-        <StatCard icon={TrendingUp} label="This Month" value={formatINR(stats.thisMonthRevenue)} color="bg-purple-100 text-purple-600" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard icon={ShoppingCart} label="Orders (filtered)" value={stats.total} color="bg-blue-100 text-blue-600" />
+        <StatCard icon={IndianRupee} label="Revenue (paid)" value={formatINR(stats.revenue)} color="bg-green-100 text-green-600" />
         <StatCard icon={Clock} label="Pending Orders" value={stats.pending} color="bg-amber-100 text-amber-600" />
         <StatCard icon={AlertCircle} label="Advance Pending" value={stats.advancePending} color="bg-red-100 text-red-600" />
       </div>
 
-      {/* Header + filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-5 items-start sm:items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 items-start sm:items-center justify-between">
         <h1 className="text-2xl font-bold">Orders</h1>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => exportCSV(filtered)} className="gap-2">
-            <Download className="h-4 w-4" /> Export CSV
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={() => exportCSV(filtered)} className="gap-2">
+          <Download className="h-4 w-4" /> Export CSV
+        </Button>
       </div>
 
+      {/* Date filter */}
+      <div className="flex gap-1.5 flex-wrap items-center mb-4">
+        <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+        {(["all", "today", "yesterday", "custom"] as DateFilter[]).map(f => (
+          <button key={f} onClick={() => setDateFilter(f)}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${dateFilter === f ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+            {f === "all" ? "All Time" : f === "today" ? "Today" : f === "yesterday" ? "Yesterday" : "Custom"}
+          </button>
+        ))}
+        {dateFilter === "custom" && (
+          <>
+            <Input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="h-7 text-xs w-36 px-2" />
+            <span className="text-slate-400 text-xs">→</span>
+            <Input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className="h-7 text-xs w-36 px-2" />
+          </>
+        )}
+      </div>
+
+      {/* Search + status filters */}
       <div className="flex flex-wrap gap-3 mb-5">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -380,7 +378,7 @@ export default function AdminOrders() {
             {loading ? (
               <TableRow><TableCell colSpan={8} className="text-center py-10"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-400" /></TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="text-center py-10 text-slate-400">No orders found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-10 text-slate-400">No orders found for the selected filter.</TableCell></TableRow>
             ) : filtered.map((order) => (
               <TableRow key={order.id} className="hover:bg-slate-50">
                 <TableCell className="font-mono font-bold text-xs">{order.id?.slice(-8).toUpperCase()}</TableCell>
@@ -390,7 +388,7 @@ export default function AdminOrders() {
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <p className="text-xs text-slate-400">{order.address?.city}</p>
                     {order.source === "offline" && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">🏪 Offline</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">Offline</span>
                     )}
                   </div>
                 </TableCell>
@@ -424,13 +422,13 @@ export default function AdminOrders() {
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5 text-primary" />
               Order #{selected?.id?.slice(-8).toUpperCase()}
-              <span className="text-xs font-normal text-slate-500">{selected?.createdAt && new Date(selected.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+              <span className="text-xs font-normal text-slate-500">
+                {selected?.createdAt && new Date(selected.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+              </span>
             </DialogTitle>
           </DialogHeader>
-
           {selected && (
             <div className="space-y-5 py-2">
-              {/* Customer + Address */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-slate-50 rounded-xl p-4">
                   <p className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><User className="h-3.5 w-3.5" /> Customer</p>
@@ -443,8 +441,6 @@ export default function AdminOrders() {
                   <p className="text-sm text-slate-500">{selected.address?.city}{selected.address?.state ? ", " + selected.address.state : ""} {selected.address?.pincode}</p>
                 </div>
               </div>
-
-              {/* Items */}
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase mb-2">Order Items</p>
                 <div className="bg-slate-50 rounded-xl overflow-hidden">
@@ -468,8 +464,6 @@ export default function AdminOrders() {
                   </table>
                 </div>
               </div>
-
-              {/* Price Breakdown */}
               <div className="bg-slate-50 rounded-xl p-4">
                 <p className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-1"><IndianRupee className="h-3.5 w-3.5" /> Price Breakdown</p>
                 <div className="space-y-1.5 text-sm">
@@ -489,8 +483,6 @@ export default function AdminOrders() {
                   )}
                 </div>
               </div>
-
-              {/* Payment Management */}
               <div className="border rounded-xl p-4 space-y-3">
                 <p className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Banknote className="h-3.5 w-3.5" /> Payment Management</p>
                 <div className="grid grid-cols-2 gap-3">
@@ -498,48 +490,33 @@ export default function AdminOrders() {
                     <Label className="text-xs">Order Status</Label>
                     <Select value={editStatus} onValueChange={setEditStatus}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                      </SelectContent>
+                      <SelectContent>{STATUS_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div>
                     <Label className="text-xs">Payment Status</Label>
                     <Select value={editPayStatus} onValueChange={setEditPayStatus}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {PAYMENT_STATUS_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                      </SelectContent>
+                      <SelectContent>{PAYMENT_STATUS_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 </div>
-
                 {selected.paymentMethod === "cod" && (
                   <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                    <input
-                      type="checkbox"
-                      id="advance-received"
-                      checked={editAdvanceReceived}
-                      onChange={(e) => {
-                        setEditAdvanceReceived(e.target.checked);
-                        if (e.target.checked) setEditPayStatus("partial");
-                      }}
-                      className="h-4 w-4"
-                    />
+                    <input type="checkbox" id="advance-received" checked={editAdvanceReceived}
+                      onChange={(e) => { setEditAdvanceReceived(e.target.checked); if (e.target.checked) setEditPayStatus("partial"); }}
+                      className="h-4 w-4" />
                     <Label htmlFor="advance-received" className="cursor-pointer text-amber-800 font-semibold">
                       Advance Received — {formatINR(selected.advanceAmount || 0)}
                     </Label>
                     {editAdvanceReceived && <CheckCircle className="h-4 w-4 text-green-600 ml-auto" />}
                   </div>
                 )}
-
                 <div>
                   <Label className="text-xs">Paid Amount (manual update)</Label>
                   <Input placeholder={`e.g. ${selected.finalAmount}`} value={editPaidAmount} onChange={(e) => setEditPaidAmount(e.target.value)} className="mt-1" type="number" />
                 </div>
               </div>
-
-              {/* Extra Charges + Notes */}
               <div className="border rounded-xl p-4 space-y-3">
                 <p className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Extra Charges & Notes</p>
                 <div className="grid grid-cols-2 gap-3">
@@ -557,8 +534,6 @@ export default function AdminOrders() {
                   <Textarea placeholder="Admin notes..." value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} className="mt-1" />
                 </div>
               </div>
-
-              {/* Refund History */}
               {selected.refundAmount && (
                 <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
                   <p className="text-xs font-bold text-teal-800 uppercase mb-2">Refund Record</p>
@@ -569,14 +544,9 @@ export default function AdminOrders() {
               )}
             </div>
           )}
-
           <DialogFooter className="flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => selected && printInvoice(selected)} className="gap-1">
-              <Printer className="h-4 w-4" /> Print Invoice
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setRefundDialog(true)}>
-              <RefreshCw className="h-4 w-4" /> Refund
-            </Button>
+            <Button variant="outline" size="sm" onClick={() => selected && printInvoice(selected)} className="gap-1"><Printer className="h-4 w-4" /> Print Invoice</Button>
+            <Button variant="outline" size="sm" className="gap-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setRefundDialog(true)}><RefreshCw className="h-4 w-4" /> Refund</Button>
             <Button variant="outline" onClick={() => setSelected(null)}>Cancel</Button>
             <Button onClick={saveOrder} disabled={saving}>
               {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />Saving...</> : "Save Changes"}
@@ -594,7 +564,6 @@ export default function AdminOrders() {
               <p>Order: <strong>#{selected?.id?.slice(-8).toUpperCase()}</strong></p>
               <p>Customer: <strong>{selected?.address?.name}</strong></p>
               <p>Order Total: <strong>{formatINR(selected?.finalAmount)}</strong></p>
-              {selected?.paidAmount > 0 && <p>Paid: <strong className="text-green-600">{formatINR(selected?.paidAmount)}</strong></p>}
             </div>
             <div>
               <Label>Refund Amount (₹) *</Label>
@@ -605,7 +574,7 @@ export default function AdminOrders() {
               <Textarea placeholder="Reason for refund..." value={refundNote} onChange={(e) => setRefundNote(e.target.value)} rows={2} className="mt-1" />
             </div>
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
-              ⚠️ Process the refund manually — send via UPI or bank transfer to the customer. This record is for internal tracking only.
+              Process the refund manually — this record is for internal tracking only.
             </div>
           </div>
           <DialogFooter>
@@ -616,7 +585,6 @@ export default function AdminOrders() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </AdminLayout>
   );
 }

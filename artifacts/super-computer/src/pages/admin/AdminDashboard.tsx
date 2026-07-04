@@ -5,10 +5,10 @@ import { db } from "@/lib/firebase";
 import {
   Package, Users, ShoppingCart, IndianRupee, TrendingUp, Clock,
   CheckCircle, XCircle, AlertCircle, Calendar, AlertTriangle,
-  Download, FileText,
+  Download, FileText, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import jsPDF from "jspdf";
 
 type Period = "today" | "week" | "month" | "year" | "all";
@@ -216,11 +216,15 @@ function downloadAllDuesPDF(entries: any[]) {
 }
 
 export default function AdminDashboard() {
+  const [, navigate] = useLocation();
   const [period, setPeriod] = useState<Period>("all");
   const [allOrders, setAllOrders] = useState<any[]>([]);
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [customerCount, setCustomerCount] = useState(0);
   const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
+  const [localSales, setLocalSales] = useState<any[]>([]);
+  const [dueAlertDays, setDueAlertDays] = useState<number>(3);
+  const [showAllDue, setShowAllDue] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -249,7 +253,6 @@ export default function AdminDashboard() {
           .map(([id, v]: any) => ({ id, ...v }))
           .filter((e: any) => e.status !== "cleared")
           .sort((a: any, b: any) => {
-            // Sort: overdue first, then upcoming, then no date
             const da = daysUntil(a.dueDate);
             const db2 = daysUntil(b.dueDate);
             if (da === null && db2 === null) return b.createdAt - a.createdAt;
@@ -259,6 +262,16 @@ export default function AdminDashboard() {
           });
         setLedgerEntries(list);
       } else setLedgerEntries([]);
+    }));
+
+    unsubs.push(onValue(ref(db, "local_sales"), (snap) => {
+      if (snap.exists()) {
+        setLocalSales(Object.entries(snap.val()).map(([id, v]: any) => ({ id, ...v })));
+      } else setLocalSales([]);
+    }));
+
+    unsubs.push(onValue(ref(db, "settings/dueAlertDays"), (snap) => {
+      if (snap.exists()) setDueAlertDays(Number(snap.val()) || 3);
     }));
 
     return () => unsubs.forEach(u => u());
@@ -302,6 +315,34 @@ export default function AdminDashboard() {
     [ledgerEntries]
   );
 
+  // Group local_sales by client and compute due alerts
+  const dueAlertClients = useMemo(() => {
+    const map: Record<string, { name: string; phone: string; totalDue: number; products: string[]; latestTs: number; dueDate?: string }> = {};
+    localSales.forEach((s: any) => {
+      if (!((s.dueAmount ?? 0) > 0)) return;
+      const key = `${(s.clientName || "").trim()}|${(s.clientPhone || "").replace(/\D/g, "")}`;
+      if (!map[key]) {
+        map[key] = { name: s.clientName || "Unknown", phone: s.clientPhone || "", totalDue: 0, products: [], latestTs: 0, dueDate: s.dueDate };
+      }
+      map[key].totalDue += s.dueAmount || 0;
+      if (s.productName && !map[key].products.includes(s.productName)) map[key].products.push(s.productName);
+      if ((s.createdAt || 0) > map[key].latestTs) { map[key].latestTs = s.createdAt || 0; map[key].dueDate = s.dueDate; }
+    });
+    // Filter by dueAlertDays threshold: include if dueDate is within alert window or overdue or no dueDate
+    return Object.values(map).filter(c => {
+      if (!c.dueDate) return true;
+      const days = daysUntil(c.dueDate);
+      return days === null || days <= dueAlertDays;
+    }).sort((a, b) => {
+      const da = a.dueDate ? daysUntil(a.dueDate) : null;
+      const db2 = b.dueDate ? daysUntil(b.dueDate) : null;
+      if (da === null && db2 === null) return b.latestTs - a.latestTs;
+      if (da === null) return 1;
+      if (db2 === null) return -1;
+      return da - db2;
+    });
+  }, [localSales, dueAlertDays]);
+
   const periodLabel = PERIODS.find(p => p.key === period)?.label || "All Time";
 
   return (
@@ -342,39 +383,81 @@ export default function AdminDashboard() {
         <StatCard icon={Users}        label="Customers"                   value={String(customerCount)}         color="#F59E0B" bg="#fef3c7" sub="Registered users" />
       </div>
 
-      {/* Due Amounts Alert Bar */}
-      {ledgerEntries.length > 0 && (
-        <div className={`mb-5 rounded-2xl p-4 flex items-center gap-4 ${
-          overdueCount > 0 ? "bg-red-50 border-2 border-red-200" : dueSoonCount > 0 ? "bg-amber-50 border-2 border-amber-200" : "bg-orange-50 border border-orange-200"
-        }`}>
-          <div className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${
-            overdueCount > 0 ? "bg-red-100" : "bg-amber-100"
-          }`}>
-            <AlertTriangle className={`h-6 w-6 ${overdueCount > 0 ? "text-red-600" : "text-amber-600"}`} />
+      {/* Due Alerts — Per-Customer Cards */}
+      {dueAlertClients.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <h2 className="font-bold text-slate-900 text-sm">
+                Due Alerts
+                <span className="ml-2 text-xs font-normal text-slate-400">
+                  ({dueAlertClients.length} customer{dueAlertClients.length > 1 ? "s" : ""} · window: {dueAlertDays} day{dueAlertDays !== 1 ? "s" : ""})
+                </span>
+              </h2>
+            </div>
+            <button
+              onClick={() => downloadAllDuesPDF(dueAlertClients.map(c => ({
+                customerName: c.name, phone: c.phone, billNo: "—",
+                amount: c.totalDue, dueDate: c.dueDate ?? null,
+                createdAt: c.latestTs, productName: c.products.join(", "),
+              })))}
+              className="flex items-center gap-1 text-xs font-bold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <Download className="h-3.5 w-3.5" /> PDF
+            </button>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className={`font-bold text-sm ${overdueCount > 0 ? "text-red-800" : "text-amber-800"}`}>
-              {overdueCount > 0
-                ? `${overdueCount} Overdue Payment${overdueCount > 1 ? "s" : ""}!`
-                : dueSoonCount > 0
-                ? `${dueSoonCount} Payment${dueSoonCount > 1 ? "s" : ""} Due in 3 Days`
-                : `${ledgerEntries.length} Pending Due Amount${ledgerEntries.length > 1 ? "s" : ""}`
-              }
-            </p>
-            <p className={`text-xs mt-0.5 ${overdueCount > 0 ? "text-red-600" : "text-amber-600"}`}>
-              Total Pending: {formatINR(totalDue)} · {ledgerEntries.length} customer{ledgerEntries.length > 1 ? "s" : ""}
-            </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {(showAllDue ? dueAlertClients : dueAlertClients.slice(0, 6)).map((client, i) => {
+              const days = client.dueDate ? daysUntil(client.dueDate) : null;
+              const isOverdue = days !== null && days < 0;
+              const isDueSoon = days !== null && days >= 0 && days <= dueAlertDays;
+              return (
+                <button
+                  key={i}
+                  onClick={() => navigate(`/admin/accounting?client=${encodeURIComponent(client.name)}&phone=${encodeURIComponent(client.phone)}`)}
+                  className={`text-left rounded-2xl border-2 p-4 hover:shadow-md transition-all cursor-pointer ${
+                    isOverdue ? "bg-red-50 border-red-300 hover:border-red-400" :
+                    isDueSoon ? "bg-amber-50 border-amber-300 hover:border-amber-400" :
+                    "bg-orange-50 border-orange-200 hover:border-orange-400"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div>
+                      <p className={`font-bold text-sm leading-tight ${isOverdue ? "text-red-800" : isDueSoon ? "text-amber-800" : "text-orange-800"}`}>
+                        {client.name}
+                      </p>
+                      {client.phone && <p className="text-xs text-slate-500 mt-0.5">{client.phone}</p>}
+                    </div>
+                    <span className={`text-xs font-black px-2 py-1 rounded-lg shrink-0 ${
+                      isOverdue ? "bg-red-200 text-red-800" : isDueSoon ? "bg-amber-200 text-amber-800" : "bg-orange-200 text-orange-800"
+                    }`}>
+                      {formatINR(client.totalDue)}
+                    </span>
+                  </div>
+                  {client.products.length > 0 && (
+                    <p className="text-xs text-slate-600 truncate">{client.products.slice(0, 2).join(", ")}{client.products.length > 2 ? ` +${client.products.length - 2}` : ""}</p>
+                  )}
+                  {client.dueDate && (
+                    <p className={`text-xs font-semibold mt-1.5 ${isOverdue ? "text-red-600" : isDueSoon ? "text-amber-600" : "text-orange-600"}`}>
+                      {isOverdue
+                        ? `⚠ Overdue by ${Math.abs(days!)} day${Math.abs(days!) !== 1 ? "s" : ""}`
+                        : days === 0 ? "⚠ Due Today!"
+                        : `Due in ${days} day${days !== 1 ? "s" : ""}`}
+                    </p>
+                  )}
+                </button>
+              );
+            })}
           </div>
-          <button
-            onClick={() => downloadAllDuesPDF(ledgerEntries)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
-              overdueCount > 0
-                ? "bg-red-200 text-red-800 hover:bg-red-300"
-                : "bg-amber-200 text-amber-800 hover:bg-amber-300"
-            }`}
-          >
-            <Download className="h-3.5 w-3.5" /> All PDF
-          </button>
+          {dueAlertClients.length > 6 && (
+            <button
+              onClick={() => setShowAllDue(v => !v)}
+              className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl py-2 transition-colors"
+            >
+              {showAllDue ? <><ChevronUp className="h-4 w-4" /> Show Less</> : <><ChevronDown className="h-4 w-4" /> +{dueAlertClients.length - 6} More</>}
+            </button>
+          )}
         </div>
       )}
 
