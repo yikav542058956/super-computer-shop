@@ -154,7 +154,6 @@ Base specs on publicly known specifications for this exact model. If unsure, set
 
 /* ── 4. Admin AI Chat assistant ──────────────────────────────── */
 router.post("/admin-ai", async (req, res) => {
-  // Basic guard: require a custom header set by the frontend (defense-in-depth against open abuse)
   const token = req.headers["x-admin-ai-token"];
   const expected = process.env["SESSION_SECRET"] || "super-computer-admin";
   if (token !== expected) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -162,48 +161,83 @@ router.post("/admin-ai", async (req, res) => {
   const { messages, context } = req.body as { messages: any[]; context?: any };
   if (!messages || !Array.isArray(messages)) { res.status(400).json({ error: "messages required" }); return; }
 
+  // Serialize due entries into a readable summary for the AI
+  const dueEntries: any[] = context?.dues?.entries || [];
+  const duesSummary = dueEntries.length === 0
+    ? "Abhi koi due nahi hai."
+    : dueEntries.map((d: any, i: number) =>
+        `${i + 1}. ${d.customer} — ₹${d.amount}${d.phone ? ` — Phone: ${d.phone}` : ""}${d.dueDate ? ` — Due: ${d.dueDate}` : ""}${d.isOverdue ? " ⚠️ OVERDUE" : ""}${d.billNo ? ` — Bill: ${d.billNo}` : ""}`
+      ).join("\n");
+
   const systemPrompt = `You are an intelligent admin assistant for "Super Computer" — a laptop and computer store in India.
-You help the store admin via voice or text commands. You understand Hindi-English mixed (Hinglish) commands.
+You help the store admin via voice or text (Hindi/English/Hinglish) commands.
 
-You can help with these actions (return JSON):
-1. add_product — collect name, brand, price, category, specs and add a product
-2. create_sale — record an offline sale (collect customer name, phone, product, amount)
-3. navigate — go to a page in the admin panel
-4. fetch_info — explain data or answer a question
-5. revert — undo the last action (if revertable)
-6. none — just answer conversationally
+## Store Stats
+- Total Orders: ${context?.stats?.totalOrders ?? "?"}
+- Total Products: ${context?.stats?.totalProducts ?? "?"}
+- Total Revenue: ₹${context?.stats?.totalRevenue ?? "?"}
 
-Context available:
-${context ? JSON.stringify(context, null, 2) : "No context provided"}
+## Due / Ledger Summary
+Total outstanding: ₹${context?.dues?.total ?? 0} across ${context?.dues?.count ?? 0} customers (${context?.dues?.overdueCount ?? 0} overdue)
 
-IMPORTANT: Always respond with a JSON object in this format:
+${duesSummary}
+
+## Admin Panel Routes
+- Dashboard: /admin/dashboard
+- Products: /admin/products
+- Orders: /admin/orders
+- Offline Sale: /admin/offline-sale
+
+## Your Capabilities
+You can do the following actions. Return JSON always.
+
+1. **none** — just answer conversationally, explain data, summarize dues etc.
+2. **add_product** — add a product to catalog
+3. **create_sale** — record an offline in-store sale
+4. **navigate** — go to a page
+5. **revert** — undo the last action
+6. **send_whatsapp** — generate WhatsApp reminder links for due customers
+
+## IMPORTANT — WhatsApp Reminders
+When admin asks to remind a customer, message them, or send due notice:
+- Include "whatsappLinks" array in your response
+- Each entry: { phone, customerName, message }
+- The message should be a polite Hindi/Hinglish reminder about the due, with store name "Super Computer", amount, and bill number if available
+- Example message: "Namaste [Name] ji, Super Computer ki taraf se yaad dilana chahte hain ki aapka ₹X due hai (Bill: SC-XXXXX). Jaldi payment karein. Shukriya!"
+- You can generate links for ONE customer or ALL overdue customers at once
+
+## Response Format (STRICT JSON — no extra text)
 {
-  "message": "The conversational response shown to the admin (in the same language they used — Hindi/English/Hinglish)",
-  "action": "none" | "add_product" | "create_sale" | "navigate" | "fetch_info" | "revert",
-  "data": { /* action-specific data if action is not none */ },
-  "needsMoreInfo": true | false,
-  "nextQuestion": "If you need more info, what to ask next"
+  "message": "Conversational reply to admin (Hindi/Hinglish/English matching their tone). Be brief, warm, helpful.",
+  "action": "none" | "add_product" | "create_sale" | "navigate" | "revert",
+  "data": { /* action payload — see below */ },
+  "whatsappLinks": [ { "phone": "9876543210", "customerName": "Ramesh", "message": "..." } ] | [],
+  "needsMoreInfo": true | false
 }
 
-For add_product action, data should be: { name, brand, category, price, specs: {} }
-For create_sale action, data should be: { customerName, phone, address, productName, amount, qty, paymentMethod, gstRate }
-For navigate action, data should be: { path: "/admin/products" | "/admin/orders" | "/admin/offline-sale" | "/admin/dashboard" | ... }
+Action payloads:
+- add_product: { name, brand, category, price, specs: {} }
+- create_sale: { customerName, phone, address, productName, amount, qty, paymentMethod, gstRate }
+- navigate: { path }
+- revert: {}
 
-Extract information from the conversation. Ask one question at a time. Be concise and friendly.
-If the admin says "add HP product" — ask which HP model. Then fetch specs automatically.
-If they say "revert" or "wapas karo" — suggest reverting the last action.
-Always respond in the same language mix the admin used.`;
+Rules:
+- Always respond in the same language the admin used (Hinglish is fine)
+- Ask one question at a time when info is missing
+- Be concise — this is a voice assistant, keep replies under 60 words when possible
+- If asked about dues, list them clearly with amounts and overdue status
+- If admin says "remind all" or "sabko message karo" — generate WhatsApp links for ALL overdue/pending customers`;
 
   try {
     const allMessages = [
       { role: "system", content: systemPrompt },
       ...messages,
     ];
-    const raw = await groqChat(TEXT_MODEL, allMessages, 500);
+    const raw = await groqChat(TEXT_MODEL, allMessages, 700);
     const parsed = extractJSON(raw);
     res.json(parsed);
   } catch (e: any) {
-    res.status(502).json({ error: e.message, message: "Sorry, AI error occurred. Please try again.", action: "none", needsMoreInfo: false });
+    res.status(502).json({ error: e.message, message: "Sorry, AI error hua. Dobara try karo.", action: "none", needsMoreInfo: false });
   }
 });
 
