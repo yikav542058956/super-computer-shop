@@ -107,12 +107,31 @@ export function AdminAIAssistant() {
   const openRef         = useRef(false);
   const listeningRef    = useRef(false);
   const messagesRef     = useRef<ChatMessage[]>([]);
+  // voiceModeRef: true jab user ne mic se baat ki ho — tab auto-loop chalta hai
+  const voiceModeRef    = useRef(false);
+  // ttsActiveRef: true jab TTS bol raha ho
+  const ttsActiveRef    = useRef(false);
 
   useEffect(() => { loadingRef.current  = loading;   }, [loading]);
   useEffect(() => { ttsEnabledRef.current = ttsEnabled; }, [ttsEnabled]);
   useEffect(() => { openRef.current     = open;       }, [open]);
   useEffect(() => { listeningRef.current = listening; }, [listening]);
   useEffect(() => { messagesRef.current  = messages;  }, [messages]);
+
+  // ── Fallback: jab loading false ho aur voiceMode on ho ──────────────
+  // Agar TTS ka onend fire na kare (Chrome bug), tab bhi mic restart ho
+  useEffect(() => {
+    if (!loading && voiceModeRef.current && openRef.current && !ttsActiveRef.current) {
+      // TTS nahi chal rahi aur loading bhi khatam — mic start karo
+      const t = setTimeout(() => {
+        if (voiceModeRef.current && openRef.current && !loadingRef.current) {
+          startMicRef.current();
+        }
+      }, 300);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [loading]);
 
   // ── Persist sessions whenever they change ──────────────────────────
   useEffect(() => { saveSessions(sessions); }, [sessions]);
@@ -160,6 +179,7 @@ export function AdminAIAssistant() {
   // ── TTS ────────────────────────────────────────────────────────────
   const speak = useCallback((text: string, afterSpeak?: () => void) => {
     if (!ttsEnabledRef.current || !window.speechSynthesis) {
+      ttsActiveRef.current = false;
       afterSpeak?.();
       return;
     }
@@ -176,7 +196,16 @@ export function AdminAIAssistant() {
     const voices = window.speechSynthesis.getVoices();
     const v = voices.find(v => v.lang.startsWith("hi")) || voices.find(v => v.lang.startsWith("en-IN"));
     if (v) u.voice = v;
-    u.onend = () => afterSpeak?.();
+    ttsActiveRef.current = true;
+    u.onstart = () => { ttsActiveRef.current = true; };
+    u.onend   = () => {
+      ttsActiveRef.current = false;
+      afterSpeak?.();
+    };
+    u.onerror = () => {
+      ttsActiveRef.current = false;
+      afterSpeak?.();
+    };
     window.speechSynthesis.speak(u);
   }, []);
 
@@ -196,12 +225,14 @@ export function AdminAIAssistant() {
       rec.continuous      = false;
       recognitionRef.current = rec;
 
-      rec.onstart  = () => setListening(true);
+      rec.onstart  = () => { setListening(true); voiceModeRef.current = true; };
       rec.onend    = () => setListening(false);
       rec.onerror  = (e: any) => {
         setListening(false);
-        if (e.error === "not-allowed" || e.error === "permission-denied")
+        if (e.error === "not-allowed" || e.error === "permission-denied") {
           setMicError("Mic permission do — browser mein Allow karein.");
+          voiceModeRef.current = false; // permission nahi mili — loop band
+        }
       };
       rec.onresult = (e: any) => {
         const transcript = e.results[0][0].transcript.trim();
@@ -218,7 +249,9 @@ export function AdminAIAssistant() {
 
   useEffect(() => { startMicRef.current = startMic; }, [startMic]);
 
-  const stopMic = useCallback(() => {
+  // Manual stop — voice loop band karo
+  const stopMic = useCallback((keepVoiceMode = false) => {
+    if (!keepVoiceMode) voiceModeRef.current = false;
     try { recognitionRef.current?.abort(); } catch { /* ignore */ }
     setListening(false);
   }, []);
@@ -263,7 +296,8 @@ export function AdminAIAssistant() {
     });
     if (role === "assistant") {
       speak(content, () => {
-        if (openRef.current && !loadingRef.current) {
+        // Auto-restart mic only when user is in voice mode
+        if (openRef.current && !loadingRef.current && voiceModeRef.current) {
           startMicRef.current();
         }
       });
@@ -276,7 +310,7 @@ export function AdminAIAssistant() {
     if (!userText || loadingRef.current) return;
     setInput("");
     window.speechSynthesis?.cancel();
-    stopMic();
+    stopMic(true); // keepVoiceMode=true so voice loop stays alive if user spoke
 
     // Add user message
     let newMessages: ChatMessage[] = [];
@@ -314,9 +348,9 @@ export function AdminAIAssistant() {
         return next;
       });
 
-      // TTS + auto-mic
+      // TTS + auto-mic (only in voice mode)
       speak(aiMsg, () => {
-        if (openRef.current && !loadingRef.current) startMicRef.current();
+        if (openRef.current && !loadingRef.current && voiceModeRef.current) startMicRef.current();
       });
 
       if (data.action && data.action !== "none" && !data.needsMoreInfo) {
@@ -662,7 +696,7 @@ export function AdminAIAssistant() {
               {["Sabka due batao", "Overdue kaun hai?", "HP laptop add karo", "Offline sale banao", "Total revenue kitna hai?"].map(cmd => (
                 <button
                   key={cmd}
-                  onClick={() => sendMsg(cmd)}
+                  onClick={() => { voiceModeRef.current = false; sendMsg(cmd); }}
                   className="px-3 py-2 rounded-full text-xs font-semibold border transition-all hover:scale-105 active:scale-95"
                   style={{ borderColor: "rgba(124,58,237,0.4)", color: "#c4b5fd", background: "rgba(124,58,237,0.1)" }}
                 >
@@ -759,7 +793,7 @@ export function AdminAIAssistant() {
               </>
             )}
             <button
-              onClick={listening ? stopMic : startMic}
+              onClick={listening ? () => stopMic() : startMic}
               className="relative h-16 w-16 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-95"
               style={listening
                 ? { background: "linear-gradient(135deg,#dc2626,#b91c1c)", boxShadow: "0 0 0 4px rgba(220,38,38,0.3), 0 8px 32px rgba(220,38,38,0.4)" }
@@ -789,7 +823,7 @@ export function AdminAIAssistant() {
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && input.trim()) { e.preventDefault(); sendMsg(input); } }}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && input.trim()) { e.preventDefault(); voiceModeRef.current = false; sendMsg(input); } }}
               placeholder="Ya type karke bhi poochh sakte ho..."
               className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 outline-none"
               disabled={loading}
@@ -797,7 +831,7 @@ export function AdminAIAssistant() {
             />
           </div>
           <button
-            onClick={() => { if (input.trim()) sendMsg(input); }}
+            onClick={() => { if (input.trim()) { voiceModeRef.current = false; sendMsg(input); } }}
             disabled={!input.trim() || loading}
             className="h-10 w-10 rounded-2xl flex items-center justify-center text-white transition-all disabled:opacity-30 shrink-0 active:scale-95"
             style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}
