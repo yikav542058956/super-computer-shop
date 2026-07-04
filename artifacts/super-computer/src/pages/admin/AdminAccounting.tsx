@@ -195,17 +195,22 @@ function normalizeOfflineOrder(order: any) {
   // ── Legacy AdminOrders format (has order.address + order.items[]) ──
   const items: any[] = Array.isArray(order.items) ? order.items : Object.values(order.items ?? {});
   const first  = items[0] ?? {};
-  const total  = n(order.finalAmount);
-  // Legacy records were always marked paid=delivered; honour paidAmount/refundAmount if present
+  const total  = n(order.finalAmount ?? order.grandTotal);
+  // Honour paidAmount OR amountPaid (AdminOfflineSale uses amountPaid); fall back to full total
   const refund = n(order.refundAmount);
   const paid   = order.paidAmount != null
     ? n(order.paidAmount)
-    : order.paymentStatus === "refunded" ? 0 : total - refund;
-  const due    = Math.max(0, total - paid - refund);
+    : order.amountPaid != null
+      ? n(order.amountPaid)
+      : order.paymentStatus === "refunded" ? 0 : total - refund;
+  // Honour explicit dueAmount if saved (AdminOfflineSale always saves it); derive otherwise
+  const due    = order.dueAmount != null
+    ? Math.max(0, n(order.dueAmount))
+    : Math.max(0, total - paid - refund);
   return {
     id:           order.id,
     _fromOrder:   true,
-    billNo:       null,
+    billNo:       order.billNo ?? null,
     clientName:   String(order.address?.name ?? "Unknown"),
     clientPhone:  String(order.address?.phone ?? ""),
     clientAddress:String(order.address?.address ?? order.address?.city ?? ""),
@@ -217,7 +222,7 @@ function normalizeOfflineOrder(order: any) {
     totalSaleValue: total,
     amountPaid:   paid,
     dueAmount:    due,
-    dueDate:      null,
+    dueDate:      order.dueDate ?? null,
     discountType: "flat"  as const,
     discountValue: 0,
     discountAmount: 0,
