@@ -1,4 +1,14 @@
-import { OFFER_TYPE_META, type ProductOffer } from "@/lib/offers";
+import type { ComponentType } from "react";
+import { Flame, Gift, ShieldCheck, PartyPopper, Sparkles } from "lucide-react";
+import { OFFER_TYPE_META, type ProductOffer, type OfferType } from "@/lib/offers";
+
+const OFFER_TYPE_ICON: Record<OfferType, ComponentType<{ size?: number; className?: string }>> = {
+  sale: Flame,
+  gift: Gift,
+  warranty: ShieldCheck,
+  festival: PartyPopper,
+  custom: Sparkles,
+};
 
 interface Props {
   offers?: ProductOffer[] | null;
@@ -19,6 +29,7 @@ export default function OfferBadges({ offers, variant = "compact", className = "
       <div className={`flex flex-wrap gap-1 ${className}`}>
         {offers.map((offer) => {
           const meta = OFFER_TYPE_META[offer.type];
+          const Icon = OFFER_TYPE_ICON[offer.type];
           return (
             <span
               key={offer.id}
@@ -26,7 +37,7 @@ export default function OfferBadges({ offers, variant = "compact", className = "
               style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}
               title={offer.description}
             >
-              <span>{meta.emoji}</span>
+              <Icon size={11} className="flex-shrink-0" />
               <span className="truncate max-w-[110px]">{offer.name}</span>
             </span>
           );
@@ -39,13 +50,19 @@ export default function OfferBadges({ offers, variant = "compact", className = "
     <div className={`space-y-2 ${className}`}>
       {offers.map((offer) => {
         const meta = OFFER_TYPE_META[offer.type];
+        const Icon = OFFER_TYPE_ICON[offer.type];
         return (
           <div
             key={offer.id}
             className="flex items-start gap-2.5 rounded-xl px-3 py-2.5"
             style={{ background: meta.bg, border: `1px solid ${meta.border}` }}
           >
-            <span className="text-lg leading-none mt-0.5">{meta.emoji}</span>
+            <span
+              className="flex-shrink-0 mt-0.5 h-7 w-7 rounded-full flex items-center justify-center"
+              style={{ background: "#ffffff", color: meta.color }}
+            >
+              <Icon size={15} />
+            </span>
             <div className="min-w-0">
               <p className="text-sm font-black leading-tight" style={{ color: meta.color }}>
                 {offer.name}

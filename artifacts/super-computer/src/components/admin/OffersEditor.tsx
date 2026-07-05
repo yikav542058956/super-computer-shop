@@ -2,8 +2,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, X, Tag } from "lucide-react";
+import { Plus, X, Tag, Flame, Gift, ShieldCheck, PartyPopper, Sparkles } from "lucide-react";
 import { OFFER_TYPE_META, OFFER_TYPE_ORDER, newOfferId, type OfferType, type ProductOffer } from "@/lib/offers";
+
+const OFFER_TYPE_ICON: Record<OfferType, typeof Flame> = {
+  sale: Flame,
+  gift: Gift,
+  warranty: ShieldCheck,
+  festival: PartyPopper,
+  custom: Sparkles,
+};
 
 interface Props {
   offers: ProductOffer[];
@@ -67,11 +75,17 @@ export default function OffersEditor({ offers, onChange }: Props) {
                     >
                       <SelectTrigger className="bg-white h-8 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {OFFER_TYPE_ORDER.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {OFFER_TYPE_META[t].emoji} {OFFER_TYPE_META[t].label}
-                          </SelectItem>
-                        ))}
+                        {OFFER_TYPE_ORDER.map((t) => {
+                          const TypeIcon = OFFER_TYPE_ICON[t];
+                          return (
+                            <SelectItem key={t} value={t}>
+                              <span className="inline-flex items-center gap-1.5">
+                                <TypeIcon size={13} style={{ color: OFFER_TYPE_META[t].color }} />
+                                {OFFER_TYPE_META[t].label}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
