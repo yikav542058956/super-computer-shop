@@ -16,6 +16,8 @@ import { Plus, Edit, Trash, Upload, ImageIcon, Loader2, X, Search, ScanLine, Che
 // Camera & Sparkles used for bill scan & AI description
 import { formatINR } from "@/lib/utils";
 import { toast } from "sonner";
+import OffersEditor from "@/components/admin/OffersEditor";
+import { normalizeOffers, type ProductOffer } from "@/lib/offers";
 
 interface SpecField { key: string; value: string; }
 
@@ -29,6 +31,7 @@ const EMPTY_FORM = {
   description: "",
   specs: [] as SpecField[],
   images: [] as string[],
+  offers: [] as ProductOffer[],
   isFeatured: false,
   isNewArrival: false,
   isTopDeal: false,
@@ -222,7 +225,7 @@ export default function AdminProducts() {
 
   const openAdd = () => {
     setEditingId(null);
-    setForm({ ...EMPTY_FORM, specs: defaultSpecs() });
+    setForm({ ...EMPTY_FORM, specs: defaultSpecs(), offers: [] });
     setShowDialog(true);
   };
 
@@ -252,6 +255,7 @@ export default function AdminProducts() {
       description: product.description || "",
       specs,
       images: Array.isArray(product.images) ? product.images : product.images ? Object.values(product.images) : [],
+      offers: normalizeOffers(product.offers),
       isFeatured: product.isFeatured || false,
       isNewArrival: product.isNewArrival || false,
       isTopDeal: product.isTopDeal || false,
@@ -323,6 +327,7 @@ export default function AdminProducts() {
         description: form.description.trim(),
         specs: specsObj,
         images: form.images,
+        offers: form.offers.filter((o) => o.name.trim()),
         isFeatured: form.isFeatured,
         isNewArrival: form.isNewArrival,
         status: form.status,
@@ -815,6 +820,9 @@ export default function AdminProducts() {
                 ))}
               </div>
             </div>
+
+            {/* Offers */}
+            <OffersEditor offers={form.offers} onChange={(offers) => setForm((f) => ({ ...f, offers }))} />
           </div>
 
           <DialogFooter>

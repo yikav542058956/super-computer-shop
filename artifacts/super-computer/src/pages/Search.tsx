@@ -10,6 +10,8 @@ import {
   ChevronRight, Package,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
+import OfferBadges from "@/components/OfferBadges";
+import { normalizeOffers } from "@/lib/offers";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useCart as useCartBadge } from "@/contexts/CartContext";
@@ -146,6 +148,11 @@ function ProductCard({ product, index, onNavigate }: { product: any; index: numb
 
           {/* Specs */}
           <p className="text-[11px] text-[#6B7280] mt-0.5 leading-relaxed line-clamp-1">{specsLine(product)}</p>
+
+          {/* Offers (sale, free gift, warranty, festival, etc.) */}
+          {normalizeOffers(product.offers).length > 0 && (
+            <OfferBadges offers={normalizeOffers(product.offers)} className="mt-1" />
+          )}
 
           {/* Badges */}
           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">

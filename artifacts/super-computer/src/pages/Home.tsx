@@ -13,6 +13,8 @@ import {
   Info, AlertTriangle, CheckCircle, Megaphone, X,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
+import OfferBadges from "@/components/OfferBadges";
+import { normalizeOffers } from "@/lib/offers";
 import useEmblaCarousel from "embla-carousel-react";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useCart } from "@/contexts/CartContext";
@@ -453,9 +455,15 @@ function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
               <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#16a34a" }}>{product.brand}</span>
             </div>
 
-            <h3 className="text-gray-900 font-semibold text-sm line-clamp-2 leading-snug mb-3 flex-1 group-hover:text-green-700 transition-colors">
+            <h3 className="text-gray-900 font-semibold text-sm line-clamp-2 leading-snug mb-2 group-hover:text-green-700 transition-colors">
               {product.name}
             </h3>
+
+            {/* Offers (sale, free gift, warranty, festival, etc.) */}
+            {normalizeOffers(product.offers).length > 0 && (
+              <OfferBadges offers={normalizeOffers(product.offers)} className="mb-2" />
+            )}
+            <div className="flex-1" />
 
             {/* Price */}
             <div className="mb-3">

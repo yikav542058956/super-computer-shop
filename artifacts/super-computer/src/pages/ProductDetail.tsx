@@ -16,6 +16,8 @@ import { WhatsAppFloat } from "@/components/WhatsAppButton";
 import { formatINR } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import OfferBadges from "@/components/OfferBadges";
+import { normalizeOffers } from "@/lib/offers";
 
 /* ─── Image Carousel ─────────────────────────────────────────── */
 function ImageCarousel({ images, productName }: { images: string[]; productName: string }) {
@@ -573,6 +575,14 @@ export default function ProductDetail() {
                 <div className="mb-5 pb-5 border-b border-gray-100">
                   <StockBadge stock={product.stock} />
                 </div>
+
+                {/* Offers (Summer Sale, free gift, warranty, festival offers, etc.) */}
+                {normalizeOffers(product.offers).length > 0 && (
+                  <div className="mb-5">
+                    <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Offers For You</p>
+                    <OfferBadges offers={normalizeOffers(product.offers)} variant="full" />
+                  </div>
+                )}
 
                 {/* Price */}
                 <div className="mb-6">

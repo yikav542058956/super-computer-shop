@@ -14,6 +14,8 @@ import {
   Cpu, Camera, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import OffersEditor from "@/components/admin/OffersEditor";
+import type { ProductOffer } from "@/lib/offers";
 
 /* ─── Types ──────────────────────────────────────────── */
 interface SpecField { key: string; value: string; }
@@ -61,6 +63,7 @@ const EMPTY_FORM = {
   description: "",
   specs: [] as SpecField[],
   images: [] as string[],
+  offers: [] as ProductOffer[],
   isFeatured: false,
   isNewArrival: false,
   isTopDeal: false,
@@ -299,6 +302,7 @@ export default function AddProductDialog({ open, onOpenChange, onSaved, initialN
         description: form.description.trim(),
         specs: specsObj,
         images: form.images,
+        offers: form.offers.filter((o) => o.name.trim()),
         isFeatured: form.isFeatured,
         isNewArrival: form.isNewArrival,
         isTopDeal: form.isTopDeal,
@@ -583,6 +587,9 @@ export default function AddProductDialog({ open, onOpenChange, onSaved, initialN
                 ))}
               </div>
             </div>
+
+            {/* Offers */}
+            <OffersEditor offers={form.offers} onChange={(offers) => setForm((f) => ({ ...f, offers }))} />
           </div>
 
           <DialogFooter>
