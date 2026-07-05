@@ -380,7 +380,7 @@ export default function AdminOrders() {
             ) : filtered.length === 0 ? (
               <TableRow><TableCell colSpan={8} className="text-center py-10 text-slate-400">No orders found for the selected filter.</TableCell></TableRow>
             ) : filtered.map((order) => (
-              <TableRow key={order.id} className="hover:bg-slate-50">
+              <TableRow key={order.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => openOrder(order)}>
                 <TableCell className="font-mono font-bold text-xs">{order.id?.slice(-8).toUpperCase()}</TableCell>
                 <TableCell className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</TableCell>
                 <TableCell>

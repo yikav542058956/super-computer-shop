@@ -254,7 +254,50 @@ Rules:
   }
 });
 
-/* ── 4. Generate a realistic customer review text ─────────────── */
+/* ── 4. Verify UPI payment screenshot ─────────────────────────── */
+router.post("/verify-payment", async (req, res) => {
+  const { imageBase64, mimeType = "image/jpeg", expectedAmount, orderId } = req.body as {
+    imageBase64: string; mimeType?: string; expectedAmount: number; orderId?: string;
+  };
+  if (!imageBase64) { res.status(400).json({ error: "imageBase64 required" }); return; }
+  if (!expectedAmount) { res.status(400).json({ error: "expectedAmount required" }); return; }
+
+  const nowIST = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+  const prompt = `You are a payment verification AI for an Indian e-commerce store (Super Computer).
+
+Analyze this UPI/banking app payment screenshot and answer:
+1. Is this a real successful payment screenshot from a legitimate payment app (PhonePe, GPay, Paytm, BHIM, bank app, etc.)?
+2. What is the exact amount shown as paid/debited?
+3. What time does the screenshot show for the transaction?
+
+Verification rules:
+- Expected amount: ₹${expectedAmount} (accept within ₹2 rounding difference)
+- Current IST time: ${nowIST}
+- Payment must be within the last 60 minutes
+- Must show a SUCCESS/PAID/COMPLETED status (not pending, not failed)
+- Must look like a genuine transaction screen (not a photo of a photo, not edited)
+
+Return ONLY valid JSON (no markdown):
+{"isValid":true/false,"detectedAmount":number_or_null,"detectedTime":"string_or_null","reason":"1-2 sentence explanation","confidence":"high/medium/low"}`;
+
+  try {
+    const raw = await groqChat(VISION_MODEL, [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+        ],
+      },
+    ], 300);
+    const result = extractJSON(raw);
+    res.json(result);
+  } catch (e: any) {
+    res.status(502).json({ error: e.message, isValid: false, reason: "AI verification failed. Please try again." });
+  }
+});
+
+/* ── 5. Generate a realistic customer review text ─────────────── */
 router.post("/generate-review", async (req, res) => {
   const { name, brand, category, rating } = req.body as any;
   if (!name) { res.status(400).json({ error: "name required" }); return; }

@@ -161,6 +161,11 @@ export default function AdminAccounting() {
   const [payAmount, setPayAmount] = useState("");
   const [payNote, setPayNote] = useState("");
   const [paying, setPaying] = useState(false);
+  const [refundDialog, setRefundDialog] = useState(false);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundNote, setRefundNote] = useState("");
+  const [refunding, setRefunding] = useState(false);
+  const [showKhata, setShowKhata] = useState(false);
 
   /* ── Load on mount ── */
   useEffect(() => {
@@ -226,9 +231,10 @@ export default function AdminAccounting() {
         const payEntries = Object.entries(entries).map(([id, v]: any) => ({ id, ...v }));
         acc.payments = payEntries.sort((a: any, b: any) => b.createdAt - a.createdAt);
         // Subtract manual payments from due
-        const extraPaid = payEntries.reduce((s: number, e: any) => s + (e.amount || 0), 0);
-        acc.totalPaid += extraPaid;
-        acc.totalDue = Math.max(0, acc.totalDue - extraPaid);
+        const extraReceived = payEntries.filter((e: any) => e.type !== "refund").reduce((s: number, e: any) => s + (e.amount || 0), 0);
+        const extraRefunded = payEntries.filter((e: any) => e.type === "refund").reduce((s: number, e: any) => s + (e.amount || 0), 0);
+        acc.totalPaid += extraReceived;
+        acc.totalDue = Math.max(0, acc.totalDue - extraReceived) + extraRefunded;
       }
     });
 
@@ -327,6 +333,27 @@ export default function AdminAccounting() {
     } finally { setPaying(false); }
   };
 
+  /* ── Record admin refund to customer ── */
+  const recordAdminRefund = async () => {
+    if (!selectedAccount) return;
+    const amount = Number(refundAmount);
+    if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
+    setRefunding(true);
+    try {
+      const entryRef = push(ref(db, `ledger_payments/${selectedAccount.key}`));
+      await set(entryRef, {
+        amount, note: refundNote.trim() || "Refund to customer",
+        type: "refund",
+        createdAt: Date.now(), date: Date.now(),
+      });
+      toast.success(`Refund of ${formatINR(amount)} recorded for ${selectedAccount.name}!`);
+      setRefundDialog(false); setRefundAmount(""); setRefundNote("");
+      setSelectedAccount(null);
+    } catch (e: any) {
+      toast.error("Failed: " + e.message);
+    } finally { setRefunding(false); }
+  };
+
   /* ── Auto-open client from URL params ── */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -360,13 +387,44 @@ export default function AdminAccounting() {
       .sort((a: any, b: any) => b.createdAt - a.createdAt);
   }, [selectedAccount, ledgerRaw]);
 
-  const selectedTotalDue = useMemo(() => selectedFullSales.reduce((s, x) => s + Math.max(0, x.dueAmount || 0), 0), [selectedFullSales]);
+  const selectedManualReceived = useMemo(() =>
+    selectedPayments.filter((e: any) => e.type !== "refund").reduce((s: number, e: any) => s + (e.amount || 0), 0),
+    [selectedPayments]
+  );
+  const selectedAdminRefunded = useMemo(() =>
+    selectedPayments.filter((e: any) => e.type === "refund").reduce((s: number, e: any) => s + (e.amount || 0), 0),
+    [selectedPayments]
+  );
+  const selectedTotalDue = useMemo(() => {
+    const salesDue = selectedFullSales.reduce((s, x) => s + Math.max(0, x.dueAmount || 0), 0);
+    return Math.max(0, salesDue - selectedManualReceived) + selectedAdminRefunded;
+  }, [selectedFullSales, selectedManualReceived, selectedAdminRefunded]);
   const selectedTotalPaid = useMemo(() => {
     const salePaid = selectedFullSales.reduce((s, x) => s + (x.amountPaid || 0), 0);
-    const manualPaid = selectedPayments.reduce((s: number, e: any) => s + (e.amount || 0), 0);
-    return salePaid + manualPaid;
-  }, [selectedFullSales, selectedPayments]);
+    return salePaid + selectedManualReceived;
+  }, [selectedFullSales, selectedManualReceived]);
   const selectedTotalValue = useMemo(() => selectedFullSales.reduce((s, x) => s + (x.totalSaleValue || 0), 0), [selectedFullSales]);
+
+  /* ── Khata book unified timeline ── */
+  const khataEntries = useMemo(() => {
+    const entries: { date: number; desc: string; dr: number; cr: number; type: string }[] = [];
+    selectedFullSales.forEach(sale => {
+      entries.push({ date: sale.createdAt, desc: `Sold: ${sale.productName || "Product"}`, dr: sale.totalSaleValue || 0, cr: 0, type: "sale" });
+      if ((sale.amountPaid || 0) > 0) {
+        entries.push({ date: sale.createdAt + 1, desc: `Advance (${sale.productName || "Product"})`, dr: 0, cr: sale.amountPaid || 0, type: "initial" });
+      }
+    });
+    selectedPayments.forEach((p: any) => {
+      if (p.type === "refund") {
+        entries.push({ date: p.date || p.createdAt, desc: p.note || "Refund to customer", dr: p.amount || 0, cr: 0, type: "refund" });
+      } else {
+        entries.push({ date: p.date || p.createdAt, desc: p.note || "Payment received", dr: 0, cr: p.amount || 0, type: "payment" });
+      }
+    });
+    entries.sort((a, b) => a.date - b.date);
+    let bal = 0;
+    return entries.map(e => { bal += e.dr - e.cr; return { ...e, balance: bal }; });
+  }, [selectedFullSales, selectedPayments]);
 
   return (
     <AdminLayout>
@@ -443,7 +501,7 @@ export default function AdminAccounting() {
                 ) : (
                   <div>
                     <p className="text-xs text-green-500 font-semibold">Settled ✓</p>
-                    <p className="font-black text-green-600">{formatINR(acc.totalPaid)}</p>
+                    <p className="font-black text-green-600">₹0 Due</p>
                   </div>
                 )}
               </div>
@@ -488,15 +546,32 @@ export default function AdminAccounting() {
                 </div>
               </div>
 
-              {/* ── Record Payment button ── */}
-              {selectedTotalDue > 0 && (
+              {/* ── Action Buttons ── */}
+              <div className="flex gap-2">
+                {selectedTotalDue > 0 && (
+                  <Button
+                    className="flex-1 gap-2 bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => { setPayAmount(""); setPayNote(""); setPayDialog(true); }}
+                  >
+                    <IndianRupee className="h-4 w-4" /> Record Payment
+                  </Button>
+                )}
                 <Button
-                  className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => { setPayAmount(""); setPayNote(""); setPayDialog(true); }}
+                  variant="outline"
+                  className="flex-1 gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+                  onClick={() => { setRefundAmount(""); setRefundNote(""); setRefundDialog(true); }}
                 >
-                  <IndianRupee className="h-4 w-4" /> Record Payment from {selectedAccount.name}
+                  <TrendingDown className="h-4 w-4" /> Refund to Customer
                 </Button>
-              )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`gap-1 text-xs ${showKhata ? "bg-slate-100" : ""}`}
+                  onClick={() => setShowKhata(v => !v)}
+                >
+                  <BookOpen className="h-3.5 w-3.5" /> Khata Book
+                </Button>
+              </div>
 
               {/* ── Purchase History ── */}
               <div>
@@ -548,25 +623,69 @@ export default function AdminAccounting() {
                 )}
               </div>
 
-              {/* ── Payment History ── */}
-              {selectedPayments.length > 0 && (
+              {/* ── Khata Book Timeline ── */}
+              {showKhata && khataEntries.length > 0 && (
                 <div>
                   <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1">
-                    <IndianRupee className="h-3.5 w-3.5" /> Payment History
+                    <BookOpen className="h-3.5 w-3.5" /> Khata Book (Full Ledger)
+                  </p>
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                          <th className="text-left px-3 py-2 text-slate-500 font-semibold">Date</th>
+                          <th className="text-left px-3 py-2 text-slate-500 font-semibold">Vivaran</th>
+                          <th className="text-right px-3 py-2 text-red-500 font-semibold">Udhar (दिया)</th>
+                          <th className="text-right px-3 py-2 text-green-600 font-semibold">Jama (मिला)</th>
+                          <th className="text-right px-3 py-2 text-slate-600 font-semibold">Balance</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {khataEntries.map((e, i) => (
+                          <tr key={i} className={e.type === "refund" ? "bg-blue-50" : e.type === "sale" ? "bg-orange-50/40" : "bg-green-50/40"}>
+                            <td className="px-3 py-2 text-slate-500 whitespace-nowrap">
+                              {new Date(e.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                            </td>
+                            <td className="px-3 py-2 text-slate-700 max-w-[140px] truncate">{e.desc}</td>
+                            <td className="px-3 py-2 text-right font-bold text-red-600">{e.dr > 0 ? formatINR(e.dr) : "—"}</td>
+                            <td className="px-3 py-2 text-right font-bold text-green-700">{e.cr > 0 ? formatINR(e.cr) : "—"}</td>
+                            <td className={`px-3 py-2 text-right font-black ${e.balance > 0 ? "text-red-600" : e.balance < 0 ? "text-blue-700" : "text-green-700"}`}>
+                              {e.balance > 0 ? formatINR(e.balance) : e.balance < 0 ? `-${formatINR(Math.abs(e.balance))}` : "✓ 0"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1.5 px-1">
+                    🔴 Udhar = we gave / sold · 🟢 Jama = they paid us · 🔵 Blue = refund we gave back
+                  </p>
+                </div>
+              )}
+
+              {/* ── Payment History ── */}
+              {selectedPayments.length > 0 && !showKhata && (
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1">
+                    <IndianRupee className="h-3.5 w-3.5" /> Payment / Refund History
                   </p>
                   <div className="space-y-2">
-                    {selectedPayments.map((entry: any) => (
-                      <div key={entry.id} className="flex items-center gap-3 p-3 rounded-xl border bg-green-50 border-green-100">
-                        <TrendingDown className="h-4 w-4 text-green-600 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm text-green-800">{entry.note || "Payment received"}</p>
-                          <p className="text-xs text-slate-500">
-                            {new Date(entry.date || entry.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                          </p>
+                    {selectedPayments.map((entry: any) => {
+                      const isRefund = entry.type === "refund";
+                      return (
+                        <div key={entry.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isRefund ? "bg-blue-50 border-blue-100" : "bg-green-50 border-green-100"}`}>
+                          <TrendingDown className={`h-4 w-4 shrink-0 ${isRefund ? "text-blue-600 rotate-180" : "text-green-600"}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-semibold text-sm ${isRefund ? "text-blue-800" : "text-green-800"}`}>{entry.note || (isRefund ? "Refund to customer" : "Payment received")}</p>
+                            <p className="text-xs text-slate-500">
+                              {new Date(entry.date || entry.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                              {isRefund && <span className="ml-2 bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded text-[10px] font-bold">Refund</span>}
+                            </p>
+                          </div>
+                          <p className={`font-black shrink-0 ${isRefund ? "text-blue-700" : "text-green-700"}`}>{formatINR(entry.amount)}</p>
                         </div>
-                        <p className="font-black text-green-700 shrink-0">{formatINR(entry.amount)}</p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -574,7 +693,49 @@ export default function AdminAccounting() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedAccount(null)}>Close</Button>
+            <Button variant="outline" onClick={() => { setSelectedAccount(null); setShowKhata(false); }}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ══════════ RECORD REFUND DIALOG ══════════ */}
+      <Dialog open={refundDialog} onOpenChange={o => { if (!o) { setRefundDialog(false); setRefundAmount(""); setRefundNote(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingDown className="h-5 w-5 text-blue-600" />
+              Refund to Customer — {selectedAccount?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-700">
+              Record money you are giving <strong>back</strong> to the customer (returns, excess refund, etc.)
+            </div>
+            <div>
+              <Label>Amount Refunded (₹) *</Label>
+              <Input
+                type="number" min="0" className="mt-1" placeholder="e.g. 2000"
+                value={refundAmount} onChange={e => setRefundAmount(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Reason (optional)</Label>
+              <Textarea
+                rows={2} className="mt-1"
+                placeholder="e.g. Product returned, excess payment refund..."
+                value={refundNote} onChange={e => setRefundNote(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRefundDialog(false); setRefundAmount(""); setRefundNote(""); }}>Cancel</Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={recordAdminRefund}
+              disabled={refunding || !refundAmount || Number(refundAmount) <= 0}
+            >
+              {refunding ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />Saving...</> : "Confirm Refund"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -6,16 +6,17 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ref, push, set, get } from "firebase/database";
+import { ref, push, set, get, update } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import {
   CheckCircle2, Banknote, MapPin, Package, ShoppingBag,
   Loader2, Truck, Shield, Smartphone, CreditCard,
   Copy, AlertCircle, Info, Zap, ArrowLeft, ChevronRight,
-  Tag,
+  Tag, Upload, X, CheckCircle, XCircle,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const GST_RATE = 0.18;
 
@@ -168,6 +169,13 @@ export default function Checkout() {
   const [storeUpi, setStoreUpi] = useState("supercomputer@upi");
   const [gatewayEnabled, setGatewayEnabled] = useState(true);
   const [paymentConfigLoaded, setPaymentConfigLoaded] = useState(false);
+  // Payment proof upload state
+  const [proofDialog, setProofDialog] = useState(false);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [proofValid, setProofValid] = useState<boolean | null>(null);
+  const [proofReason, setProofReason] = useState("");
   const [deliveryZones, setDeliveryZones] = useState({
     localDistricts: "Kasganj, Etah, Kannauj, Aliganj, Soron, Patiyali, Ganj Dundwara",
     localCharge: 0,
@@ -321,6 +329,57 @@ export default function Checkout() {
 
   const copyUpi = () => navigator.clipboard.writeText(storeUpi).then(() => toast.success("UPI ID copied!"));
 
+  const handleProofSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProofFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setProofPreview(reader.result as string);
+    reader.readAsDataURL(file);
+    setProofValid(null); setProofReason("");
+  };
+
+  const verifyPaymentProof = async () => {
+    if (!proofFile || !orderId) return;
+    setVerifying(true);
+    setProofValid(null); setProofReason("");
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(proofFile);
+      });
+      const res = await fetch("/api/groq/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: base64,
+          mimeType: proofFile.type || "image/jpeg",
+          expectedAmount: advanceAmount,
+          orderId: orderId.slice(-8).toUpperCase(),
+        }),
+      });
+      const data = await res.json();
+      setProofValid(!!data.isValid);
+      setProofReason(data.reason || (data.isValid ? "Payment verified!" : "Could not verify payment."));
+      if (data.isValid) {
+        await update(ref(db, `orders/${orderId}`), {
+          paymentProofStatus: "pending_admin_review",
+          paymentProofAt: Date.now(),
+          paymentStatus: "partial",
+          updatedAt: Date.now(),
+        });
+        toast.success("Payment proof submitted! Admin will confirm shortly.");
+      }
+    } catch (e: any) {
+      setProofValid(false);
+      setProofReason("Verification failed: " + (e.message || "Unknown error"));
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   /* ── Step 4: COD Success ── */
   if (step === 4 && orderId) {
     return (
@@ -355,9 +414,28 @@ export default function Checkout() {
                 <p className="text-xs text-slate-500 mt-2">Amount: <span className="font-bold text-amber-700">{formatINR(advanceAmount)}</span></p>
                 <p className="text-xs text-slate-500">Remaining at delivery: <span className="font-bold">{formatINR(finalAmount - advanceAmount)}</span></p>
               </div>
+              {/* UPI QR Code */}
+              {storeUpi && (
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <p className="text-xs text-slate-500 font-semibold">Scan to Pay</p>
+                  <img
+                    src={`https://chart.googleapis.com/chart?chs=200x200&cht=qr&coel=UTF-8&chld=M|0&chl=${encodeURIComponent(`upi://pay?pa=${storeUpi}&pn=SuperComputer&am=${advanceAmount}&cu=INR&tn=Order${orderId.slice(-8).toUpperCase()}`)}`}
+                    alt="UPI QR Code"
+                    className="w-44 h-44 rounded-xl border border-amber-200 shadow-sm"
+                  />
+                  <p className="text-[10px] text-slate-400">Open any UPI app → Scan QR → Pay {formatINR(advanceAmount)}</p>
+                </div>
+              )}
               <p className="text-xs text-slate-400 flex items-center gap-1">
-                <Info className="h-3.5 w-3.5" />WhatsApp the payment screenshot — your order will be confirmed quickly
+                <Info className="h-3.5 w-3.5" />After paying, upload your screenshot below for faster confirmation
               </p>
+              {/* I Have Paid button */}
+              <button
+                onClick={() => { setProofDialog(true); setProofFile(null); setProofPreview(null); setProofValid(null); setProofReason(""); }}
+                className="w-full mt-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
+              >
+                <Upload className="h-4 w-4" /> I Have Paid — Upload Screenshot
+              </button>
               <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
                 <Truck className="h-5 w-5 text-blue-400" />
                 <p className="font-semibold text-gray-900 text-sm">Estimated Delivery: 3–5 working days</p>
@@ -373,7 +451,74 @@ export default function Checkout() {
             </div>
           </div>
         </div>
-      </Layout>
+
+        {/* ── Payment Proof Upload Dialog ── */}
+        <Dialog open={proofDialog} onOpenChange={o => { if (!o) setProofDialog(false); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5 text-green-600" /> Upload Payment Screenshot
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-slate-600">Upload your UPI payment screenshot. Our AI will verify the amount and time.</p>
+
+              <label className="block w-full cursor-pointer">
+                <div className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${proofFile ? "border-green-400 bg-green-50" : "border-gray-300 hover:border-gray-400 bg-gray-50"}`}>
+                  {proofPreview ? (
+                    <div className="relative">
+                      <img src={proofPreview} alt="Payment proof" className="max-h-40 mx-auto rounded-lg object-contain" />
+                      <button
+                        onClick={(e) => { e.preventDefault(); setProofFile(null); setProofPreview(null); setProofValid(null); setProofReason(""); }}
+                        className="absolute top-1 right-1 bg-white rounded-full p-0.5 border shadow-sm"
+                      ><X className="h-3.5 w-3.5 text-gray-600" /></button>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600 font-semibold">Tap to select screenshot</p>
+                      <p className="text-xs text-gray-400 mt-1">JPG, PNG — from gallery or camera</p>
+                    </>
+                  )}
+                </div>
+                <input type="file" accept="image/*" className="hidden" onChange={handleProofSelect} />
+              </label>
+
+              {proofValid === true && (
+                <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-xl p-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-green-800 text-sm">Payment Verified ✓</p>
+                    <p className="text-xs text-green-700 mt-0.5">{proofReason}</p>
+                    <p className="text-xs text-slate-500 mt-1">Admin will confirm your order shortly!</p>
+                  </div>
+                </div>
+              )}
+              {proofValid === false && (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
+                  <XCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-red-700 text-sm">Could Not Verify</p>
+                    <p className="text-xs text-red-600 mt-0.5">{proofReason}</p>
+                    <p className="text-xs text-slate-500 mt-1">Try a clearer screenshot or WhatsApp us directly.</p>
+                  </div>
+                </div>
+              )}
+
+              <Button
+                disabled={!proofFile || verifying || proofValid === true}
+                onClick={verifyPaymentProof}
+                className="w-full bg-green-600 hover:bg-green-700 text-white gap-2"
+              >
+                {verifying
+                  ? <><Loader2 className="h-4 w-4 animate-spin" /> Verifying with AI...</>
+                  : proofValid === true ? "✓ Submitted!"
+                  : "Verify & Submit"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+    </Layout>
     );
   }
 

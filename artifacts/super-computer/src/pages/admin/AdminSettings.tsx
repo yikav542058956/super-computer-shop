@@ -13,7 +13,7 @@ import {
   Settings, MessageCircle, Store, Phone, Mail, Percent, Truck, Save, CheckCircle,
   ShieldCheck, Trash2, UserPlus, MapPin, CreditCard, Eye, EyeOff, Smartphone,
   AlertTriangle, Info, Database, Download, Upload, RotateCcw, PackageX, Search,
-  FileText, Building2,
+  FileText, Building2, Sparkles,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -935,6 +935,14 @@ export default function AdminSettings() {
     toast.success("SEO settings saved! Changes apply live on the site.");
   };
 
+  // AI Assistant toggle
+  const [aiToggle, setAiToggle] = useState(true);
+  useEffect(() => {
+    get(ref(db, "settings/aiAssistantEnabled")).then(snap => {
+      if (snap.exists()) setAiToggle(snap.val() !== false);
+    });
+  }, []);
+
   // Due Alert Days
   const [dueAlertDays, setDueAlertDays] = useState("3");
   useEffect(() => {
@@ -1086,6 +1094,34 @@ export default function AdminSettings() {
                     : <><Save className="h-4 w-4" />Save</>
                   }
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* AI Assistant Toggle */}
+          <Card className="border-2 border-purple-200 bg-purple-50/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-purple-800">
+                <Sparkles className="h-5 w-5" /> AI Assistant (Floating Button)
+              </CardTitle>
+              <CardDescription className="text-purple-700">
+                Enable or disable the floating AI assistant button visible to admins on all pages.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between bg-white rounded-xl border border-purple-100 px-4 py-3">
+                <div>
+                  <p className="font-semibold text-slate-800">AI Assistant</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Floating chat button on all admin pages</p>
+                </div>
+                <Switch
+                  checked={aiToggle}
+                  onCheckedChange={async (v) => {
+                    setAiToggle(v);
+                    await set(ref(db, "settings/aiAssistantEnabled"), v);
+                    toast.success(v ? "AI Assistant enabled!" : "AI Assistant disabled!");
+                  }}
+                />
               </div>
             </CardContent>
           </Card>

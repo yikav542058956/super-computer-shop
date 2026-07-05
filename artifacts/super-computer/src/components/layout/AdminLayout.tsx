@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { ref, get } from "firebase/database";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Tag,
@@ -41,6 +42,13 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const [location, setLocation] = useLocation();
   const { logout } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(true);
+
+  useEffect(() => {
+    get(ref(db, "settings/aiAssistantEnabled")).then(snap => {
+      if (snap.exists()) setAiEnabled(snap.val() !== false);
+    });
+  }, []);
 
   const handleLogout = async () => {
     setDrawerOpen(false);
@@ -191,7 +199,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     </div>
 
     {/* Floating AI — outside overflow-hidden so fixed positioning works */}
-    <AdminAIAssistant />
+    {aiEnabled && <AdminAIAssistant />}
     </>
   );
 };

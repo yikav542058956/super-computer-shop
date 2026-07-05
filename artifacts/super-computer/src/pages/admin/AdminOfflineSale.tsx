@@ -15,8 +15,9 @@ import {
   ShoppingBag, Plus, Loader2, CheckCircle, Search, X, Package,
   ChevronRight, User, Phone, MapPin, CreditCard,
   FileText, Download, IndianRupee, AlertCircle, Percent,
-  History, Calendar, Banknote, Clock, Eye, RefreshCw,
+  History, Calendar, Banknote, Clock, Eye, RefreshCw, BookOpen,
 } from "lucide-react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { formatINR } from "@/lib/utils";
 import jsPDF from "jspdf";
@@ -690,7 +691,16 @@ function SalesHistory() {
                   </div>
                 )}
 
-                <div className="mt-2 flex justify-end">
+                <div className="mt-2 flex items-center justify-between">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.location.href = `/admin/accounting?client=${encodeURIComponent(customerName)}&phone=${encodeURIComponent(phone)}`;
+                    }}
+                    className="text-xs text-blue-600 font-semibold flex items-center gap-1 hover:text-blue-800"
+                  >
+                    <BookOpen className="h-3 w-3" /> Ledger
+                  </button>
                   <span className="text-xs text-orange-600 font-medium flex items-center gap-1">
                     <Eye className="h-3 w-3" /> View Details
                   </span>
