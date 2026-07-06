@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, Users, Tag,
   Settings, LogOut, Image as ImageIcon, BarChart, Megaphone,
   Ticket, Camera, Wallet, BookOpen, CreditCard, ShoppingBag,
-  Sparkles, Menu, X, ChevronRight, MapPinned, Briefcase,
+  Sparkles, Menu, X, ChevronRight, MapPinned, Briefcase, Receipt,
 } from "lucide-react";
 import { AdminAIAssistant } from "@/components/admin/AdminAIAssistant";
 
@@ -24,6 +24,7 @@ const navItems = [
   { label: "Reports",         href: "/admin/reports",          icon: BarChart },
   { label: "Customer Photos", href: "/admin/customer-photos",  icon: Camera },
   { label: "Wallet",          href: "/admin/wallet",           icon: Wallet },
+  { label: "Bill / Invoice",  href: "/admin/bill",             icon: Receipt },
   { label: "Other Work",      href: "/admin/other-work",       icon: Briefcase },
   { label: "Ledger",          href: "/admin/accounting",       icon: BookOpen },
   { label: "Lead Generator",  href: "/admin/leads",            icon: MapPinned },
