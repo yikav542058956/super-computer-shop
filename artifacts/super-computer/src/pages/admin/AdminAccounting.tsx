@@ -1,6 +1,6 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { ref, onValue, push, set, update } from "firebase/database";
+import { ref, onValue, push, set, update, remove } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import {
   Search, Plus, TrendingUp, TrendingDown,
   IndianRupee, Loader2, ChevronRight, AlertCircle, BookOpen,
-  ShoppingBag, Calendar, Package, CheckCircle, Clock, X,
+  ShoppingBag, Calendar, Package, CheckCircle, Clock, X, Trash2,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 import { toast } from "sonner";
@@ -354,6 +354,43 @@ export default function AdminAccounting() {
     } finally { setRefunding(false); }
   };
 
+  /* ── Delete a manual payment/refund entry from the ledger ── */
+  const deletePaymentEntry = async (entryId: string) => {
+    if (!selectedAccount) return;
+    if (!window.confirm("Delete this ledger entry? This cannot be undone.")) return;
+    try {
+      await remove(ref(db, `ledger_payments/${selectedAccount.key}/${entryId}`));
+      toast.success("Ledger entry deleted");
+    } catch (e: any) {
+      toast.error("Failed to delete: " + e.message);
+    }
+  };
+
+  /* ── Delete a sale entry (local sale or offline order) ── */
+  const deleteSaleEntry = async (sale: any) => {
+    if (!window.confirm(`Delete this sale (${sale.productName || "Product"} - ${formatINR(sale.totalSaleValue)})? This cannot be undone.`)) return;
+    try {
+      const path = sale._fromOrder ? `orders/${sale.id}` : `local_sales/${sale.id}`;
+      await remove(ref(db, path));
+      toast.success("Sale entry deleted");
+      setSelectedAccount(null);
+    } catch (e: any) {
+      toast.error("Failed to delete: " + e.message);
+    }
+  };
+
+  /* ── Delete entire client's ledger (all manual payment/refund entries) ── */
+  const deleteClientLedger = async () => {
+    if (!selectedAccount) return;
+    if (!window.confirm(`Delete ALL ledger entries for ${selectedAccount.name}? Sales themselves will not be removed. This cannot be undone.`)) return;
+    try {
+      await remove(ref(db, `ledger_payments/${selectedAccount.key}`));
+      toast.success("Client ledger cleared");
+    } catch (e: any) {
+      toast.error("Failed to delete: " + e.message);
+    }
+  };
+
   /* ── Auto-open client from URL params ── */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -571,6 +608,15 @@ export default function AdminAccounting() {
                 >
                   <BookOpen className="h-3.5 w-3.5" /> Khata Book
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
+                  onClick={deleteClientLedger}
+                  title="Delete all manual payment/refund entries for this client"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Clear Ledger
+                </Button>
               </div>
 
               {/* ── Purchase History ── */}
@@ -616,6 +662,13 @@ export default function AdminAccounting() {
                               <p className="text-xs font-bold text-green-600">✓ Paid</p>
                             )}
                           </div>
+                          <button
+                            onClick={() => deleteSaleEntry(sale)}
+                            className="shrink-0 h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Delete this sale"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       );
                     })}
@@ -683,6 +736,13 @@ export default function AdminAccounting() {
                             </p>
                           </div>
                           <p className={`font-black shrink-0 ${isRefund ? "text-blue-700" : "text-green-700"}`}>{formatINR(entry.amount)}</p>
+                          <button
+                            onClick={() => deletePaymentEntry(entry.id)}
+                            className="shrink-0 h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Delete this entry"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       );
                     })}
