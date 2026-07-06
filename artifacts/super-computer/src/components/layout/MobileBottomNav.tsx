@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLoginDialog } from "@/contexts/LoginDialogContext";
-import { Home, Play, Search, User, ShoppingCart } from "lucide-react";
+import { Home, Search, User, ShoppingCart } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function MobileBottomNav() {
@@ -24,7 +24,6 @@ export function MobileBottomNav() {
 
   const tabs = [
     { label: "Home",    icon: Home,   path: "/",        active: location === "/",      onClick: () => setLocation("/") },
-    { label: "Play",    icon: Play,   path: "/play",    active: isActive("/play"),      onClick: () => setLocation("/play") },
     { label: "Search",  icon: Search, path: "/search",  active: isActive("/search"),    onClick: () => setLocation("/search") },
     { label: "Account", icon: User,   path: "/profile", active: isActive("/profile") || isActive("/orders") || isActive("/wallet"), onClick: handleAccount },
   ];
