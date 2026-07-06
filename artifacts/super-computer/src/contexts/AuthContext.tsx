@@ -58,15 +58,19 @@ function normalizePhone(phone: string): string {
   return digits;
 }
 
-/** Check if a phone number is in the adminPhones list */
+/** Check if a phone number is an admin: either whitelisted in adminPhones, or has role "admin" on its user record */
 async function checkPhoneAdmin(phone: string): Promise<boolean> {
   const normalized = normalizePhone(phone);
+  const rawDigits = phone.replace(/\D/g, "");
   try {
-    const snap = await get(ref(db, `adminPhones/${normalized}`));
-    if (snap.exists()) return true;
-    // Also try the raw value in case stored differently
-    const snap2 = await get(ref(db, `adminPhones/${phone.replace(/\D/g, "")}`));
-    return snap2.exists();
+    const [whitelistSnap, whitelistSnap2, userSnap] = await Promise.all([
+      get(ref(db, `adminPhones/${normalized}`)),
+      get(ref(db, `adminPhones/${rawDigits}`)),
+      get(ref(db, `users/phone_${normalized}`)),
+    ]);
+    if (whitelistSnap.exists() || whitelistSnap2.exists()) return true;
+    if (userSnap.exists() && userSnap.val()?.role === "admin") return true;
+    return false;
   } catch {
     return false;
   }
