@@ -5,9 +5,11 @@
   "framework": null,
   "installCommand": "pnpm install",
   "rewrites": [
-    { "source": "/api/cashfree/:path*", "destination": "/api/cashfree/:path*" },
-    { "source": "/api/proxy/:path*",    "destination": "/api/proxy/:path*" },
-    { "source": "/(.*)",                "destination": "/index.html" }
+    { "source": "/api/cashfree/:path*",       "destination": "/api/cashfree/:path*" },
+    { "source": "/api/proxy/:path*",          "destination": "/api/proxy/:path*" },
+    { "source": "/api/leads/generate",        "destination": "/api/leads/generate" },
+    { "source": "/api/leads/gmaps-generate",  "destination": "/api/leads/gmaps-generate" },
+    { "source": "/(.*)",                      "destination": "/index.html" }
   ],
   "headers": [
     {

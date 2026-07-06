@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import {
   MapPinned, Search, Loader2, Trash2, Download, FileText,
   Phone, MapPin, Sparkles, Layers, ThumbsUp, ThumbsDown, X,
+  Map, Globe, Star,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -22,23 +23,49 @@ const INDIAN_STATES = [
   "Delhi", "Jammu and Kashmir", "Ladakh", "Chandigarh", "Puducherry",
 ];
 
+const POPULAR_CITIES = [
+  "Delhi", "Mumbai", "Bangalore", "Hyderabad", "Chennai", "Kolkata",
+  "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Surat", "Kanpur",
+  "Nagpur", "Bhopal", "Indore", "Patna", "Varanasi", "Agra",
+  "Noida", "Gurugram", "Faridabad", "Ghaziabad", "Meerut", "Ranchi",
+  "Coimbatore", "Vishakhapatnam", "Kochi", "Chandigarh", "Bhubaneswar",
+];
+
 type LeadStatus = "new" | "interested" | "not_interested";
+type LeadSource = "osm" | "google_maps";
 
 interface Lead {
   id: string;
   name: string;
   address: string;
   phone: string;
+  website?: string;
+  rating?: number;
+  reviews?: number;
   category: string;
-  state: string;
+  state?: string;
+  city?: string;
+  source?: "google_maps" | "openstreetmap";
   createdAt: number;
   status?: LeadStatus;
 }
 
 export default function AdminLeads() {
-  const [state, setState] = useState("Bihar");
-  const [category, setCategory] = useState("");
-  const [count, setCount] = useState("20");
+  // Source toggle
+  const [source, setSource] = useState<LeadSource>("google_maps");
+
+  // Google Maps form
+  const [gmCity, setGmCity] = useState("Delhi");
+  const [useCustomCity, setUseCustomCity] = useState(false);
+  const [gmCustomCity, setGmCustomCity] = useState("");
+  const [gmCategory, setGmCategory] = useState("computer coaching");
+  const [gmCount, setGmCount] = useState("20");
+
+  // OSM form
+  const [osmState, setOsmState] = useState("Bihar");
+  const [osmCategory, setOsmCategory] = useState("");
+  const [osmCount, setOsmCount] = useState("20");
+
   const [generating, setGenerating] = useState(false);
   const [genMessage, setGenMessage] = useState("");
 
@@ -50,6 +77,7 @@ export default function AdminLeads() {
   const [filterState, setFilterState] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState<"all" | LeadStatus>("all");
+  const [filterSource, setFilterSource] = useState<"all" | "google_maps" | "openstreetmap">("all");
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
 
@@ -65,8 +93,15 @@ export default function AdminLeads() {
     return () => unsub();
   }, []);
 
-  const stateOptions = useMemo(() => Array.from(new Set(leads.map((l) => l.state).filter(Boolean))).sort(), [leads]);
-  const categoryOptions = useMemo(() => Array.from(new Set(leads.map((l) => l.category).filter(Boolean))).sort(), [leads]);
+  const locationOptions = useMemo(() => {
+    const locs = leads.map((l) => l.city || l.state || "").filter(Boolean);
+    return Array.from(new Set(locs)).sort();
+  }, [leads]);
+
+  const categoryOptions = useMemo(
+    () => Array.from(new Set(leads.map((l) => l.category).filter(Boolean))).sort(),
+    [leads],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -79,53 +114,84 @@ export default function AdminLeads() {
           l.address?.toLowerCase().includes(q) ||
           l.phone?.toLowerCase().includes(q) ||
           l.category?.toLowerCase().includes(q) ||
+          l.city?.toLowerCase().includes(q) ||
           l.state?.toLowerCase().includes(q);
         if (!matches) return false;
       }
-      if (filterState !== "all" && l.state !== filterState) return false;
+      if (filterState !== "all" && l.city !== filterState && l.state !== filterState) return false;
       if (filterCategory !== "all" && l.category !== filterCategory) return false;
       if (filterStatus !== "all" && (l.status || "new") !== filterStatus) return false;
+      if (filterSource !== "all" && (l.source || "openstreetmap") !== filterSource) return false;
       if (from && (!l.createdAt || l.createdAt < from)) return false;
       if (to && (!l.createdAt || l.createdAt > to)) return false;
       return true;
     });
-  }, [leads, search, filterState, filterCategory, filterStatus, filterFrom, filterTo]);
+  }, [leads, search, filterState, filterCategory, filterStatus, filterSource, filterFrom, filterTo]);
 
   const clearFilters = () => {
-    setSearch(""); setFilterState("all"); setFilterCategory("all"); setFilterStatus("all");
-    setFilterFrom(""); setFilterTo("");
+    setSearch(""); setFilterState("all"); setFilterCategory("all");
+    setFilterStatus("all"); setFilterSource("all"); setFilterFrom(""); setFilterTo("");
   };
-  const filtersActive = !!search || filterState !== "all" || filterCategory !== "all" || filterStatus !== "all" || !!filterFrom || !!filterTo;
+
+  const filtersActive =
+    !!search || filterState !== "all" || filterCategory !== "all" ||
+    filterStatus !== "all" || filterSource !== "all" || !!filterFrom || !!filterTo;
 
   const handleGenerate = async () => {
-    if (!category.trim()) { toast.error("Category daalein, jaise: computer coaching"); return; }
-    setGenerating(true);
-    setGenMessage("");
-    try {
-      const res = await fetch("/api/leads/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state, category: category.trim(), count: Number(count) || 20 }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Generate failed");
-      setGenMessage(data.message || "");
-      if (data.newCount > 0) {
-        toast.success(`${data.newCount} naye leads mil gaye!`);
-      } else {
-        toast.info(data.message || "Koi naya lead nahi mila");
+    if (source === "google_maps") {
+      const city = gmCustomCity.trim() || gmCity;
+      if (!gmCategory.trim()) { toast.error("Category daalein, jaise: computer coaching"); return; }
+      if (!city) { toast.error("City daalein"); return; }
+      setGenerating(true);
+      setGenMessage("");
+      try {
+        const res = await fetch("/api/leads/gmaps-generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ city, category: gmCategory.trim(), count: Number(gmCount) || 20 }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Generate failed");
+        setGenMessage(data.message || "");
+        if (data.newCount > 0) {
+          toast.success(`${data.newCount} naye leads mile Google Maps se!`);
+        } else {
+          toast.info(data.message || "Koi naya lead nahi mila");
+        }
+      } catch (e: any) {
+        toast.error("Failed: " + e.message);
+      } finally {
+        setGenerating(false);
       }
-    } catch (e: any) {
-      toast.error("Failed: " + e.message);
-    } finally {
-      setGenerating(false);
+    } else {
+      if (!osmCategory.trim()) { toast.error("Category daalein, jaise: computer coaching"); return; }
+      setGenerating(true);
+      setGenMessage("");
+      try {
+        const res = await fetch("/api/leads/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state: osmState, category: osmCategory.trim(), count: Number(osmCount) || 20 }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Generate failed");
+        setGenMessage(data.message || "");
+        if (data.newCount > 0) {
+          toast.success(`${data.newCount} naye leads mil gaye!`);
+        } else {
+          toast.info(data.message || "Koi naya lead nahi mila");
+        }
+      } catch (e: any) {
+        toast.error("Failed: " + e.message);
+      } finally {
+        setGenerating(false);
+      }
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Ye lead delete karna hai? Ye dobara generate mein bhi nahi aayega.")) return;
     try {
-      // Mark as excluded first so future "Generate" runs never bring this same business back.
       await set(ref(db, `leads_excluded_ids/${id}`), true);
       await remove(ref(db, `leads/${id}`));
       toast.success("Lead deleted — ab ye dobara nahi aayega");
@@ -142,17 +208,21 @@ export default function AdminLeads() {
     }
   };
 
-  const statusLabel = (s?: LeadStatus) => s === "interested" ? "Interesting" : s === "not_interested" ? "Not Interesting" : "New";
+  const statusLabel = (s?: LeadStatus) =>
+    s === "interested" ? "Interesting" : s === "not_interested" ? "Not Interesting" : "New";
 
   const downloadCSV = () => {
     if (filtered.length === 0) { toast.error("Koi lead nahi hai download karne ke liye"); return; }
-    const header = ["Name", "Address", "Phone", "Category", "State", "Date", "Status"];
+    const header = ["Name", "Address", "Phone", "Website", "Rating", "Category", "City/State", "Source", "Date", "Status"];
     const rows = filtered.map((l) => [
       l.name || "",
       l.address || "",
       l.phone || "",
+      l.website || "",
+      l.rating != null ? String(l.rating) : "",
       l.category || "",
-      l.state || "",
+      l.city || l.state || "",
+      l.source === "google_maps" ? "Google Maps" : "OpenStreetMap",
       l.createdAt ? new Date(l.createdAt).toLocaleDateString("en-IN") : "",
       statusLabel(l.status),
     ]);
@@ -178,8 +248,16 @@ export default function AdminLeads() {
     doc.text(`Generated: ${new Date().toLocaleDateString("en-IN")} · Total: ${filtered.length}`, 14, 22);
     autoTable(doc, {
       startY: 28,
-      head: [["Name", "Address", "Phone", "Category", "State", "Status"]],
-      body: filtered.map((l) => [l.name || "", l.address || "", l.phone || "", l.category || "", l.state || "", statusLabel(l.status)]),
+      head: [["Name", "Address", "Phone", "Category", "City", "Rating", "Status"]],
+      body: filtered.map((l) => [
+        l.name || "",
+        l.address || "",
+        l.phone || "",
+        l.category || "",
+        l.city || l.state || "",
+        l.rating != null ? `${l.rating}★` : "",
+        statusLabel(l.status),
+      ]),
       styles: { fontSize: 8 },
       headStyles: { fillColor: [37, 99, 235] },
     });
@@ -195,37 +273,129 @@ export default function AdminLeads() {
           <h1 className="text-xl font-black text-slate-800">Lead Generator</h1>
         </div>
         <p className="text-sm text-slate-500 -mt-4">
-          State aur category daalkar naye business leads generate karein (naam, address, phone) — kabhi duplicate nahi milega.
+          City aur category daalkar Google Maps se business leads generate karein — naam, address, phone sab milega.
         </p>
+
+        {/* ── Source Toggle ── */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setSource("google_maps")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${
+              source === "google_maps"
+                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
+            }`}
+          >
+            <Map className="h-4 w-4" />
+            Google Maps
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${source === "google_maps" ? "bg-white/20 text-white" : "bg-green-100 text-green-700"}`}>
+              RECOMMENDED
+            </span>
+          </button>
+          <button
+            onClick={() => setSource("osm")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${
+              source === "osm"
+                ? "bg-slate-800 text-white border-slate-800"
+                : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
+            }`}
+          >
+            <Globe className="h-4 w-4" />
+            OpenStreetMap
+          </button>
+        </div>
 
         {/* ── Generate Form ── */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 space-y-4">
-          <div className="grid sm:grid-cols-3 gap-3">
-            <div>
-              <Label className="text-xs text-slate-500 mb-1 block">State</Label>
-              <select
-                value={state}
-                onChange={(e) => setState(e.target.value)}
-                className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
-              >
-                {INDIAN_STATES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500 mb-1 block">Category</Label>
-              <Input
-                placeholder="jaise: computer coaching"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500 mb-1 block">Kitne leads chahiye</Label>
-              <Input type="number" min={1} max={100} value={count} onChange={(e) => setCount(e.target.value)} />
-            </div>
-          </div>
+          {source === "google_maps" ? (
+            <>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">City</Label>
+                  <div className="space-y-2">
+                    <select
+                      value={useCustomCity ? "__custom__" : gmCity}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setUseCustomCity(true);
+                          setGmCustomCity("");
+                        } else {
+                          setUseCustomCity(false);
+                          setGmCustomCity("");
+                          setGmCity(e.target.value);
+                        }
+                      }}
+                      className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                    >
+                      {POPULAR_CITIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                      <option value="__custom__">✏️ Custom City...</option>
+                    </select>
+                    {useCustomCity && (
+                      <Input
+                        placeholder="City ka naam likhein..."
+                        value={gmCustomCity}
+                        onChange={(e) => setGmCustomCity(e.target.value)}
+                        className="text-sm"
+                        autoFocus
+                      />
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">Category</Label>
+                  <Input
+                    placeholder="jaise: computer coaching"
+                    value={gmCategory}
+                    onChange={(e) => setGmCategory(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">Kitne leads chahiye</Label>
+                  <Input type="number" min={1} max={50} value={gmCount} onChange={(e) => setGmCount(e.target.value)} />
+                </div>
+              </div>
+              <div className="bg-blue-50 rounded-xl p-3 text-xs text-blue-700 border border-blue-100">
+                <strong>Google Maps mode:</strong> Ye Google Maps se real business listings scrape karta hai — naam, address, phone number, website, rating sab. Best results ke liye specific city choose karein (jaise "Delhi" not "UP").
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">State</Label>
+                  <select
+                    value={osmState}
+                    onChange={(e) => setOsmState(e.target.value)}
+                    className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                  >
+                    {INDIAN_STATES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">Category</Label>
+                  <Input
+                    placeholder="jaise: computer coaching"
+                    value={osmCategory}
+                    onChange={(e) => setOsmCategory(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">Kitne leads chahiye</Label>
+                  <Input type="number" min={1} max={100} value={osmCount} onChange={(e) => setOsmCount(e.target.value)} />
+                </div>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 border border-slate-100">
+                <strong>OpenStreetMap mode:</strong> Free open-source map data use karta hai. Phone number aur address hamesha available nahi hote, lekin duplicate kabhi nahi aata.
+              </div>
+            </>
+          )}
+
           <Button
             onClick={handleGenerate}
             disabled={generating}
@@ -234,11 +404,11 @@ export default function AdminLeads() {
             {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {generating ? "Generate ho raha hai..." : "Generate Leads"}
           </Button>
-          {genMessage && <p className="text-xs text-slate-500">{genMessage}</p>}
-          <p className="text-[11px] text-slate-400">
-            Ye tool free open-source map data (OpenStreetMap) use karta hai, isliye kuch business ka phone number ho sakta hai available na ho.
-            Roz naya category/state try karke aur leads generate kar sakte ho — pehle wale kabhi dobara nahi aayenge.
-          </p>
+          {genMessage && (
+            <p className={`text-xs ${genMessage.includes("nahi mila") ? "text-amber-600" : "text-green-600"}`}>
+              {genMessage}
+            </p>
+          )}
         </div>
 
         {/* ── Leads Table ── */}
@@ -263,12 +433,12 @@ export default function AdminLeads() {
           </div>
 
           {/* ── Filters ── */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
             <div>
-              <Label className="text-[10px] text-slate-400 mb-1 block">State</Label>
+              <Label className="text-[10px] text-slate-400 mb-1 block">City/State</Label>
               <select value={filterState} onChange={(e) => setFilterState(e.target.value)} className="w-full h-9 rounded-md border border-slate-200 px-2 text-xs bg-white">
                 <option value="all">Sabhi</option>
-                {stateOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                {locationOptions.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div>
@@ -276,6 +446,14 @@ export default function AdminLeads() {
               <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full h-9 rounded-md border border-slate-200 px-2 text-xs bg-white">
                 <option value="all">Sabhi</option>
                 {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label className="text-[10px] text-slate-400 mb-1 block">Source</Label>
+              <select value={filterSource} onChange={(e) => setFilterSource(e.target.value as any)} className="w-full h-9 rounded-md border border-slate-200 px-2 text-xs bg-white">
+                <option value="all">Sabhi</option>
+                <option value="google_maps">Google Maps</option>
+                <option value="openstreetmap">OpenStreetMap</option>
               </select>
             </div>
             <div>
@@ -311,17 +489,21 @@ export default function AdminLeads() {
           {loading ? (
             <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>
           ) : filtered.length === 0 ? (
-            <p className="text-center text-slate-400 py-10 text-sm">Abhi tak koi lead generate nahi hua. Upar form se leads generate karein.</p>
+            <p className="text-center text-slate-400 py-10 text-sm">
+              Abhi tak koi lead generate nahi hua. Upar "Google Maps" select karke city + category daalein aur Generate dabayein.
+            </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[760px]">
+              <table className="w-full text-sm min-w-[860px]">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs text-slate-500 uppercase tracking-wide">
                     <th className="py-2 pr-3">Name</th>
                     <th className="py-2 pr-3">Address</th>
                     <th className="py-2 pr-3">Phone</th>
+                    <th className="py-2 pr-3">Rating</th>
                     <th className="py-2 pr-3">Category</th>
-                    <th className="py-2 pr-3">State</th>
+                    <th className="py-2 pr-3">City</th>
+                    <th className="py-2 pr-3">Source</th>
                     <th className="py-2 pr-3">Status</th>
                     <th className="py-2 pl-3 pr-1 sticky right-0 bg-white text-right">Actions</th>
                   </tr>
@@ -329,30 +511,60 @@ export default function AdminLeads() {
                 <tbody className="divide-y divide-slate-100">
                   {filtered.map((l) => {
                     const status = l.status || "new";
+                    const isGmaps = l.source === "google_maps";
                     return (
                       <tr key={l.id} className="hover:bg-slate-50 group">
-                        <td className="py-2.5 pr-3 font-semibold text-slate-800 whitespace-nowrap">{l.name}</td>
+                        <td className="py-2.5 pr-3 font-semibold text-slate-800 whitespace-nowrap max-w-[160px]">
+                          <div className="truncate" title={l.name}>{l.name}</div>
+                          {l.website && (
+                            <a href={l.website} target="_blank" rel="noopener noreferrer"
+                              className="text-[10px] text-blue-500 hover:underline truncate block max-w-[150px]">
+                              {l.website.replace(/^https?:\/\//, "").slice(0, 30)}
+                            </a>
+                          )}
+                        </td>
                         <td className="py-2.5 pr-3 text-slate-600 max-w-[160px]">
-                          <span className="flex items-start gap-1"><MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />{l.address || "—"}</span>
+                          <span className="flex items-start gap-1">
+                            <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />
+                            <span className="truncate" title={l.address || "—"}>{l.address || "—"}</span>
+                          </span>
                         </td>
                         <td className="py-2.5 pr-3 text-slate-600 whitespace-nowrap">
                           {l.phone ? (
-                            <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5 text-slate-400" />{l.phone}</span>
-                          ) : "—"}
+                            <a href={`tel:${l.phone}`} className="flex items-center gap-1 hover:text-blue-600">
+                              <Phone className="h-3.5 w-3.5 text-slate-400" />{l.phone}
+                            </a>
+                          ) : (
+                            <span className="text-slate-300 text-xs">—</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 pr-3 whitespace-nowrap">
+                          {l.rating != null ? (
+                            <span className="flex items-center gap-1 text-amber-600 font-semibold text-xs">
+                              <Star className="h-3.5 w-3.5 fill-amber-400 stroke-amber-400" />
+                              {l.rating.toFixed(1)}
+                              {l.reviews != null && <span className="text-slate-400 font-normal">({l.reviews})</span>}
+                            </span>
+                          ) : <span className="text-slate-300 text-xs">—</span>}
                         </td>
                         <td className="py-2.5 pr-3 text-slate-500 whitespace-nowrap">{l.category}</td>
-                        <td className="py-2.5 pr-3 text-slate-500 whitespace-nowrap">{l.state}</td>
+                        <td className="py-2.5 pr-3 text-slate-500 whitespace-nowrap">{l.city || l.state || "—"}</td>
+                        <td className="py-2.5 pr-3 whitespace-nowrap">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            isGmaps ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-slate-500"
+                          }`}>
+                            {isGmaps ? "Google Maps" : "OSM"}
+                          </span>
+                        </td>
                         <td className="py-2.5 pr-3">
-                          <span
-                            className={
-                              "px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap " +
-                              (status === "interested"
-                                ? "bg-green-100 text-green-700"
-                                : status === "not_interested"
-                                ? "bg-red-100 text-red-600"
-                                : "bg-slate-100 text-slate-500")
-                            }
-                          >
+                          <span className={
+                            "px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap " +
+                            (status === "interested"
+                              ? "bg-green-100 text-green-700"
+                              : status === "not_interested"
+                              ? "bg-red-100 text-red-600"
+                              : "bg-slate-100 text-slate-500")
+                          }>
                             {statusLabel(status)}
                           </span>
                         </td>
