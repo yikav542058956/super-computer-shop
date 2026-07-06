@@ -155,14 +155,18 @@ router.post("/leads/generate", async (req, res) => {
           const tags = el.tags || {};
           const name = tags.name;
           if (!name) continue;
+
+          const address = buildAddress(tags);
+          const phone = tags.phone || tags["contact:phone"] || tags["contact:mobile"] || "";
+          // Only keep leads that have name + phone + address all present — incomplete leads are skipped.
+          if (!address || !phone) continue;
+
           totalMatched++;
           const leadId = `osm_${el.type}_${el.id}`;
           if (existingKeys[leadId] || newLeads[leadId]) continue; // never repeat a lead already generated
 
           const lat = el.lat ?? el.center?.lat;
           const lon = el.lon ?? el.center?.lon;
-          const address = buildAddress(tags) || [tags["addr:city"], state].filter(Boolean).join(", ") || state;
-          const phone = tags.phone || tags["contact:phone"] || tags["contact:mobile"] || "";
 
           const lead = {
             name,
