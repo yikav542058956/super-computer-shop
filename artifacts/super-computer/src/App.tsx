@@ -47,6 +47,7 @@ import AdminAnnouncements from "@/pages/admin/AdminAnnouncements";
 import AdminCustomerPhotos from "@/pages/admin/AdminCustomerPhotos";
 import AdminWallet from "@/pages/admin/AdminWallet";
 import AdminAccounting from "@/pages/admin/AdminAccounting";
+import AdminLeads from "@/pages/admin/AdminLeads";
 import AdminOfflineSale from "@/pages/admin/AdminOfflineSale";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 
@@ -179,6 +180,12 @@ function Router() {
       <Route path="/admin/accounting">
         <AdminRoute>
           <AdminAccounting />
+        </AdminRoute>
+      </Route>
+
+      <Route path="/admin/leads">
+        <AdminRoute>
+          <AdminLeads />
         </AdminRoute>
       </Route>
 

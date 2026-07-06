@@ -78,6 +78,7 @@
   "dependencies": {
     "@cashfreepayments/cashfree-js": "^1.0.7",
     "firebase": "^12.15.0",
+    "jspdf-autotable": "^5.0.8",
     "react-fast-marquee": "^1.6.5"
   }
 }

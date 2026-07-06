@@ -1,0 +1,1 @@
+- [OSM-based lead generation](osm-lead-generation.md) — Overpass times out on whole-state queries; must tile the bbox + use a persisted scan cursor to avoid dupes and timeouts.
