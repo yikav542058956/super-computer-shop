@@ -49,6 +49,7 @@ import AdminWallet from "@/pages/admin/AdminWallet";
 import AdminAccounting from "@/pages/admin/AdminAccounting";
 import AdminLeads from "@/pages/admin/AdminLeads";
 import AdminOfflineSale from "@/pages/admin/AdminOfflineSale";
+import AdminOtherWork from "@/pages/admin/AdminOtherWork";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 
 const queryClient = new QueryClient();
@@ -192,6 +193,12 @@ function Router() {
       <Route path="/admin/offline-sale">
         <AdminRoute>
           <AdminOfflineSale />
+        </AdminRoute>
+      </Route>
+
+      <Route path="/admin/other-work">
+        <AdminRoute>
+          <AdminOtherWork />
         </AdminRoute>
       </Route>
 
