@@ -576,7 +576,10 @@ function TrustSection() {
   );
 }
 
-/* ─── Happy Customers (admin-managed photos) ────────────────── */
+/* ─── Happy Customers (admin-managed photos + videos) ───────── */
+const isVideoUrl = (url?: string) =>
+  url ? /\.(mp4|mov|webm|avi|mkv|3gp)/i.test(url) || url.includes("/video/") : false;
+
 function HappyCustomers() {
   const [photos, setPhotos] = useState<any[]>([]);
   useEffect(() => {
@@ -603,23 +606,34 @@ function HappyCustomers() {
           </h2>
         </motion.div>
         <div className="grid grid-cols-2 gap-3">
-          {photos.slice(0, 6).map((photo, i) => (
-            <motion.div key={photo.id}
-              initial={{ opacity: 0, scale: 0.94 }} whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }} transition={{ delay: i * 0.07 }}
-              className="rounded-2xl overflow-hidden relative"
-              style={{ background: "#e5e7eb", border: "1px solid rgba(0,0,0,0.07)" }}>
-              <img src={photo.imageUrl} alt={photo.customerName || "Customer"}
-                className="w-full object-cover" style={{ aspectRatio: "4/3" }} />
-              {(photo.customerName || photo.laptop) && (
-                <div className="absolute bottom-0 left-0 right-0 p-2.5"
-                  style={{ background: "linear-gradient(transparent,rgba(0,0,0,0.75))" }}>
-                  {photo.customerName && <p className="text-white text-xs font-bold leading-none">{photo.customerName}</p>}
-                  {photo.laptop && <p className="text-slate-300 text-[10px] mt-0.5 leading-none truncate">{photo.laptop}</p>}
-                </div>
-              )}
-            </motion.div>
-          ))}
+          {photos.slice(0, 6).map((photo, i) => {
+            const vid = photo.mediaType === "video" || isVideoUrl(photo.imageUrl);
+            return (
+              <motion.div key={photo.id}
+                initial={{ opacity: 0, scale: 0.94 }} whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }} transition={{ delay: i * 0.07 }}
+                className="rounded-2xl overflow-hidden relative"
+                style={{ aspectRatio: "4/3", background: "#e5e7eb", border: "1px solid rgba(0,0,0,0.07)" }}>
+                {vid ? (
+                  <video
+                    src={photo.imageUrl}
+                    className="w-full h-full object-cover"
+                    autoPlay muted loop playsInline
+                  />
+                ) : (
+                  <img src={photo.imageUrl} alt={photo.customerName || "Customer"}
+                    className="w-full h-full object-cover" />
+                )}
+                {(photo.customerName || photo.laptop) && (
+                  <div className="absolute bottom-0 left-0 right-0 p-2.5"
+                    style={{ background: "linear-gradient(transparent,rgba(0,0,0,0.75))" }}>
+                    {photo.customerName && <p className="text-white text-xs font-bold leading-none">{photo.customerName}</p>}
+                    {photo.laptop && <p className="text-slate-300 text-[10px] mt-0.5 leading-none truncate">{photo.laptop}</p>}
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>
