@@ -140,8 +140,8 @@ export default function AdminLeads() {
   const handleGenerate = async () => {
     if (source === "google_maps") {
       const city = gmCustomCity.trim() || gmCity;
-      if (!gmCategory.trim()) { toast.error("Category daalein, jaise: computer coaching"); return; }
-      if (!city) { toast.error("City daalein"); return; }
+      if (!gmCategory.trim()) { toast.error("Please enter a category, e.g: computer coaching"); return; }
+      if (!city) { toast.error("Please enter a city"); return; }
       setGenerating(true);
       setGenMessage("");
       try {
@@ -154,9 +154,9 @@ export default function AdminLeads() {
         if (!res.ok) throw new Error(data.error || "Generate failed");
         setGenMessage(data.message || "");
         if (data.newCount > 0) {
-          toast.success(`${data.newCount} naye leads mile Google Maps se!`);
+          toast.success(`${data.newCount} new leads found from Google Maps!`);
         } else {
-          toast.info(data.message || "Koi naya lead nahi mila");
+          toast.info(data.message || "No new leads found");
         }
       } catch (e: any) {
         toast.error("Failed: " + e.message);
@@ -164,7 +164,7 @@ export default function AdminLeads() {
         setGenerating(false);
       }
     } else {
-      if (!osmCategory.trim()) { toast.error("Category daalein, jaise: computer coaching"); return; }
+      if (!osmCategory.trim()) { toast.error("Please enter a category, e.g: computer coaching"); return; }
       setGenerating(true);
       setGenMessage("");
       try {
@@ -177,9 +177,9 @@ export default function AdminLeads() {
         if (!res.ok) throw new Error(data.error || "Generate failed");
         setGenMessage(data.message || "");
         if (data.newCount > 0) {
-          toast.success(`${data.newCount} naye leads mil gaye!`);
+          toast.success(`${data.newCount} new leads found!`);
         } else {
-          toast.info(data.message || "Koi naya lead nahi mila");
+          toast.info(data.message || "No new leads found");
         }
       } catch (e: any) {
         toast.error("Failed: " + e.message);
@@ -190,11 +190,11 @@ export default function AdminLeads() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Ye lead delete karna hai? Ye dobara generate mein bhi nahi aayega.")) return;
+    if (!window.confirm("Delete this lead? It will not appear again in future generate results.")) return;
     try {
       await set(ref(db, `leads_excluded_ids/${id}`), true);
       await remove(ref(db, `leads/${id}`));
-      toast.success("Lead deleted — ab ye dobara nahi aayega");
+      toast.success("Lead deleted — it will not be generated again");
     } catch (e: any) {
       toast.error("Failed: " + e.message);
     }
@@ -212,7 +212,7 @@ export default function AdminLeads() {
     s === "interested" ? "Interesting" : s === "not_interested" ? "Not Interesting" : "New";
 
   const downloadCSV = () => {
-    if (filtered.length === 0) { toast.error("Koi lead nahi hai download karne ke liye"); return; }
+    if (filtered.length === 0) { toast.error("No leads to download"); return; }
     const header = ["Name", "Address", "Phone", "Website", "Rating", "Category", "City/State", "Source", "Date", "Status"];
     const rows = filtered.map((l) => [
       l.name || "",
@@ -236,11 +236,11 @@ export default function AdminLeads() {
     a.download = `leads_${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Excel (CSV) file download ho gayi!");
+    toast.success("CSV file downloaded!");
   };
 
   const downloadPDF = () => {
-    if (filtered.length === 0) { toast.error("Koi lead nahi hai download karne ke liye"); return; }
+    if (filtered.length === 0) { toast.error("No leads to download"); return; }
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.text("Lead List — Super Computer", 14, 15);
@@ -262,7 +262,7 @@ export default function AdminLeads() {
       headStyles: { fillColor: [37, 99, 235] },
     });
     doc.save(`leads_${Date.now()}.pdf`);
-    toast.success("PDF download ho gayi!");
+    toast.success("PDF downloaded!");
   };
 
   return (
@@ -273,7 +273,7 @@ export default function AdminLeads() {
           <h1 className="text-xl font-black text-slate-800">Lead Generator</h1>
         </div>
         <p className="text-sm text-slate-500 -mt-4">
-          City aur category daalkar Google Maps se business leads generate karein — naam, address, phone sab milega.
+          Enter a city and category to generate business leads from Google Maps — name, address, phone and more.
         </p>
 
         {/* ── Source Toggle ── */}
@@ -334,7 +334,7 @@ export default function AdminLeads() {
                     </select>
                     {useCustomCity && (
                       <Input
-                        placeholder="City ka naam likhein..."
+                        placeholder="Type city name..."
                         value={gmCustomCity}
                         onChange={(e) => setGmCustomCity(e.target.value)}
                         className="text-sm"
@@ -346,19 +346,19 @@ export default function AdminLeads() {
                 <div>
                   <Label className="text-xs text-slate-500 mb-1 block">Category</Label>
                   <Input
-                    placeholder="jaise: computer coaching"
+                    placeholder="e.g: computer coaching"
                     value={gmCategory}
                     onChange={(e) => setGmCategory(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-slate-500 mb-1 block">Kitne leads chahiye</Label>
+                  <Label className="text-xs text-slate-500 mb-1 block">How many leads</Label>
                   <Input type="number" min={1} max={50} value={gmCount} onChange={(e) => setGmCount(e.target.value)} />
                 </div>
               </div>
               <div className="bg-blue-50 rounded-xl p-3 text-xs text-blue-700 border border-blue-100">
-                <strong>Google Maps mode:</strong> Ye Google Maps se real business listings scrape karta hai — naam, address, phone number, website, rating sab. Best results ke liye specific city choose karein (jaise "Delhi" not "UP").
+                <strong>Google Maps mode:</strong> Scrapes real business listings from Google Maps — name, address, phone, website, and rating. For best results pick a specific city (e.g. "Delhi") rather than a state.
               </div>
             </>
           ) : (
@@ -379,19 +379,19 @@ export default function AdminLeads() {
                 <div>
                   <Label className="text-xs text-slate-500 mb-1 block">Category</Label>
                   <Input
-                    placeholder="jaise: computer coaching"
+                    placeholder="e.g: computer coaching"
                     value={osmCategory}
                     onChange={(e) => setOsmCategory(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-slate-500 mb-1 block">Kitne leads chahiye</Label>
+                  <Label className="text-xs text-slate-500 mb-1 block">How many leads</Label>
                   <Input type="number" min={1} max={100} value={osmCount} onChange={(e) => setOsmCount(e.target.value)} />
                 </div>
               </div>
               <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 border border-slate-100">
-                <strong>OpenStreetMap mode:</strong> Free open-source map data use karta hai. Phone number aur address hamesha available nahi hote, lekin duplicate kabhi nahi aata.
+                <strong>OpenStreetMap mode:</strong> Uses free open-source map data. Phone numbers and addresses may not always be available, but duplicates are never generated.
               </div>
             </>
           )}
@@ -402,10 +402,10 @@ export default function AdminLeads() {
             className="w-full sm:w-auto gap-2 bg-blue-600 hover:bg-blue-700"
           >
             {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {generating ? "Generate ho raha hai..." : "Generate Leads"}
+            {generating ? "Generating..." : "Generate Leads"}
           </Button>
           {genMessage && (
-            <p className={`text-xs ${genMessage.includes("nahi mila") ? "text-amber-600" : "text-green-600"}`}>
+            <p className={`text-xs ${genMessage.toLowerCase().includes("no new") ? "text-amber-600" : "text-green-600"}`}>
               {genMessage}
             </p>
           )}
@@ -437,21 +437,21 @@ export default function AdminLeads() {
             <div>
               <Label className="text-[10px] text-slate-400 mb-1 block">City/State</Label>
               <select value={filterState} onChange={(e) => setFilterState(e.target.value)} className="w-full h-9 rounded-md border border-slate-200 px-2 text-xs bg-white">
-                <option value="all">Sabhi</option>
+                <option value="all">All</option>
                 {locationOptions.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div>
               <Label className="text-[10px] text-slate-400 mb-1 block">Category</Label>
               <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full h-9 rounded-md border border-slate-200 px-2 text-xs bg-white">
-                <option value="all">Sabhi</option>
+                <option value="all">All</option>
                 {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
               <Label className="text-[10px] text-slate-400 mb-1 block">Source</Label>
               <select value={filterSource} onChange={(e) => setFilterSource(e.target.value as any)} className="w-full h-9 rounded-md border border-slate-200 px-2 text-xs bg-white">
-                <option value="all">Sabhi</option>
+                <option value="all">All</option>
                 <option value="google_maps">Google Maps</option>
                 <option value="openstreetmap">OpenStreetMap</option>
               </select>
@@ -459,7 +459,7 @@ export default function AdminLeads() {
             <div>
               <Label className="text-[10px] text-slate-400 mb-1 block">Status</Label>
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="w-full h-9 rounded-md border border-slate-200 px-2 text-xs bg-white">
-                <option value="all">Sabhi</option>
+                <option value="all">All</option>
                 <option value="new">New</option>
                 <option value="interested">Interesting</option>
                 <option value="not_interested">Not Interesting</option>
@@ -490,7 +490,7 @@ export default function AdminLeads() {
             <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>
           ) : filtered.length === 0 ? (
             <p className="text-center text-slate-400 py-10 text-sm">
-              Abhi tak koi lead generate nahi hua. Upar "Google Maps" select karke city + category daalein aur Generate dabayein.
+              No leads yet. Select "Google Maps" above, enter a city + category, and click Generate.
             </p>
           ) : (
             <div className="overflow-x-auto">
