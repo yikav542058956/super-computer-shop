@@ -122,11 +122,19 @@ router.post("/leads/generate", async (req, res) => {
     const cursorStart = cursorRes && cursorRes.ok ? Number((await cursorRes.json()) || 0) % tiles.length : 0;
     const orderedTiles = [...tiles.slice(cursorStart), ...tiles.slice(0, cursorStart)];
 
-    // Fetch existing lead ids to avoid ever generating the same business twice
-    const existingRes = await fetch(`${FIREBASE_DB_URL}/leads.json?shallow=true`, { signal: AbortSignal.timeout(10000) });
+    // Fetch existing + previously-deleted lead ids so we never re-generate the same business twice,
+    // even if the admin deleted it from the list before.
+    const [existingRes, deletedRes] = await Promise.all([
+      fetch(`${FIREBASE_DB_URL}/leads.json?shallow=true`, { signal: AbortSignal.timeout(10000) }),
+      fetch(`${FIREBASE_DB_URL}/leads_excluded_ids.json?shallow=true`, { signal: AbortSignal.timeout(10000) }).catch(() => null),
+    ]);
     const existingKeys: Record<string, boolean> = existingRes.ok
       ? ((await existingRes.json()) as Record<string, boolean> | null) || {}
       : {};
+    const excludedKeys: Record<string, boolean> = deletedRes && deletedRes.ok
+      ? ((await deletedRes.json()) as Record<string, boolean> | null) || {}
+      : {};
+    Object.assign(existingKeys, excludedKeys);
 
     const newLeads: Record<string, any> = {};
     const returned: any[] = [];
