@@ -1,14 +1,27 @@
 import { useState, useEffect } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { ref, get } from "firebase/database";
+import { ref, get, set as dbSet } from "firebase/database";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Lock, ShieldCheck, Loader2 } from "lucide-react";
+import { Lock, ShieldCheck, Loader2, KeyRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+
+/** Check if ANY user in the whole database already has role "admin" */
+async function anyAdminExists(): Promise<boolean> {
+  try {
+    const snap = await get(ref(db, "users"));
+    if (!snap.exists()) return false;
+    const users = snap.val() as Record<string, any>;
+    return Object.values(users).some((u) => u?.role === "admin");
+  } catch {
+    // If we can't read (e.g. rules), assume an admin may exist to stay safe.
+    return true;
+  }
+}
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -16,6 +29,10 @@ export default function AdminLogin() {
   const [, setLocation] = useLocation();
   const [loading, setLoading] = useState(false);
   const { isAdmin, isLoggedIn, loading: authLoading } = useAuth();
+  const [pendingUid, setPendingUid] = useState<string | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [pendingName, setPendingName] = useState<string>("");
+  const [claiming, setClaiming] = useState(false);
 
   // If already logged in as admin, redirect to dashboard
   useEffect(() => {
@@ -33,6 +50,16 @@ export default function AdminLogin() {
       if (snap.exists() && snap.val().role === "admin") {
         toast.success("Welcome to Admin Panel!");
         setLocation("/admin/dashboard");
+        return;
+      }
+
+      // No admin role on this account. If the database has NO admin at all
+      // (e.g. after a data wipe), let this account claim the first-admin slot.
+      const noAdminYet = await anyAdminExists().then((exists) => !exists);
+      if (noAdminYet) {
+        setPendingUid(userCred.user.uid);
+        setPendingEmail(userCred.user.email || email);
+        setPendingName(snap.exists() ? snap.val().name || "" : "");
       } else {
         await auth.signOut();
         toast.error("Access denied. Admin only.");
@@ -43,6 +70,66 @@ export default function AdminLogin() {
       setLoading(false);
     }
   };
+
+  const claimAdmin = async () => {
+    if (!pendingUid) return;
+    setClaiming(true);
+    try {
+      // Double-check right before writing, in case someone else just claimed it.
+      const stillNoAdmin = await anyAdminExists().then((exists) => !exists);
+      if (!stillNoAdmin) {
+        toast.error("An admin was already set up. Please log in with that account.");
+        await auth.signOut();
+        setPendingUid(null);
+        return;
+      }
+      await dbSet(ref(db, `users/${pendingUid}`), {
+        name: pendingName || "Admin",
+        email: pendingEmail || "",
+        phone: "",
+        role: "admin",
+        createdAt: Date.now(),
+      });
+      toast.success("You are now the admin!");
+      setLocation("/admin/dashboard");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to set admin role");
+    } finally {
+      setClaiming(false);
+    }
+  };
+
+  if (pendingUid) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl p-7 text-center">
+          <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-amber-500 shadow-lg mb-4">
+            <KeyRound className="h-7 w-7 text-white" />
+          </div>
+          <h2 className="text-xl font-black text-slate-900 mb-2">No Admin Found</h2>
+          <p className="text-sm text-slate-500 mb-6">
+            Your database currently has no admin account. Do you want to make{" "}
+            <span className="font-semibold text-slate-700">{pendingEmail}</span> the admin?
+          </p>
+          <Button
+            className="w-full h-11 font-bold text-base mb-2"
+            style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", color: "#fff" }}
+            onClick={claimAdmin}
+            disabled={claiming}
+          >
+            {claiming ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Setting up...</> : "Make me the admin"}
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={async () => { await auth.signOut(); setPendingUid(null); }}
+          >
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (authLoading) {
     return (
