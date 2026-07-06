@@ -314,7 +314,7 @@ export default function AdminLeads() {
             <p className="text-center text-slate-400 py-10 text-sm">Abhi tak koi lead generate nahi hua. Upar form se leads generate karein.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm min-w-[760px]">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs text-slate-500 uppercase tracking-wide">
                     <th className="py-2 pr-3">Name</th>
@@ -323,25 +323,25 @@ export default function AdminLeads() {
                     <th className="py-2 pr-3">Category</th>
                     <th className="py-2 pr-3">State</th>
                     <th className="py-2 pr-3">Status</th>
-                    <th className="py-2 pr-3"></th>
+                    <th className="py-2 pl-3 pr-1 sticky right-0 bg-white text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filtered.map((l) => {
                     const status = l.status || "new";
                     return (
-                      <tr key={l.id} className="hover:bg-slate-50">
-                        <td className="py-2.5 pr-3 font-semibold text-slate-800">{l.name}</td>
-                        <td className="py-2.5 pr-3 text-slate-600 max-w-[220px]">
+                      <tr key={l.id} className="hover:bg-slate-50 group">
+                        <td className="py-2.5 pr-3 font-semibold text-slate-800 whitespace-nowrap">{l.name}</td>
+                        <td className="py-2.5 pr-3 text-slate-600 max-w-[160px]">
                           <span className="flex items-start gap-1"><MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />{l.address || "—"}</span>
                         </td>
-                        <td className="py-2.5 pr-3 text-slate-600">
+                        <td className="py-2.5 pr-3 text-slate-600 whitespace-nowrap">
                           {l.phone ? (
                             <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5 text-slate-400" />{l.phone}</span>
                           ) : "—"}
                         </td>
-                        <td className="py-2.5 pr-3 text-slate-500">{l.category}</td>
-                        <td className="py-2.5 pr-3 text-slate-500">{l.state}</td>
+                        <td className="py-2.5 pr-3 text-slate-500 whitespace-nowrap">{l.category}</td>
+                        <td className="py-2.5 pr-3 text-slate-500 whitespace-nowrap">{l.state}</td>
                         <td className="py-2.5 pr-3">
                           <span
                             className={
@@ -356,25 +356,25 @@ export default function AdminLeads() {
                             {statusLabel(status)}
                           </span>
                         </td>
-                        <td className="py-2.5 pr-3">
-                          <div className="flex items-center gap-1">
+                        <td className="py-2.5 pl-3 pr-1 sticky right-0 bg-white group-hover:bg-slate-50">
+                          <div className="flex items-center gap-1 justify-end">
                             <button
                               onClick={() => handleSetStatus(l.id, "interested")}
-                              className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${status === "interested" ? "text-green-600 bg-green-50" : "text-slate-400 hover:text-green-600 hover:bg-green-50"}`}
+                              className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors shrink-0 ${status === "interested" ? "text-green-600 bg-green-50" : "text-slate-400 hover:text-green-600 hover:bg-green-50"}`}
                               title="Interesting lead"
                             >
                               <ThumbsUp className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => handleSetStatus(l.id, "not_interested")}
-                              className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${status === "not_interested" ? "text-red-600 bg-red-50" : "text-slate-400 hover:text-red-600 hover:bg-red-50"}`}
+                              className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors shrink-0 ${status === "not_interested" ? "text-red-600 bg-red-50" : "text-slate-400 hover:text-red-600 hover:bg-red-50"}`}
                               title="Not interesting"
                             >
                               <ThumbsDown className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => handleDelete(l.id)}
-                              className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
                               title="Delete this lead"
                             >
                               <Trash2 className="h-4 w-4" />
