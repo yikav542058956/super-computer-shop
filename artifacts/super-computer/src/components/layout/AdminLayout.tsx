@@ -3,47 +3,50 @@ import { Link, useLocation } from "wouter";
 import { auth, db } from "@/lib/firebase";
 import { ref, get } from "firebase/database";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Tag,
   Settings, LogOut, Image as ImageIcon, BarChart, Megaphone,
   Ticket, Camera, Wallet, BookOpen, CreditCard, ShoppingBag,
   Sparkles, Menu, X, ChevronRight, MapPinned, Briefcase, Receipt,
+  Languages,
 } from "lucide-react";
 import { AdminAIAssistant } from "@/components/admin/AdminAIAssistant";
 
 const navItems = [
-  { label: "Dashboard",       href: "/admin/dashboard",        icon: LayoutDashboard },
-  { label: "Products",        href: "/admin/products",         icon: Package },
-  { label: "Orders",          href: "/admin/orders",           icon: ShoppingCart },
-  { label: "Offline Sale",    href: "/admin/offline-sale",     icon: ShoppingBag },
-  { label: "Customers",       href: "/admin/customers",        icon: Users },
-  { label: "Categories",      href: "/admin/categories",       icon: Tag },
-  { label: "Banners",         href: "/admin/banners",          icon: ImageIcon },
-  { label: "Announcements",   href: "/admin/announcements",    icon: Megaphone },
-  { label: "Coupons",         href: "/admin/coupons",          icon: Ticket },
-  { label: "Reports",         href: "/admin/reports",          icon: BarChart },
-  { label: "Customer Photos", href: "/admin/customer-photos",  icon: Camera },
-  { label: "Wallet",          href: "/admin/wallet",           icon: Wallet },
-  { label: "Bill / Invoice",  href: "/admin/bill",             icon: Receipt },
-  { label: "Other Work",      href: "/admin/other-work",       icon: Briefcase },
-  { label: "Ledger",          href: "/admin/accounting",       icon: BookOpen },
-  { label: "Lead Generator",  href: "/admin/leads",            icon: MapPinned },
-  { label: "Payment",         href: "/admin/payment",          icon: CreditCard },
-  { label: "Settings",        href: "/admin/settings",         icon: Settings },
+  { tKey: "adm_dashboard",       label: "Dashboard",       href: "/admin/dashboard",       icon: LayoutDashboard },
+  { tKey: "adm_products",        label: "Products",         href: "/admin/products",        icon: Package },
+  { tKey: "adm_orders",          label: "Orders",           href: "/admin/orders",          icon: ShoppingCart },
+  { tKey: "adm_offline_sale",    label: "Offline Sale",     href: "/admin/offline-sale",    icon: ShoppingBag },
+  { tKey: "adm_customers",       label: "Customers",        href: "/admin/customers",       icon: Users },
+  { tKey: "adm_categories",      label: "Categories",       href: "/admin/categories",      icon: Tag },
+  { tKey: "adm_banners",         label: "Banners",          href: "/admin/banners",         icon: ImageIcon },
+  { tKey: "adm_announcements",   label: "Announcements",    href: "/admin/announcements",   icon: Megaphone },
+  { tKey: "adm_coupons",         label: "Coupons",          href: "/admin/coupons",         icon: Ticket },
+  { tKey: "adm_reports",         label: "Reports",          href: "/admin/reports",         icon: BarChart },
+  { tKey: "adm_photos",          label: "Customer Photos",  href: "/admin/customer-photos", icon: Camera },
+  { tKey: "adm_wallet",          label: "Wallet",           href: "/admin/wallet",          icon: Wallet },
+  { tKey: "adm_bill",            label: "Bill / Invoice",   href: "/admin/bill",            icon: Receipt },
+  { tKey: "adm_other_work",      label: "Other Work",       href: "/admin/other-work",      icon: Briefcase },
+  { tKey: "adm_ledger",          label: "Ledger",           href: "/admin/accounting",      icon: BookOpen },
+  { tKey: "adm_leads",           label: "Lead Generator",   href: "/admin/leads",           icon: MapPinned },
+  { tKey: "adm_payment",         label: "Payment",          href: "/admin/payment",         icon: CreditCard },
+  { tKey: "adm_settings",        label: "Settings",         href: "/admin/settings",        icon: Settings },
 ];
 
 // Bottom nav: 5 most-used pages on mobile
 const bottomNav = [
-  { label: "Home",    href: "/admin/dashboard",     icon: LayoutDashboard },
-  { label: "Products",href: "/admin/products",      icon: Package },
-  { label: "Orders",  href: "/admin/orders",        icon: ShoppingCart },
-  { label: "Sale",    href: "/admin/offline-sale",  icon: ShoppingBag },
-  { label: "More",    href: null,                   icon: Menu },          // opens drawer
+  { tKey: "adm_dashboard",   label: "Home",     href: "/admin/dashboard",    icon: LayoutDashboard },
+  { tKey: "adm_products",    label: "Products", href: "/admin/products",     icon: Package },
+  { tKey: "adm_orders",      label: "Orders",   href: "/admin/orders",       icon: ShoppingCart },
+  { tKey: "adm_offline_sale",label: "Sale",     href: "/admin/offline-sale", icon: ShoppingBag },
+  { tKey: "more",            label: "More",     href: null,                  icon: Menu },
 ];
 
 export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const [location, setLocation] = useLocation();
   const { logout } = useAuth();
+  const { lang, setLang, t } = useLanguage();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(true);
 
@@ -63,6 +66,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const NavItem = ({ item, onClick }: { item: typeof navItems[0]; onClick?: () => void }) => {
     const Icon = item.icon;
     const isActive = location === item.href;
+    const label = t(item.tKey) !== item.tKey ? t(item.tKey) : item.label;
     return (
       <Link href={item.href}>
         <div
@@ -72,12 +76,18 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           }`}
         >
           <Icon className="h-4 w-4 shrink-0" />
-          <span className="font-medium text-sm">{item.label}</span>
+          <span className="font-medium text-sm">{label}</span>
           {isActive && <ChevronRight className="h-3.5 w-3.5 ml-auto opacity-60" />}
         </div>
       </Link>
     );
   };
+
+  const currentPageLabel = (() => {
+    const item = navItems.find(n => n.href === location);
+    if (!item) return t("adm_portal");
+    return t(item.tKey) !== item.tKey ? t(item.tKey) : item.label;
+  })();
 
   return (
     <>
@@ -103,10 +113,23 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </nav>
         </div>
-        <div className="p-3 border-t border-slate-800 shrink-0">
+        <div className="p-3 border-t border-slate-800 shrink-0 space-y-1">
+          {/* Language toggle */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg">
+            <Languages className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+            <button
+              onClick={() => setLang("hi")}
+              className={`text-xs font-bold px-1.5 py-0.5 rounded transition-all ${lang === "hi" ? "text-white bg-slate-700" : "text-slate-500 hover:text-slate-300"}`}
+            >हिंदी</button>
+            <span className="text-slate-700 text-xs">|</span>
+            <button
+              onClick={() => setLang("en")}
+              className={`text-xs font-bold px-1.5 py-0.5 rounded transition-all ${lang === "en" ? "text-white bg-slate-700" : "text-slate-500 hover:text-slate-300"}`}
+            >English</button>
+          </div>
           <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2 w-full rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
             <LogOut className="h-4 w-4" />
-            <span className="font-medium text-sm">Logout</span>
+            <span className="font-medium text-sm">{t("adm_logout")}</span>
           </button>
         </div>
       </aside>
@@ -134,10 +157,23 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             ))}
           </nav>
         </div>
-        <div className="p-3 border-t border-slate-800 shrink-0">
+        <div className="p-3 border-t border-slate-800 shrink-0 space-y-1">
+          {/* Language toggle mobile */}
+          <div className="flex items-center gap-2 px-3 py-1.5">
+            <Languages className="h-3.5 w-3.5 text-slate-500" />
+            <button
+              onClick={() => setLang("hi")}
+              className={`text-xs font-bold px-2 py-1 rounded ${lang === "hi" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-slate-300"}`}
+            >हिंदी</button>
+            <span className="text-slate-700 text-xs">|</span>
+            <button
+              onClick={() => setLang("en")}
+              className={`text-xs font-bold px-2 py-1 rounded ${lang === "en" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-slate-300"}`}
+            >English</button>
+          </div>
           <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-300 transition-colors">
             <LogOut className="h-4 w-4" />
-            <span className="font-medium text-sm">Logout</span>
+            <span className="font-medium text-sm">{t("adm_logout")}</span>
           </button>
         </div>
       </aside>
@@ -155,11 +191,21 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <span className="font-bold text-slate-800 text-base truncate">
-              {navItems.find(n => n.href === location)?.label || "Admin Portal"}
-            </span>
+            <span className="font-bold text-slate-800 text-base truncate">{currentPageLabel}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Language toggle — header (desktop) */}
+            <div className="hidden md:flex items-center gap-1 text-xs">
+              <button
+                onClick={() => setLang("hi")}
+                className={`font-bold px-2 py-1 rounded transition-all ${lang === "hi" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-slate-700"}`}
+              >हिंदी</button>
+              <span className="text-slate-300">|</span>
+              <button
+                onClick={() => setLang("en")}
+                className={`font-bold px-2 py-1 rounded transition-all ${lang === "en" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-slate-700"}`}
+              >EN</button>
+            </div>
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0">A</div>
           </div>
         </header>
@@ -175,8 +221,8 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         {bottomNav.map(item => {
           const Icon = item.icon;
           const isActive = item.href ? location === item.href : false;
+          const label = t(item.tKey) !== item.tKey ? t(item.tKey) : item.label;
           if (!item.href) {
-            // "More" opens the drawer
             return (
               <button
                 key="more"
@@ -184,7 +230,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                 className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-slate-500 hover:text-primary transition-colors"
               >
                 <Icon className="h-5 w-5" />
-                <span className="text-[10px] font-semibold">More</span>
+                <span className="text-[10px] font-semibold">{label}</span>
               </button>
             );
           }
@@ -192,7 +238,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             <Link key={item.href} href={item.href}>
               <div className={`flex flex-col items-center justify-center py-2 gap-0.5 flex-1 min-w-0 transition-colors ${isActive ? "text-primary" : "text-slate-500 hover:text-primary"}`}>
                 <Icon className="h-5 w-5" />
-                <span className="text-[10px] font-semibold">{item.label}</span>
+                <span className="text-[10px] font-semibold">{label}</span>
               </div>
             </Link>
           );

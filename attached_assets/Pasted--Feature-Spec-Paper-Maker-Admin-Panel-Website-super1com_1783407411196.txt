@@ -1,0 +1,117 @@
+# Feature Spec: "Paper Maker" (Admin Panel)
+
+**Website:** super1computer.shop
+**Location:** Admin Panel (not public-facing)
+**Purpose:** Convert a handwritten exam paper (photo) into a typed, editable digital paper, and export as PDF.
+
+---
+
+## 1. Navigation Structure (IMPORTANT)
+
+- Add a **new button/tab named "Exam Name"** in the existing Admin Panel (alongside other existing admin tabs).
+- Clicking **"Exam Name"** opens the Exam list screen:
+  - Shows all existing exams (e.g. "Mid-Term Exam 2026", "Final Exam 2026")
+  - **"+ Add New Exam"** button to create a new exam (admin types exam name + school name once here)
+  - Clicking an existing exam from the list opens **that exam's own page**
+
+- Each **individual exam's page** contains:
+  - Exam Name + School Name shown at top (already set when exam was created)
+  - **"Create a Paper"** button
+  - **History** list below — but this History shows ONLY papers created under THIS exam (not mixed with other exams)
+
+> Important: History is exam-wise separated. Each exam has its own isolated set of papers. Selecting "Mid-Term Exam 2026" and its history will never show papers from "Final Exam 2026".
+
+## 2. User Flow (inside a selected Exam's page)
+
+1. Admin clicks **"Exam Name"** tab in Admin Panel → sees list of exams → selects one (or creates new one first).
+2. Inside the selected exam's page, admin sees the **"Create a Paper"** button and, below it, the History of papers for THIS exam only.
+3. Clicking **"Create a Paper"** opens an upload screen:
+   - Admin uploads a photo of the handwritten paper (from camera or file).
+   - System runs OCR (text extraction) on the image.
+   - Extracted text is shown in an **editable text box** (formatted like a paper — title, questions, etc.)
+4. Admin can edit/correct the OCR text (OCR is never 100% accurate, so editing is mandatory).
+5. Admin clicks **"Save"**:
+   - Paper is saved in the database, linked to this specific Exam ID (which already carries Exam Name + School Name) + Date/Time.
+   - Entry appears in this exam's **History** list only.
+6. Admin can also click **"Export as PDF"**:
+   - Generates a clean, formatted PDF with:
+     - School Name (as header)
+     - Exam Name
+     - Date
+     - The typed paper content
+   - PDF downloads or opens in a new tab.
+7. From History, admin can click any past paper (within this exam) to:
+   - View it
+   - Edit it again
+   - Re-export as PDF
+   - Delete it
+
+---
+
+## 3. History Section — What to Show
+
+Each row/card in History (inside a selected exam's page) should display:
+- Date created
+- Status (Draft / Final)
+- Action buttons: **View / Edit / Export PDF / Delete**
+
+(Exam Name and School Name are NOT repeated per row here — they're already shown once at the top of the exam's page, since history is already filtered to this one exam.)
+
+---
+
+## 3. Technical Requirements
+
+### a) OCR (Photo → Text)
+Use one of these OCR services/libraries (developer can choose based on cost/accuracy):
+- **Google Cloud Vision API** (best accuracy, paid after free tier)
+- **Tesseract.js** (free, works offline, slightly lower accuracy on handwriting)
+- **Azure Computer Vision OCR** (good accuracy, paid)
+
+> Note: Handwriting OCR is harder than printed text OCR — accuracy may vary. Editable text box after OCR is mandatory so admin can fix mistakes.
+
+### b) Database (two tables needed)
+
+**`exams` table** (created once per exam via "+ Add New Exam"):
+- `id`
+- `exam_name`
+- `school_name`
+- `created_at`
+
+**`papers` table** (one row per paper, linked to an exam):
+- `id`
+- `exam_id` (foreign key → `exams.id`) — this is what keeps history exam-wise separated
+- `original_image_url` (uploaded photo, keep for reference)
+- `extracted_text` (editable content)
+- `status` (draft/final)
+- `created_at`
+- `updated_at`
+
+### c) PDF Generation
+- Use a library like `jsPDF`, `pdf-lib`, or server-side `wkhtmltopdf` / `Puppeteer` (HTML to PDF) — developer's choice based on stack.
+- PDF template should include:
+  - School Name at top (bold, centered)
+  - Exam Name below it
+  - Date
+  - Paper content below
+
+### d) Image Upload
+- Accept JPG/PNG/PDF upload
+- Store image on server or cloud storage (e.g. AWS S3 / Firebase Storage / server disk)
+- Show upload progress and basic validation (file size limit, image only)
+
+### e) Access
+- This feature should only be visible/usable inside **Admin Panel** — not on the public website.
+
+---
+
+## 4. Edge Cases to Handle
+- Blurry/unclear photo → show warning, ask to re-upload
+- OCR returns empty text → show message "Text not detected, please type manually"
+- Large image file → compress before processing
+- Admin closes page without saving → warn "unsaved changes" before leaving edit screen
+- Duplicate Exam Name → allow it, but show School Name + Date to differentiate in History
+
+---
+
+## 5. Summary for Developer
+Build an Admin-only "Paper Maker" tool: upload handwritten paper photo → OCR converts to editable text → admin edits and adds Exam Name + School Name → save to History → export as formatted PDF with school name and exam name clearly shown.

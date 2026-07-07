@@ -1,6 +1,6 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useEffect, useState, useMemo } from "react";
-import { ref, onValue, update } from "firebase/database";
+import { ref, onValue, update, remove } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import {
   Eye, Search, Download, Printer, CheckCircle, XCircle,
   TrendingUp, ShoppingCart, IndianRupee, Clock, Loader2,
   Banknote, Smartphone, RefreshCw, Package, MapPin, User,
-  FileText, AlertCircle, Plus, Calendar,
+  FileText, AlertCircle, Plus, Calendar, Trash2,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 import { toast } from "sonner";
@@ -216,6 +216,23 @@ export default function AdminOrders() {
   const [refundNote, setRefundNote] = useState("");
   const [refunding, setRefunding] = useState(false);
 
+  // Selective delete
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const toggleSelect = (id: string) => setSelectedIds(prev => {
+    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
+  });
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Delete ${selectedIds.size} order(s) permanently? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => remove(ref(db, `orders/${id}`))));
+      setSelectedIds(new Set());
+      toast.success(`${selectedIds.size} order(s) deleted`);
+    } catch (e: any) { toast.error("Failed: " + (e as any).message); }
+    finally { setBulkDeleting(false); }
+  };
+
   useEffect(() => {
     const unsub = onValue(ref(db, "orders"), (snap) => {
       if (snap.exists()) {
@@ -360,10 +377,26 @@ export default function AdminOrders() {
         </Select>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-red-50 rounded-lg border border-red-100">
+          <span className="text-sm text-red-700 font-semibold">{selectedIds.size} selected</span>
+          <Button size="sm" variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleting} className="gap-1.5">
+            {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            Delete Selected
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
+              <TableHead className="w-10">
+                <input type="checkbox" className="rounded cursor-pointer"
+                  checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                  onChange={() => setSelectedIds(selectedIds.size === filtered.length ? new Set() : new Set(filtered.map(o => o.id)))} />
+              </TableHead>
               <TableHead>Order ID</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Customer</TableHead>
@@ -376,11 +409,16 @@ export default function AdminOrders() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={8} className="text-center py-10"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-400" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center py-10"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-400" /></TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="text-center py-10 text-slate-400">No orders found for the selected filter.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center py-10 text-slate-400">No orders found for the selected filter.</TableCell></TableRow>
             ) : filtered.map((order) => (
-              <TableRow key={order.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => openOrder(order)}>
+              <TableRow key={order.id} className={`hover:bg-slate-50 cursor-pointer ${selectedIds.has(order.id) ? "bg-red-50/40" : ""}`} onClick={() => openOrder(order)}>
+                <TableCell onClick={e => e.stopPropagation()}>
+                  <input type="checkbox" className="rounded cursor-pointer"
+                    checked={selectedIds.has(order.id)}
+                    onChange={() => toggleSelect(order.id)} />
+                </TableCell>
                 <TableCell className="font-mono font-bold text-xs">{order.id?.slice(-8).toUpperCase()}</TableCell>
                 <TableCell className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</TableCell>
                 <TableCell>
@@ -406,8 +444,8 @@ export default function AdminOrders() {
                 </TableCell>
                 <TableCell><StatusBadge status={order.orderStatus} options={STATUS_OPTIONS} /></TableCell>
                 <TableCell><StatusBadge status={order.paymentStatus || "pending"} options={PAYMENT_STATUS_OPTIONS} /></TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => openOrder(order)}><Eye className="h-4 w-4" /></Button>
+                <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                  <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
             ))}

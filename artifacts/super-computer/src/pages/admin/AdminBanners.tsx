@@ -106,6 +106,21 @@ export default function AdminBanners() {
     }
   };
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const toggleSelect = (id: string) => setSelectedIds(prev => {
+    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
+  });
+  const toggleSelectAll = () => setSelectedIds(
+    selectedIds.size === banners.length ? new Set() : new Set(banners.map(b => b.id))
+  );
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Delete ${selectedIds.size} banners?`)) return;
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => remove(ref(db, `banners/${id}`))));
+      setSelectedIds(new Set()); toast.success("Banners deleted");
+    } catch { toast.error("Failed to delete some banners"); }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this banner?")) return;
     try {
@@ -127,10 +142,25 @@ export default function AdminBanners() {
         <Button onClick={openAdd}><Plus className="mr-2 h-4 w-4" /> Add Banner</Button>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-red-50 rounded-lg border border-red-100">
+          <span className="text-sm text-red-700 font-semibold">{selectedIds.size} selected</span>
+          <button onClick={handleBulkDelete} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold bg-red-600 text-white hover:bg-red-700 transition-colors">
+            <Trash className="h-3.5 w-3.5" /> Delete Selected
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} className="px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200 hover:bg-slate-50 transition-colors">Clear</button>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
+              <TableHead className="w-10 px-3">
+                <input type="checkbox" className="rounded cursor-pointer"
+                  checked={banners.length > 0 && selectedIds.size === banners.length}
+                  onChange={toggleSelectAll} />
+              </TableHead>
               <TableHead>Image</TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Subtitle</TableHead>
@@ -141,12 +171,17 @@ export default function AdminBanners() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-400" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-400" /></TableCell></TableRow>
             ) : banners.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-12 text-slate-400">No banners yet. Add one to get started.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-12 text-slate-400">No banners yet. Add one to get started.</TableCell></TableRow>
             ) : (
               banners.map((banner) => (
-                <TableRow key={banner.id}>
+                <TableRow key={banner.id} className={selectedIds.has(banner.id) ? "bg-red-50/40" : ""}>
+                  <TableCell className="px-3">
+                    <input type="checkbox" className="rounded cursor-pointer"
+                      checked={selectedIds.has(banner.id)}
+                      onChange={() => toggleSelect(banner.id)} />
+                  </TableCell>
                   <TableCell>
                     {banner.imageUrl ? (
                       <img src={banner.imageUrl} alt={banner.title} className="h-14 w-28 object-cover rounded-lg bg-slate-100" />

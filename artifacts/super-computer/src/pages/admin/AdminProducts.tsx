@@ -58,6 +58,8 @@ export default function AdminProducts() {
   const [aiExtracted, setAiExtracted] = useState<any>(null);
   const [showVerifyDialog, setShowVerifyDialog] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const billScanRef = useRef<HTMLInputElement>(null);
 
   /* ── Safe JSON parse from fetch response ─────── */
@@ -364,6 +366,20 @@ export default function AdminProducts() {
     }
   };
 
+  const toggleSelect = (id: string) => setSelectedIds(prev => {
+    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
+  });
+  const toggleSelectAll = () => setSelectedIds(
+    selectedIds.size === filtered.length ? new Set() : new Set(filtered.map(p => p.id))
+  );
+  const handleBulkDelete = async () => {
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => remove(ref(db, `products/${id}`))));
+      setSelectedIds(new Set()); setBulkDeleteOpen(false);
+      toast.success("Products deleted");
+    } catch { toast.error("Failed to delete some products"); }
+  };
+
   type DateFilter = "all" | "today" | "yesterday" | "custom";
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [customFrom, setCustomFrom] = useState("");
@@ -420,10 +436,25 @@ export default function AdminProducts() {
         )}
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-red-50 rounded-lg border border-red-100">
+          <span className="text-sm text-red-700 font-semibold">{selectedIds.size} selected</span>
+          <button onClick={() => setBulkDeleteOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold bg-red-600 text-white hover:bg-red-700 transition-colors">
+            <Trash className="h-3.5 w-3.5" /> Delete Selected
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} className="px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200 hover:bg-slate-50 transition-colors">Clear</button>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
+              <TableHead className="w-10 px-3">
+                <input type="checkbox" className="rounded cursor-pointer"
+                  checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                  onChange={toggleSelectAll} />
+              </TableHead>
               <TableHead>Image</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Brand</TableHead>
@@ -435,12 +466,18 @@ export default function AdminProducts() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-400" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-400" /></TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-12 text-slate-400">{search ? "No products match your search." : "No products yet."}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-12 text-slate-400">{search ? "No products match your search." : "No products yet."}</TableCell></TableRow>
             ) : (
               filtered.map((product) => (
-                <TableRow key={product.id}>
+                <TableRow key={product.id} className={selectedIds.has(product.id) ? "bg-red-50/40" : ""}>
+                  <TableCell className="px-3">
+                    <input type="checkbox" className="rounded cursor-pointer"
+                      checked={selectedIds.has(product.id)}
+                      onChange={() => toggleSelect(product.id)}
+                      onClick={e => e.stopPropagation()} />
+                  </TableCell>
                   <TableCell>
                     {product.images?.[0] ? (
                       <img src={product.images[0]} alt={product.name} className="w-12 h-12 object-contain bg-slate-50 rounded-lg" />
@@ -486,6 +523,18 @@ export default function AdminProducts() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Bulk delete confirmation */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Delete {selectedIds.size} Products?</DialogTitle></DialogHeader>
+          <p className="text-slate-600 text-sm">This will permanently delete the selected products and cannot be undone.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleBulkDelete}>Delete All</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation */}
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>

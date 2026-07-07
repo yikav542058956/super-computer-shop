@@ -31,6 +31,20 @@ export default function AdminCoupons() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const toggleSelect = (id: string) => setSelectedIds(prev => {
+    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
+  });
+  const toggleSelectAll = () => setSelectedIds(
+    selectedIds.size === coupons.length ? new Set() : new Set(coupons.map(c => c.id))
+  );
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Delete ${selectedIds.size} coupons?`)) return;
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => remove(ref(db, `coupons/${id}`))));
+      setSelectedIds(new Set()); toast.success("Coupons deleted");
+    } catch { toast.error("Failed to delete some coupons"); }
+  };
 
   useEffect(() => {
     const couponsRef = ref(db, "coupons");
@@ -133,10 +147,25 @@ export default function AdminCoupons() {
         <Button onClick={openAdd}><Plus className="mr-2 h-4 w-4" /> Create Coupon</Button>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-red-50 rounded-lg border border-red-100">
+          <span className="text-sm text-red-700 font-semibold">{selectedIds.size} selected</span>
+          <button onClick={handleBulkDelete} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold bg-red-600 text-white hover:bg-red-700 transition-colors">
+            <Trash className="h-3.5 w-3.5" /> Delete Selected
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} className="px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200 hover:bg-slate-50 transition-colors">Clear</button>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
+              <TableHead className="w-10 px-3">
+                <input type="checkbox" className="rounded cursor-pointer"
+                  checked={coupons.length > 0 && selectedIds.size === coupons.length}
+                  onChange={toggleSelectAll} />
+              </TableHead>
               <TableHead>Code</TableHead>
               <TableHead>Discount</TableHead>
               <TableHead>Min Order</TableHead>
@@ -148,17 +177,22 @@ export default function AdminCoupons() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-400" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-400" /></TableCell></TableRow>
             ) : coupons.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12">
+                <TableCell colSpan={8} className="text-center py-12">
                   <Tag className="h-10 w-10 text-slate-300 mx-auto mb-3" />
                   <p className="text-slate-400">No coupons yet. Create one to offer discounts.</p>
                 </TableCell>
               </TableRow>
             ) : (
               coupons.map((coupon) => (
-                <TableRow key={coupon.id}>
+                <TableRow key={coupon.id} className={selectedIds.has(coupon.id) ? "bg-red-50/40" : ""}>
+                  <TableCell className="px-3">
+                    <input type="checkbox" className="rounded cursor-pointer"
+                      checked={selectedIds.has(coupon.id)}
+                      onChange={() => toggleSelect(coupon.id)} />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-1 rounded text-sm">{coupon.code}</span>

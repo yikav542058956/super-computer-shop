@@ -13,23 +13,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-
-const INDIAN_STATES = [
-  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
-  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
-  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
-  "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
-  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
-  "Delhi", "Jammu and Kashmir", "Ladakh", "Chandigarh", "Puducherry",
-];
-
-const POPULAR_CITIES = [
-  "Delhi", "Mumbai", "Bangalore", "Hyderabad", "Chennai", "Kolkata",
-  "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Surat", "Kanpur",
-  "Nagpur", "Bhopal", "Indore", "Patna", "Varanasi", "Agra",
-  "Noida", "Gurugram", "Faridabad", "Ghaziabad", "Meerut", "Ranchi",
-  "Coimbatore", "Vishakhapatnam", "Kochi", "Chandigarh", "Bhubaneswar",
-];
+import { INDIA_DISTRICTS, INDIA_STATE_NAMES } from "@/lib/indiaDistricts";
 
 type LeadStatus = "new" | "interested" | "not_interested";
 type LeadSource = "osm" | "google_maps";
@@ -54,17 +38,23 @@ export default function AdminLeads() {
   // Source toggle
   const [source, setSource] = useState<LeadSource>("google_maps");
 
-  // Google Maps form
-  const [gmCity, setGmCity] = useState("Delhi");
-  const [useCustomCity, setUseCustomCity] = useState(false);
-  const [gmCustomCity, setGmCustomCity] = useState("");
+  // Google Maps form — State → District → Area hierarchy
+  const [gmState, setGmState] = useState("Uttar Pradesh");
+  const [gmDistrict, setGmDistrict] = useState("Lucknow");
+  const [gmArea, setGmArea] = useState(""); // optional sub-area/city within district
   const [gmCategory, setGmCategory] = useState("computer coaching");
   const [gmCount, setGmCount] = useState("20");
 
+  // When state changes, reset district to first in the new list
+  const gmDistrictList = INDIA_DISTRICTS[gmState] || [];
+
   // OSM form
   const [osmState, setOsmState] = useState("Bihar");
+  const [osmDistrict, setOsmDistrict] = useState("");
   const [osmCategory, setOsmCategory] = useState("");
   const [osmCount, setOsmCount] = useState("20");
+
+  const osmDistrictList = INDIA_DISTRICTS[osmState] || [];
 
   const [generating, setGenerating] = useState(false);
   const [genMessage, setGenMessage] = useState("");
@@ -72,6 +62,30 @@ export default function AdminLeads() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
+  // Selective delete
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const toggleSelect = (id: string) => setSelectedIds(prev => {
+    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
+  });
+  const toggleSelectAll = () => setSelectedIds(
+    selectedIds.size === filtered.length ? new Set() : new Set(filtered.map(l => l.id))
+  );
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Delete ${selectedIds.size} leads? They will not appear again in future generate results.`)) return;
+    setBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      await Promise.all(ids.flatMap(id => [
+        set(ref(db, `leads_excluded_ids/${id}`), true),
+        remove(ref(db, `leads/${id}`)),
+      ]));
+      setSelectedIds(new Set());
+      toast.success(`${ids.length} leads deleted`);
+    } catch (e: any) { toast.error("Failed: " + e.message); }
+    finally { setBulkDeleting(false); }
+  };
 
   // Filters
   const [filterState, setFilterState] = useState("all");
@@ -139,9 +153,9 @@ export default function AdminLeads() {
 
   const handleGenerate = async () => {
     if (source === "google_maps") {
-      const city = gmCustomCity.trim() || gmCity;
+      const city = gmArea.trim() ? `${gmArea.trim()}, ${gmDistrict}, ${gmState}` : `${gmDistrict}, ${gmState}`;
       if (!gmCategory.trim()) { toast.error("Please enter a category, e.g: computer coaching"); return; }
-      if (!city) { toast.error("Please enter a city"); return; }
+      if (!gmDistrict) { toast.error("Please select a district"); return; }
       setGenerating(true);
       setGenMessage("");
       try {
@@ -168,10 +182,11 @@ export default function AdminLeads() {
       setGenerating(true);
       setGenMessage("");
       try {
+        const locationForOsm = osmDistrict || osmState;
         const res = await fetch("/api/leads/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ state: osmState, category: osmCategory.trim(), count: Number(osmCount) || 20 }),
+          body: JSON.stringify({ state: locationForOsm, category: osmCategory.trim(), count: Number(osmCount) || 20 }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Generate failed");
@@ -309,40 +324,49 @@ export default function AdminLeads() {
         <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 space-y-4">
           {source === "google_maps" ? (
             <>
-              <div className="grid sm:grid-cols-3 gap-3">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* State */}
                 <div>
-                  <Label className="text-xs text-slate-500 mb-1 block">City</Label>
-                  <div className="space-y-2">
-                    <select
-                      value={useCustomCity ? "__custom__" : gmCity}
-                      onChange={(e) => {
-                        if (e.target.value === "__custom__") {
-                          setUseCustomCity(true);
-                          setGmCustomCity("");
-                        } else {
-                          setUseCustomCity(false);
-                          setGmCustomCity("");
-                          setGmCity(e.target.value);
-                        }
-                      }}
-                      className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
-                    >
-                      {POPULAR_CITIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                      <option value="__custom__">✏️ Custom City...</option>
-                    </select>
-                    {useCustomCity && (
-                      <Input
-                        placeholder="Type city name..."
-                        value={gmCustomCity}
-                        onChange={(e) => setGmCustomCity(e.target.value)}
-                        className="text-sm"
-                        autoFocus
-                      />
-                    )}
-                  </div>
+                  <Label className="text-xs text-slate-500 mb-1 block">State / UT</Label>
+                  <select
+                    value={gmState}
+                    onChange={(e) => {
+                      setGmState(e.target.value);
+                      const firstDistrict = (INDIA_DISTRICTS[e.target.value] || [])[0] || "";
+                      setGmDistrict(firstDistrict);
+                      setGmArea("");
+                    }}
+                    className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                  >
+                    {INDIA_STATE_NAMES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
                 </div>
+                {/* District */}
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">District / Zila</Label>
+                  <select
+                    value={gmDistrict}
+                    onChange={(e) => { setGmDistrict(e.target.value); setGmArea(""); }}
+                    className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                  >
+                    {gmDistrictList.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Area (optional) */}
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">Area / City <span className="text-slate-300">(optional)</span></Label>
+                  <Input
+                    placeholder="e.g: Gomti Nagar, Hazratganj"
+                    value={gmArea}
+                    onChange={(e) => setGmArea(e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+                {/* Category */}
                 <div>
                   <Label className="text-xs text-slate-500 mb-1 block">Category</Label>
                   <Input
@@ -352,30 +376,48 @@ export default function AdminLeads() {
                     onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
                   />
                 </div>
-                <div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-32">
                   <Label className="text-xs text-slate-500 mb-1 block">How many leads</Label>
                   <Input type="number" min={1} max={50} value={gmCount} onChange={(e) => setGmCount(e.target.value)} />
                 </div>
-              </div>
-              <div className="bg-blue-50 rounded-xl p-3 text-xs text-blue-700 border border-blue-100">
-                <strong>Google Maps mode:</strong> Scrapes real business listings from Google Maps — name, address, phone, website, and rating. For best results pick a specific city (e.g. "Delhi") rather than a state.
+                <div className="flex-1 bg-blue-50 rounded-xl p-3 text-xs text-blue-700 border border-blue-100">
+                  <strong>Google Maps:</strong> Searching for "<em>{gmCategory || "..."}</em>" in <strong>{gmArea ? `${gmArea}, ` : ""}{gmDistrict}, {gmState}</strong> — name, phone, address, website, rating.
+                </div>
               </div>
             </>
           ) : (
             <>
-              <div className="grid sm:grid-cols-3 gap-3">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* State */}
                 <div>
-                  <Label className="text-xs text-slate-500 mb-1 block">State</Label>
+                  <Label className="text-xs text-slate-500 mb-1 block">State / UT</Label>
                   <select
                     value={osmState}
-                    onChange={(e) => setOsmState(e.target.value)}
+                    onChange={(e) => { setOsmState(e.target.value); setOsmDistrict(""); }}
                     className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
                   >
-                    {INDIAN_STATES.map((s) => (
+                    {INDIA_STATE_NAMES.map((s) => (
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
                 </div>
+                {/* District */}
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">District <span className="text-slate-300">(optional)</span></Label>
+                  <select
+                    value={osmDistrict}
+                    onChange={(e) => setOsmDistrict(e.target.value)}
+                    className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                  >
+                    <option value="">— Whole State —</option>
+                    {osmDistrictList.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Category */}
                 <div>
                   <Label className="text-xs text-slate-500 mb-1 block">Category</Label>
                   <Input
@@ -385,13 +427,14 @@ export default function AdminLeads() {
                     onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
                   />
                 </div>
+                {/* Count */}
                 <div>
                   <Label className="text-xs text-slate-500 mb-1 block">How many leads</Label>
                   <Input type="number" min={1} max={100} value={osmCount} onChange={(e) => setOsmCount(e.target.value)} />
                 </div>
               </div>
               <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 border border-slate-100">
-                <strong>OpenStreetMap mode:</strong> Uses free open-source map data. Phone numbers and addresses may not always be available, but duplicates are never generated.
+                <strong>OpenStreetMap mode:</strong> Uses free open-source map data. Phone numbers may not always be available, but duplicates are never generated.
               </div>
             </>
           )}
@@ -494,9 +537,24 @@ export default function AdminLeads() {
             </p>
           ) : (
             <div className="overflow-x-auto">
+              {selectedIds.size > 0 && (
+                <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-red-50 rounded-lg border border-red-100">
+                  <span className="text-sm text-red-700 font-semibold">{selectedIds.size} selected</span>
+                  <button onClick={handleBulkDelete} disabled={bulkDeleting} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 transition-colors">
+                    {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    Delete Selected
+                  </button>
+                  <button onClick={() => setSelectedIds(new Set())} className="px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200 hover:bg-slate-50 transition-colors">Clear</button>
+                </div>
+              )}
               <table className="w-full text-sm min-w-[860px]">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs text-slate-500 uppercase tracking-wide">
+                    <th className="py-2 pr-2 w-8">
+                      <input type="checkbox" className="rounded cursor-pointer"
+                        checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                        onChange={() => setSelectedIds(selectedIds.size === filtered.length ? new Set() : new Set(filtered.map(l => l.id)))} />
+                    </th>
                     <th className="py-2 pr-3">Name</th>
                     <th className="py-2 pr-3">Address</th>
                     <th className="py-2 pr-3">Phone</th>
@@ -513,7 +571,7 @@ export default function AdminLeads() {
                     const status = l.status || "new";
                     const isGmaps = l.source === "google_maps";
                     return (
-                      <tr key={l.id} className="hover:bg-slate-50 group">
+                      <tr key={l.id} className={`hover:bg-slate-50 group ${selectedIds.has(l.id) ? "bg-red-50/40" : ""}`}>
                         <td className="py-2.5 pr-3 font-semibold text-slate-800 whitespace-nowrap max-w-[160px]">
                           <div className="truncate" title={l.name}>{l.name}</div>
                           {l.website && (

@@ -175,6 +175,37 @@ const translations: Record<string, Record<Lang, string>> = {
   you_save:             { en: "You're saving", hi: "आपकी बचत हो रही है" },
   on_this_order:        { en: "on this order!", hi: "इस ऑर्डर पर!" },
   track_order:          { en: "Track Order", hi: "ऑर्डर ट्रैक करें" },
+
+  // ── Admin Nav ──
+  adm_portal:           { en: "Admin Portal", hi: "एडमिन पोर्टल" },
+  adm_dashboard:        { en: "Dashboard",      hi: "डैशबोर्ड" },
+  adm_products:         { en: "Products",        hi: "प्रोडक्ट" },
+  adm_orders:           { en: "Orders",          hi: "ऑर्डर" },
+  adm_offline_sale:     { en: "Offline Sale",    hi: "ऑफलाइन सेल" },
+  adm_customers:        { en: "Customers",       hi: "ग्राहक" },
+  adm_categories:       { en: "Categories",      hi: "श्रेणियां" },
+  adm_banners:          { en: "Banners",          hi: "बैनर" },
+  adm_announcements:    { en: "Announcements",   hi: "घोषणाएं" },
+  adm_coupons:          { en: "Coupons",          hi: "कूपन" },
+  adm_reports:          { en: "Reports",          hi: "रिपोर्ट" },
+  adm_photos:           { en: "Customer Photos",  hi: "ग्राहक फोटो" },
+  adm_wallet:           { en: "Wallet",           hi: "वॉलेट" },
+  adm_bill:             { en: "Bill / Invoice",   hi: "बिल / इनवॉइस" },
+  adm_other_work:       { en: "Other Work",       hi: "अन्य काम" },
+  adm_ledger:           { en: "Ledger",           hi: "खाता बही" },
+  adm_leads:            { en: "Lead Generator",   hi: "लीड जनरेटर" },
+  adm_payment:          { en: "Payment",          hi: "पेमेंट" },
+  adm_settings:         { en: "Settings",         hi: "सेटिंग्स" },
+  adm_logout:           { en: "Logout",           hi: "लॉगआउट" },
+  more:                 { en: "More",             hi: "और" },
+
+  // ── Admin Bulk Actions ──
+  adm_selected:         { en: "selected", hi: "चुने हुए" },
+  adm_delete_selected:  { en: "Delete Selected", hi: "चुने हुए हटाएं" },
+  adm_clear:            { en: "Clear", hi: "साफ़ करें" },
+  adm_confirm_bulk_del: { en: "Permanently delete selected items?", hi: "चुने हुए आइटम हमेशा के लिए हटाएं?" },
+  adm_delete_all:       { en: "Delete All", hi: "सभी हटाएं" },
+  adm_cancel:           { en: "Cancel", hi: "रद्द करें" },
 };
 
 interface LanguageContextType {
@@ -192,9 +223,9 @@ const LanguageContext = createContext<LanguageContextType>({
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {
     try {
-      return (localStorage.getItem("sc_lang") as Lang) || "hi";
+      return (localStorage.getItem("sc_lang") as Lang) || "en";
     } catch {
-      return "hi";
+      return "en";
     }
   });
 

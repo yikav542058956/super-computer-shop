@@ -74,6 +74,23 @@ export default function AdminReviews() {
   const [replying, setReplying] = useState(false);
   const [mediaDialog, setMediaDialog] = useState<{ open: boolean; items: string[]; type: "image" | "video" }>({ open: false, items: [], type: "image" });
 
+  // Selective delete
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const toggleSelectReview = (id: string) => setSelectedIds(prev => {
+    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
+  });
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Delete ${selectedIds.size} review(s) permanently?`)) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => remove(ref(db, `reviews/${id}`))));
+      setSelectedIds(new Set());
+      toast.success(`${selectedIds.size} review(s) deleted`);
+    } catch (e: any) { toast.error("Failed: " + e.message); }
+    finally { setBulkDeleting(false); }
+  };
+
   const [fakeDialog, setFakeDialog] = useState(false);
   const [fakeForm, setFakeForm] = useState({
     productId: "",
@@ -264,6 +281,18 @@ export default function AdminReviews() {
         </Tabs>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-red-50 rounded-lg border border-red-100">
+          <span className="text-sm text-red-700 font-semibold">{selectedIds.size} selected</span>
+          <button onClick={handleBulkDelete} disabled={bulkDeleting}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 transition-colors">
+            {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash className="h-3.5 w-3.5" />}
+            Delete Selected
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} className="px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200 hover:bg-slate-50">Clear</button>
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-16"><Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" /></div>
       ) : filtered.length === 0 ? (
@@ -278,10 +307,13 @@ export default function AdminReviews() {
             const media = getMediaItems(review);
 
             return (
-              <div key={review.id} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${review.isFake ? "border-l-4 border-l-amber-400" : ""}`}>
+              <div key={review.id} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${selectedIds.has(review.id) ? "border-red-200 bg-red-50/30" : ""} ${review.isFake ? "border-l-4 border-l-amber-400" : ""}`}>
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
+                      <input type="checkbox" className="mt-1 rounded cursor-pointer"
+                        checked={selectedIds.has(review.id)}
+                        onChange={() => toggleSelectReview(review.id)} />
                       <div className="h-10 w-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-sm flex-shrink-0">
                         {review.userName?.charAt(0) || "?"}
                       </div>
