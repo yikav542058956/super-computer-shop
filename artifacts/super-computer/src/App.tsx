@@ -52,6 +52,8 @@ import AdminLeads from "@/pages/admin/AdminLeads";
 import AdminOfflineSale from "@/pages/admin/AdminOfflineSale";
 import AdminOtherWork from "@/pages/admin/AdminOtherWork";
 import AdminBill from "@/pages/admin/AdminBill";
+import AdminExams from "@/pages/admin/AdminExams";
+import AdminExamDetail from "@/pages/admin/AdminExamDetail";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 
 const queryClient = new QueryClient();
@@ -207,6 +209,18 @@ function Router() {
       <Route path="/admin/other-work">
         <AdminRoute>
           <AdminOtherWork />
+        </AdminRoute>
+      </Route>
+
+      <Route path="/admin/exams/:id">
+        <AdminRoute>
+          <AdminExamDetail />
+        </AdminRoute>
+      </Route>
+
+      <Route path="/admin/exams">
+        <AdminRoute>
+          <AdminExams />
         </AdminRoute>
       </Route>
 

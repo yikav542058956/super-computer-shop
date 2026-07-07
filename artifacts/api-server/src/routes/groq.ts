@@ -320,4 +320,44 @@ Return ONLY the review text. No quotes, no labels, no markdown.`;
   } catch (e: any) { res.status(502).json({ error: e.message }); }
 });
 
+/* ── 6. OCR: Handwritten exam paper photo → formatted text ───── */
+router.post("/ocr-paper", async (req, res) => {
+  const { imageBase64, mimeType = "image/jpeg" } = req.body as {
+    imageBase64: string; mimeType?: string;
+  };
+  if (!imageBase64) { res.status(400).json({ error: "imageBase64 required" }); return; }
+
+  const prompt = `You are an expert OCR assistant specializing in handwritten exam papers.
+
+Extract ALL text from this handwritten exam paper image. Follow these rules:
+1. Preserve the original structure — questions numbered, sub-questions lettered (a, b, c)
+2. Keep headings, instructions, and marks allocations
+3. If text is unclear/blurry, mark it as [unclear] but still include your best guess
+4. Format as clean plain text — no markdown, no bullets (unless the original uses them)
+5. Separate sections with blank lines
+6. Include ALL text visible: title, subject, time, total marks, instructions, questions
+
+If the image is too blurry or unreadable, respond with exactly: "ERROR: Image too blurry. Please re-upload a clearer photo."
+
+Return ONLY the extracted text. No explanations, no commentary.`;
+
+  try {
+    const text = await groqChat(VISION_MODEL, [{
+      role: "user",
+      content: [
+        { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+        { type: "text", text: prompt },
+      ],
+    }], 2000);
+
+    if (!text || text.trim().length < 10) {
+      res.json({ text: "", warning: "No text detected. Please type the paper content manually." });
+    } else if (text.startsWith("ERROR:")) {
+      res.json({ text: "", warning: text.replace("ERROR:", "").trim() });
+    } else {
+      res.json({ text: text.trim() });
+    }
+  } catch (e: any) { res.status(502).json({ error: e.message }); }
+});
+
 export default router;
