@@ -9,7 +9,7 @@ import {
   Settings, LogOut, Image as ImageIcon, BarChart, Megaphone,
   Ticket, Camera, Wallet, BookOpen, CreditCard, ShoppingBag,
   Sparkles, Menu, X, ChevronRight, MapPinned, Briefcase, Receipt,
-  Languages, GraduationCap,
+  Languages, GraduationCap, ScanText,
 } from "lucide-react";
 import { AdminAIAssistant } from "@/components/admin/AdminAIAssistant";
 
@@ -30,6 +30,7 @@ const navItems = [
   { tKey: "adm_other_work",      label: "Other Work",       href: "/admin/other-work",      icon: Briefcase },
   { tKey: "adm_ledger",          label: "Ledger",           href: "/admin/accounting",      icon: BookOpen },
   { tKey: "adm_leads",           label: "Lead Generator",   href: "/admin/leads",           icon: MapPinned },
+  { tKey: "adm_ocr",            label: "Extract Text (OCR)",href: "/admin/ocr",             icon: ScanText },
   { tKey: "adm_exams",           label: "Exam Papers",      href: "/admin/exams",           icon: GraduationCap },
   { tKey: "adm_payment",         label: "Payment",          href: "/admin/payment",         icon: CreditCard },
   { tKey: "adm_settings",        label: "Settings",         href: "/admin/settings",        icon: Settings },

@@ -321,6 +321,56 @@ Return ONLY the review text. No quotes, no labels, no markdown.`;
 });
 
 /* ── 6. OCR: Handwritten exam paper photo → formatted text ───── */
+/* ── General-purpose OCR ─────────────────────────────────────────────────── */
+router.post("/ocr", async (req, res) => {
+  const { imageBase64, mimeType = "image/jpeg", lang = "auto" } = req.body as {
+    imageBase64: string; mimeType?: string; lang?: "auto" | "hindi" | "english";
+  };
+  if (!imageBase64) { res.status(400).json({ error: "imageBase64 required" }); return; }
+
+  const langHint =
+    lang === "hindi"   ? "The image likely contains Hindi (Devanagari) text. Prioritise Hindi OCR." :
+    lang === "english" ? "The image likely contains English text. Prioritise English OCR." :
+                         "The image may contain Hindi, English, or both — detect automatically.";
+
+  const prompt = `You are an expert OCR assistant. ${langHint}
+
+Extract ALL visible text from this image exactly as it appears.
+
+Rules:
+1. Preserve line breaks, spacing, and layout as closely as possible.
+2. For handwriting: include your best guess; mark unclear words as [unclear].
+3. For printed/typed text: reproduce it verbatim.
+4. Include text from all regions — headers, footers, tables, captions, watermarks.
+5. Do NOT translate. Keep the original language.
+6. If the image has no readable text, reply with exactly: NO_TEXT_FOUND
+7. If the image is too blurry to read, reply with exactly: IMAGE_TOO_BLURRY
+
+Return ONLY the extracted text. No explanations, no commentary.`;
+
+  try {
+    const text = await groqChat(VISION_MODEL, [{
+      role: "user",
+      content: [
+        { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+        { type: "text", text: prompt },
+      ],
+    }], 3000);
+
+    const t = (text || "").trim().toUpperCase();
+    if (!text || t === "NO_TEXT_FOUND" || t.startsWith("NO_TEXT") || t.startsWith("NO TEXT")) {
+      res.json({ text: "", warning: "Is photo mein koi text nahi mila." });
+    } else if (t === "IMAGE_TOO_BLURRY" || t.startsWith("IMAGE_TOO_BLUR") || t.startsWith("IMAGE TOO BLUR") || t.startsWith("TOO BLURRY")) {
+      res.json({ text: "", warning: "Photo blur hai — thodi clear photo upload karo." });
+    } else {
+      res.json({ text: text.trim(), chars: text.trim().length });
+    }
+  } catch (e: any) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+/* ── Exam-paper OCR ──────────────────────────────────────────────────────── */
 router.post("/ocr-paper", async (req, res) => {
   const { imageBase64, mimeType = "image/jpeg" } = req.body as {
     imageBase64: string; mimeType?: string;

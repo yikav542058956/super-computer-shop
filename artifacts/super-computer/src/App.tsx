@@ -54,6 +54,7 @@ import AdminOtherWork from "@/pages/admin/AdminOtherWork";
 import AdminBill from "@/pages/admin/AdminBill";
 import AdminExams from "@/pages/admin/AdminExams";
 import AdminExamDetail from "@/pages/admin/AdminExamDetail";
+import AdminOCR from "@/pages/admin/AdminOCR";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 
 const queryClient = new QueryClient();
@@ -209,6 +210,12 @@ function Router() {
       <Route path="/admin/other-work">
         <AdminRoute>
           <AdminOtherWork />
+        </AdminRoute>
+      </Route>
+
+      <Route path="/admin/ocr">
+        <AdminRoute>
+          <AdminOCR />
         </AdminRoute>
       </Route>
 
