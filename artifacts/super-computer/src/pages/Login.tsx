@@ -6,7 +6,7 @@ import {
   sendPasswordResetEmail,
 } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { ref, set } from "firebase/database";
+import { ref, set, get } from "firebase/database";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,29 +115,50 @@ export default function Login() {
     if (e.key === "Enter") verifyOtp();
   };
 
+  const saveUserToDb = async (phoneNumber: string, userData: { name: string; email: string }) => {
+    try {
+      const userKey = `phone_${phoneNumber}`;
+      const userRef = ref(db, `users/${userKey}`);
+      const snapshot = await get(userRef);
+      if (!snapshot.exists()) {
+        await set(userRef, {
+          name: userData.name || `User ${phoneNumber.slice(-4)}`,
+          email: userData.email || "",
+          phone: phoneNumber,
+          role: "user",
+          createdAt: Date.now(),
+          wishlist: [],
+        });
+      }
+    } catch { /* silently ignore */ }
+  };
+
   const verifyOtp = async (code?: string) => {
     const otpCode = code || otp.join("");
     if (otpCode.length !== 4) { toast.error("Enter the complete 4-digit OTP"); return; }
     setPhoneLoading(true);
     try {
+      const digits = phone.replace(/\D/g, "");
       const params = new URLSearchParams({
-        phone: phone.replace(/\D/g, ""),
+        phone: digits,
         otp: otpCode,
         device_id: deviceIdRef.current,
       });
       const res = await fetch(`/api/proxy/otpverify?${params.toString()}`);
       const data = await res.json();
       if (data.status === 200 && data.user) {
-        setExtUser({
+        const extUserData = {
           userid: data.user.userid,
           token: data.user.token,
           name: data.user.name || "",
           email: data.user.email || "",
-          phone: data.user.phone || phone,
+          phone: data.user.phone || digits,
           is_paid_user: data.user.is_paid_user || "0",
           username: data.user.username || "",
           state: data.user.state || "",
-        });
+        };
+        setExtUser(extUserData);
+        await saveUserToDb(digits, { name: extUserData.name, email: extUserData.email });
         toast.success("Login successful! Welcome.");
         setLocation("/");
       } else {

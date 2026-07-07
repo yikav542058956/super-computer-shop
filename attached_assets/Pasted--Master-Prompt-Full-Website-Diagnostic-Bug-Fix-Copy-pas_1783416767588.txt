@@ -1,0 +1,90 @@
+# Master Prompt: Full Website Diagnostic & Bug Fix
+
+Copy-paste this entire prompt to your AI coding agent whenever you want a full check-up of the website.
+
+---
+
+## Instructions to the AI Agent
+
+You are going to do a **complete diagnostic of this entire website/project** — every page, every form, every button, both the public site and the Admin Panel. Go through it systematically, section by section. Do not skip anything, and do not just "look" at the code — actually trace through the logic and, wherever possible, test the real behavior.
+
+### Step 1: Map the Website First
+- List every page/screen that exists (public site + Admin Panel).
+- List every form, button, and action on each page (Save, Submit, Delete, Upload, Export, etc.)
+- List every place data is saved to a database or file.
+
+### Step 2: Check Each of These Areas, One by One
+
+**A) Forms & Save/Update Bugs**
+- Does every "Save" / "Create" / "Update" button actually persist data correctly every time (not just sometimes)?
+- After saving, does the data properly reload/reflect on the page, or does it show stale/old data?
+- Are required fields (marked with *) actually validated before save — not letting empty/blank submissions through?
+- Do error messages show up clearly when something fails to save (not a silent failure)?
+
+**B) Race Conditions & Async Bugs**
+- Are there any places where a button click can trigger the action twice (double-submit) if clicked fast or slow internet?
+- Are all `await`/async operations properly awaited so the code doesn't move on before the data is ready?
+- Does anything behave inconsistently — works sometimes, fails other times?
+
+**C) Data Consistency**
+- When editing an existing record, does it correctly load all the right data for that record (not mixed with another record)?
+- If there's dynamic/conditional fields (fields that change based on a dropdown selection), confirm switching the dropdown doesn't leave old hidden data behind and doesn't save it.
+- Check that History/List views correctly filter and show only what they should (not showing wrong/mixed entries).
+
+**D) File & Image Uploads**
+- Do file/photo uploads work with different file types and sizes?
+- Is there a reasonable file size limit with a clear error if exceeded?
+- Do uploaded files actually get stored and linked to the right record?
+
+**E) UI/Frontend**
+- Test on both desktop and mobile screen sizes — anything broken/overlapping/cut off?
+- Any buttons that look clickable but don't do anything?
+- Any dropdowns, popups, or modals that don't close properly or block the screen?
+- Check browser console for JavaScript errors on every page.
+
+**F) Admin Panel Specific**
+- Can only authorized/logged-in admins access it (no one else can reach admin pages by guessing the URL)?
+- Do all CRUD actions (Create, Read, Update, Delete) work correctly for every section?
+- Do filters, search, and sorting (if present) actually work correctly?
+
+**G) Performance & Loading**
+- Any page that takes unusually long to load?
+- Any broken images or missing assets (404s)?
+- Check for unnecessary duplicate API/database calls on the same page.
+
+**H) Security Basics**
+- Are passwords/sensitive data stored securely (not in plain text)?
+- Is user input sanitized before going into the database (to prevent SQL injection / script injection)?
+- Are file uploads restricted to safe file types only?
+
+**I) Links & Navigation**
+- Click through every link/button/menu item — confirm nothing leads to a broken/blank page.
+- Confirm "Cancel" / "Back" buttons behave correctly and don't lose unsaved warnings where needed.
+
+### Step 3: Report Before Fixing
+Before making changes, give a clear list in this format:
+
+```
+BUG #1
+Location: [page/section/button]
+What happens: [describe the actual bug]
+Why it happens: [race condition / missing validation / stale state / etc.]
+Fix approach: [what you plan to do]
+```
+
+### Step 4: Fix Bugs
+- Fix them one at a time, not all mixed together.
+- After each fix, re-test the exact same scenario twice to confirm it's actually resolved (not just "should work now").
+- Don't introduce new bugs while fixing — check nearby/related features still work after each fix.
+
+### Step 5: Final Summary
+At the end, give a simple summary:
+- Total bugs found
+- Total bugs fixed
+- Anything that needs the website owner's decision (e.g. "should double-submit show an error or just block the second click silently?")
+- Anything you could NOT fix and why (so it's not hidden)
+
+---
+
+## Golden Rule
+Do not say "no bugs found" without actually testing each area above. If unsure whether something is a bug or intended behavior, ask instead of assuming.
