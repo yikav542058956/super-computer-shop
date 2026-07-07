@@ -8,7 +8,7 @@ import { useState, useRef } from "react";
 import {
   Search, Camera, Mic, Heart, ShoppingCart, LogOut, User, Settings,
   Package, Laptop, Gamepad2, GraduationCap, Briefcase, Palette,
-  Recycle, Star, Cpu, Languages,
+  Recycle, Star, Cpu,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ export const Navbar = () => {
   const { wishlistCount } = useWishlist();
   const { userData, extUser, currentUser, isLoggedIn, isAdmin, logout } = useAuth();
   const { openLoginDialog } = useLoginDialog();
-  const { lang, setLang, t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [, setLocation] = useLocation();
   const [location] = useLocation();
   const [query, setQuery] = useState("");
@@ -82,24 +82,6 @@ export const Navbar = () => {
       className="sticky top-0 z-50 w-full"
       style={{ background: "rgba(255,255,255,0.97)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(0,0,0,0.08)" }}
     >
-      {/* ── Language Toggle Strip ── */}
-      <div className="w-full bg-green-600 text-white text-xs flex items-center justify-end px-4 py-1 gap-3">
-        <Languages size={13} className="opacity-80" />
-        <button
-          onClick={() => setLang("hi")}
-          className={`font-bold transition-opacity px-1 rounded ${lang === "hi" ? "opacity-100 underline underline-offset-2" : "opacity-60 hover:opacity-90"}`}
-        >
-          हिंदी
-        </button>
-        <span className="opacity-40">|</span>
-        <button
-          onClick={() => setLang("en")}
-          className={`font-bold transition-opacity px-1 rounded ${lang === "en" ? "opacity-100 underline underline-offset-2" : "opacity-60 hover:opacity-90"}`}
-        >
-          English
-        </button>
-      </div>
-
       {/* ── Row 1: Logo + Search + Icons ── */}
       <div className="container mx-auto px-4 h-12 flex items-center gap-3">
 
