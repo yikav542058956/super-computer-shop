@@ -227,4 +227,70 @@ router.post("/leads/generate", async (req, res) => {
   }
 });
 
+// ── /api/leads/city-areas?city=Lucknow ──────────────────────────────────────
+// Returns a list of neighbourhoods / suburbs / localities within a city using
+// Nominatim (bbox) + Overpass (place nodes).
+router.get("/leads/city-areas", async (req, res) => {
+  const city = (req.query.city as string || "").trim();
+  if (!city) {
+    res.status(400).json({ error: "city required" });
+    return;
+  }
+
+  try {
+    // 1. Geocode the city to get a bounding box
+    const nomUrl =
+      `${NOMINATIM_URL}?city=${encodeURIComponent(city)}&country=India` +
+      `&format=json&limit=1&addressdetails=0`;
+    const nomRes = await fetch(nomUrl, {
+      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!nomRes.ok) throw new Error("Nominatim geocode failed");
+    const nomData = (await nomRes.json()) as any[];
+    if (!nomData.length || !nomData[0].boundingbox) {
+      res.json({ areas: [] });
+      return;
+    }
+    const [south, north, west, east] = (nomData[0].boundingbox as string[]).map(Number);
+
+    // 2. Overpass: fetch place nodes inside the city bbox
+    const bboxStr = `${south},${west},${north},${east}`;
+    const ovQuery = `
+[out:json][timeout:20];
+(
+  node["place"~"suburb|neighbourhood|quarter|locality|borough|residential"](${bboxStr});
+);
+out tags 300;
+    `;
+    const ovRes = await fetch(OVERPASS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain", "User-Agent": USER_AGENT },
+      body: ovQuery,
+      signal: AbortSignal.timeout(22000),
+    });
+    if (!ovRes.ok) throw new Error("Overpass query failed");
+    const ovData = (await ovRes.json()) as { elements: OverpassElement[] };
+
+    // 3. Collect unique English/local names, skip unnamed
+    const seen = new Set<string>();
+    const areas: string[] = [];
+    for (const el of ovData.elements || []) {
+      const name = el.tags?.["name:en"] || el.tags?.name;
+      if (!name) continue;
+      const clean = name.trim();
+      if (clean && !seen.has(clean.toLowerCase())) {
+        seen.add(clean.toLowerCase());
+        areas.push(clean);
+      }
+    }
+    areas.sort((a, b) => a.localeCompare(b));
+
+    res.json({ areas, city: nomData[0].display_name?.split(",")[0] || city });
+  } catch (err: any) {
+    logger.error({ err }, "leads/city-areas failed");
+    res.status(502).json({ error: err?.message || "Area fetch failed" });
+  }
+});
+
 export default router;

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import {
   MapPinned, Search, Loader2, Trash2, Download, FileText,
   Phone, MapPin, Sparkles, Layers, ThumbsUp, ThumbsDown, X,
-  Map, Globe, Star,
+  Map, Globe, Star, Plus, RefreshCw, CheckCheck,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -38,15 +38,14 @@ export default function AdminLeads() {
   // Source toggle
   const [source, setSource] = useState<LeadSource>("google_maps");
 
-  // Google Maps form — State → District → Area hierarchy
-  const [gmState, setGmState] = useState("Uttar Pradesh");
-  const [gmDistrict, setGmDistrict] = useState("Lucknow");
-  const [gmArea, setGmArea] = useState(""); // optional sub-area/city within district
+  // Google Maps form — City → Areas
+  const [gmCity, setGmCity] = useState("Lucknow");
   const [gmCategory, setGmCategory] = useState("computer coaching");
   const [gmCount, setGmCount] = useState("20");
-
-  // When state changes, reset district to first in the new list
-  const gmDistrictList = INDIA_DISTRICTS[gmState] || [];
+  const [gmAreas, setGmAreas] = useState<string[]>([]);
+  const [gmSelectedAreas, setGmSelectedAreas] = useState<Set<string>>(new Set());
+  const [gmManualAreaInput, setGmManualAreaInput] = useState("");
+  const [areasLoading, setAreasLoading] = useState(false);
 
   // OSM form
   const [osmState, setOsmState] = useState("Bihar");
@@ -151,26 +150,104 @@ export default function AdminLeads() {
     !!search || filterState !== "all" || filterCategory !== "all" ||
     filterStatus !== "all" || filterSource !== "all" || !!filterFrom || !!filterTo;
 
+  // Fetch neighbourhoods/suburbs for a city from the backend
+  const fetchAreas = async (city = gmCity) => {
+    if (!city.trim()) { toast.error("Pehle city ka naam likho"); return; }
+    // Reset stale areas from any previous city before fetching
+    setGmAreas([]);
+    setGmSelectedAreas(new Set());
+    setAreasLoading(true);
+    try {
+      const res = await fetch(`/api/leads/city-areas?city=${encodeURIComponent(city.trim())}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Areas fetch failed — thodi der baad try karein");
+      const areas: string[] = data.areas || [];
+      setGmAreas(areas);
+      setGmSelectedAreas(new Set(areas)); // all selected by default
+      if (areas.length === 0) {
+        toast.info("Is city ke liye koi area nahi mila — manually areas add kar sakte ho neeche");
+      } else {
+        toast.success(`${areas.length} areas mile ${data.city || city} mein!`);
+      }
+    } catch (e: any) {
+      const msg = e.message?.includes("fetch") || e.message?.includes("abort")
+        ? "Network error — internet check karo ya thodi der baad try karo"
+        : e.message || "Areas fetch failed";
+      toast.error(msg);
+    } finally {
+      setAreasLoading(false);
+    }
+  };
+
+  const addManualArea = () => {
+    const val = gmManualAreaInput.trim();
+    if (!val) return;
+    if (!gmAreas.includes(val)) {
+      const next = [...gmAreas, val];
+      setGmAreas(next);
+      setGmSelectedAreas(prev => new Set([...prev, val]));
+    }
+    setGmManualAreaInput("");
+  };
+
+  const toggleArea = (area: string) => {
+    setGmSelectedAreas(prev => {
+      const next = new Set(prev);
+      next.has(area) ? next.delete(area) : next.add(area);
+      return next;
+    });
+  };
+
+  const removeArea = (area: string) => {
+    setGmAreas(prev => prev.filter(a => a !== area));
+    setGmSelectedAreas(prev => { const next = new Set(prev); next.delete(area); return next; });
+  };
+
   const handleGenerate = async () => {
     if (source === "google_maps") {
-      const city = gmArea.trim() ? `${gmArea.trim()}, ${gmDistrict}, ${gmState}` : `${gmDistrict}, ${gmState}`;
       if (!gmCategory.trim()) { toast.error("Please enter a category, e.g: computer coaching"); return; }
-      if (!gmDistrict) { toast.error("Please select a district"); return; }
+      if (!gmCity.trim()) { toast.error("Please enter a city name"); return; }
       setGenerating(true);
       setGenMessage("");
+
+      // If areas were fetched but user deselected all → block with a clear message
+      if (gmAreas.length > 0 && gmSelectedAreas.size === 0) {
+        toast.error("Kam se kam ek area select karo, ya areas section clear karo");
+        setGenerating(false);
+        return;
+      }
+
+      // Build list of search targets: selected areas or just the city itself
+      const targets = gmSelectedAreas.size > 0
+        ? Array.from(gmSelectedAreas).map(area => `${area}, ${gmCity.trim()}`)
+        : [gmCity.trim()];
+
+      let totalNew = 0;
       try {
-        const res = await fetch("/api/leads/gmaps-generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ city, category: gmCategory.trim(), count: Number(gmCount) || 20 }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Generate failed");
-        setGenMessage(data.message || "");
-        if (data.newCount > 0) {
-          toast.success(`${data.newCount} new leads found from Google Maps!`);
+        for (let i = 0; i < targets.length; i++) {
+          setGenMessage(`Searching ${i + 1} of ${targets.length}: ${targets[i]}…`);
+          const res = await fetch("/api/leads/gmaps-generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              city: targets[i],
+              category: gmCategory.trim(),
+              count: Number(gmCount) || 20,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            toast.error(`${targets[i]}: ${data.error || "Failed"}`);
+            continue;
+          }
+          totalNew += data.newCount || 0;
+        }
+        if (totalNew > 0) {
+          toast.success(`${totalNew} new leads found from Google Maps!`);
+          setGenMessage(`${totalNew} new leads found across ${targets.length} area(s)!`);
         } else {
-          toast.info(data.message || "No new leads found");
+          toast.info("No new leads found — try different areas or category");
+          setGenMessage("No new leads found.");
         }
       } catch (e: any) {
         toast.error("Failed: " + e.message);
@@ -324,49 +401,36 @@ export default function AdminLeads() {
         <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 space-y-4">
           {source === "google_maps" ? (
             <>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* State */}
-                <div>
-                  <Label className="text-xs text-slate-500 mb-1 block">State / UT</Label>
-                  <select
-                    value={gmState}
-                    onChange={(e) => {
-                      setGmState(e.target.value);
-                      const firstDistrict = (INDIA_DISTRICTS[e.target.value] || [])[0] || "";
-                      setGmDistrict(firstDistrict);
-                      setGmArea("");
-                    }}
-                    className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
-                  >
-                    {INDIA_STATE_NAMES.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+              {/* ── Step 1: City + Category ── */}
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-1">
+                  <Label className="text-xs text-slate-500 mb-1 block">City / Sheher</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g: Lucknow, Delhi, Patna"
+                      value={gmCity}
+                      onChange={(e) => {
+                        setGmCity(e.target.value);
+                        // Clear stale areas whenever city text changes
+                        setGmAreas([]);
+                        setGmSelectedAreas(new Set());
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && fetchAreas()}
+                      className="text-sm flex-1"
+                    />
+                    <button
+                      onClick={() => fetchAreas()}
+                      disabled={areasLoading || !gmCity.trim()}
+                      title="Fetch areas automatically"
+                      className="h-10 px-3 rounded-md border border-slate-200 bg-white text-slate-600 hover:border-blue-400 hover:text-blue-600 disabled:opacity-50 transition-colors flex items-center gap-1.5 text-xs font-medium shrink-0"
+                    >
+                      {areasLoading
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <RefreshCw className="h-3.5 w-3.5" />}
+                      <span className="hidden sm:inline">{areasLoading ? "Fetching…" : "Fetch Areas"}</span>
+                    </button>
+                  </div>
                 </div>
-                {/* District */}
-                <div>
-                  <Label className="text-xs text-slate-500 mb-1 block">District / Zila</Label>
-                  <select
-                    value={gmDistrict}
-                    onChange={(e) => { setGmDistrict(e.target.value); setGmArea(""); }}
-                    className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
-                  >
-                    {gmDistrictList.map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-                {/* Area (optional) */}
-                <div>
-                  <Label className="text-xs text-slate-500 mb-1 block">Area / City <span className="text-slate-300">(optional)</span></Label>
-                  <Input
-                    placeholder="e.g: Gomti Nagar, Hazratganj"
-                    value={gmArea}
-                    onChange={(e) => setGmArea(e.target.value)}
-                    className="text-sm"
-                  />
-                </div>
-                {/* Category */}
                 <div>
                   <Label className="text-xs text-slate-500 mb-1 block">Category</Label>
                   <Input
@@ -376,15 +440,107 @@ export default function AdminLeads() {
                     onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
                   />
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-32">
-                  <Label className="text-xs text-slate-500 mb-1 block">How many leads</Label>
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">Leads per area</Label>
                   <Input type="number" min={1} max={50} value={gmCount} onChange={(e) => setGmCount(e.target.value)} />
                 </div>
-                <div className="flex-1 bg-blue-50 rounded-xl p-3 text-xs text-blue-700 border border-blue-100">
-                  <strong>Google Maps:</strong> Searching for "<em>{gmCategory || "..."}</em>" in <strong>{gmArea ? `${gmArea}, ` : ""}{gmDistrict}, {gmState}</strong> — name, phone, address, website, rating.
+              </div>
+
+              {/* ── Step 2: Areas ── */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="text-xs font-semibold text-slate-600">
+                      Areas
+                      {gmAreas.length > 0 && (
+                        <span className="ml-1.5 text-slate-400 font-normal">
+                          ({gmSelectedAreas.size} of {gmAreas.length} selected)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  {gmAreas.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setGmSelectedAreas(new Set(gmAreas))}
+                        className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
+                      >
+                        <CheckCheck className="h-3 w-3" /> All
+                      </button>
+                      <span className="text-slate-300">|</span>
+                      <button
+                        onClick={() => setGmSelectedAreas(new Set())}
+                        className="text-[10px] text-slate-400 hover:text-slate-600 hover:underline"
+                      >
+                        None
+                      </button>
+                    </div>
+                  )}
                 </div>
+
+                {gmAreas.length === 0 && !areasLoading && (
+                  <p className="text-xs text-slate-400 italic">
+                    City daalo aur "Fetch Areas" dabao — areas automatically aa jayenge.
+                    Ya neeche manually area add karo.
+                  </p>
+                )}
+
+                {/* Area chips */}
+                {gmAreas.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+                    {gmAreas.map((area) => {
+                      const selected = gmSelectedAreas.has(area);
+                      return (
+                        <div
+                          key={area}
+                          className={`group flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-full text-xs border transition-all cursor-pointer select-none ${
+                            selected
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-slate-400 border-slate-200 line-through"
+                          }`}
+                          onClick={() => toggleArea(area)}
+                        >
+                          {area}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeArea(area); }}
+                            className={`h-4 w-4 rounded-full flex items-center justify-center hover:bg-black/20 transition-colors ${selected ? "text-white/70 hover:text-white" : "text-slate-300 hover:text-red-400"}`}
+                            title="Remove area"
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Manual area add */}
+                <div className="flex gap-2 pt-1">
+                  <Input
+                    placeholder="Manually area add karo (e.g: Gomti Nagar)"
+                    value={gmManualAreaInput}
+                    onChange={(e) => setGmManualAreaInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addManualArea()}
+                    className="text-xs h-8 bg-white flex-1"
+                  />
+                  <button
+                    onClick={addManualArea}
+                    disabled={!gmManualAreaInput.trim()}
+                    className="h-8 px-3 rounded-md bg-slate-800 text-white text-xs font-medium hover:bg-slate-700 disabled:opacity-40 transition-colors flex items-center gap-1 shrink-0"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Info strip */}
+              <div className="bg-blue-50 rounded-xl p-3 text-xs text-blue-700 border border-blue-100">
+                <strong>Google Maps:</strong> Searching for "<em>{gmCategory || "…"}</em>" in{" "}
+                {gmSelectedAreas.size > 0
+                  ? <><strong>{gmSelectedAreas.size} area(s)</strong> of <strong>{gmCity || "city"}</strong></>
+                  : <strong>{gmCity || "city"}</strong>
+                } — name, phone, address, website, rating.
               </div>
             </>
           ) : (
