@@ -178,7 +178,7 @@ export const Navbar = () => {
               paddingRight: 76,
             }}
           />
-          <div className="absolute right-2 flex items-center gap-0.5">
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
             <button type="button" onClick={() => setLocation("/search")}
               className="h-7 w-7 flex items-center justify-center rounded-lg">
               <Camera size={15} style={{ color: "#94A3B8" }} />
