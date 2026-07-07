@@ -4,17 +4,18 @@ import { logger } from "../lib/logger";
 const router = Router();
 
 const FIREBASE_DB_URL = "https://super-computer-c6a99-default-rtdb.firebaseio.com";
+const PLACES_API_URL  = "https://places.googleapis.com/v1/places:searchText";
 
-// Browser-like headers so Google doesn't block the request
-const BROWSER_HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-  "Accept-Language": "en-US,en;q=0.9",
-  "Cache-Control": "no-cache",
-  Pragma: "no-cache",
-  "Upgrade-Insecure-Requests": "1",
-};
+// Fields to request from Places API (New) — billed per field mask
+const FIELD_MASK = [
+  "places.id",
+  "places.displayName",
+  "places.formattedAddress",
+  "places.nationalPhoneNumber",
+  "places.websiteUri",
+  "places.rating",
+  "places.userRatingCount",
+].join(",");
 
 interface GmapsLead {
   id: string;
@@ -34,178 +35,60 @@ function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
 
-function safeStr(v: unknown): string {
-  if (typeof v === "string") return v.trim();
-  if (typeof v === "number") return String(v);
-  return "";
-}
-
-function safeNum(v: unknown): number | undefined {
-  const n = Number(v);
-  return isNaN(n) ? undefined : n;
-}
-
-/** Safely traverse nested arrays using integer indices. Returns undefined on any miss. */
-function deepGet(obj: unknown, ...path: number[]): unknown {
-  let cur: any = obj;
-  for (const idx of path) {
-    if (!Array.isArray(cur) || cur.length <= idx) return undefined;
-    cur = cur[idx];
-  }
-  return cur;
-}
-
-/** Sanitize website URL — only allow http/https to prevent javascript: injection */
-function sanitizeUrl(raw: string): string | undefined {
-  if (!raw) return undefined;
-  try {
-    const u = new URL(raw);
-    if (u.protocol === "http:" || u.protocol === "https:") return u.toString();
-  } catch {
-    // not a valid URL
-  }
-  return undefined;
-}
-
 /**
- * Parse business listings from Google Maps JSPB (JSON Protocol Buffers) response.
- *
- * Google Maps embeds search-result data as APP_INITIALIZATION_STATE in the HTML.
- * The outer value is a 4-element array; element [3][2] is a JSON string containing
- * the actual JSPB payload. Inside that, listings live at [0][1].
- *
- * Each listing has a "place" sub-array at index [14] with well-known fields:
- *   [11]       – name (string)
- *   [2][0]     – primary address line (string)
- *   [18]       – secondary address (string)
- *   [178][0][0]– phone (string)
- *   [7][0]     – website (string)
- *   [4][7]     – rating (number)
- *   [4][8]     – review count (number)
- *
- * These offsets come from community reverse-engineering of the JSPB wire format.
- * If Google changes the format this returns an empty array (safe failure mode).
- */
-function parseGoogleMapsJSPB(html: string, category: string, city: string): GmapsLead[] {
-  // Extract APP_INITIALIZATION_STATE JSON array from the page HTML
-  const patterns = [
-    /APP_INITIALIZATION_STATE\s*=\s*(\[[\s\S]+?\]);\s*window\./,
-    /window\.APP_INITIALIZATION_STATE\s*=\s*(\[[\s\S]+?\]);\s*window\./,
-    /APP_INITIALIZATION_STATE\s*=\s*(\[[\s\S]{20,}\??\])\s*;/,
-  ];
-
-  let rootData: unknown = null;
-  for (const pat of patterns) {
-    const m = html.match(pat);
-    if (!m) continue;
-    try {
-      rootData = JSON.parse(m[1]);
-      break;
-    } catch {
-      continue;
-    }
-  }
-
-  if (!rootData || !Array.isArray(rootData)) {
-    logger.warn("gmaps: could not extract APP_INITIALIZATION_STATE from HTML");
-    return [];
-  }
-
-  // rootData[3][2] is the inner JSPB payload as a JSON string
-  const innerStr = deepGet(rootData, 3, 2);
-  if (typeof innerStr !== "string" || innerStr.length < 50) {
-    logger.warn("gmaps: inner JSPB payload missing or too short");
-    return [];
-  }
-
-  let inner: unknown;
-  try {
-    inner = JSON.parse(innerStr);
-  } catch {
-    logger.warn("gmaps: failed to JSON-parse inner JSPB payload");
-    return [];
-  }
-
-  // Listings array at inner[0][1]
-  const listings = deepGet(inner, 0, 1);
-  if (!Array.isArray(listings) || listings.length === 0) {
-    logger.warn("gmaps: no listings found at inner[0][1]");
-    return [];
-  }
-
-  const results: GmapsLead[] = [];
-
-  for (const item of listings as unknown[]) {
-    try {
-      const place = deepGet(item, 14);
-      // Schema guard: place must be an array with at least 12 elements
-      if (!Array.isArray(place) || place.length < 12) continue;
-
-      const name = safeStr(deepGet(place, 11));
-      if (!name) continue; // skip listings with no name — data is incomplete
-
-      const address =
-        safeStr(deepGet(place, 2, 0)) ||
-        safeStr(deepGet(place, 18)) ||
-        "";
-
-      // Phone can appear at a few alternate paths in different payload versions
-      const phone =
-        safeStr(deepGet(place, 178, 0, 0)) ||
-        safeStr(deepGet(place, 178, 0, 3)) ||
-        "";
-
-      const rawWebsite = safeStr(deepGet(place, 7, 0));
-      const website = sanitizeUrl(rawWebsite);
-
-      const rating = safeNum(deepGet(place, 4, 7));
-      const reviews = safeNum(deepGet(place, 4, 8));
-
-      // Stable fingerprint: name + normalised address to distinguish same-name businesses
-      const fp = slugify(name) + "__" + slugify(address || city);
-      const id = `gmaps_fp_${fp}`;
-
-      results.push({
-        id,
-        name,
-        address,
-        phone,
-        website,
-        rating,
-        reviews,
-        category,
-        city,
-        source: "google_maps",
-        createdAt: Date.now(),
-      });
-    } catch (err) {
-      logger.warn({ err }, "gmaps: error parsing single listing, skipping");
-      continue;
-    }
-  }
-
-  return results;
-}
-
-/**
- * Fetch and parse Google Maps search results for a given category + city.
+ * Fetch business listings via Google Places API (New) — Text Search.
+ * Docs: https://developers.google.com/maps/documentation/places/web-service/text-search
  */
 async function fetchGoogleMapsLeads(category: string, city: string): Promise<GmapsLead[]> {
-  const searchTerm = `${category} ${city} India`;
-  const url = `https://www.google.com/maps/search/${encodeURIComponent(searchTerm)}`;
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) throw new Error("GOOGLE_MAPS_API_KEY secret not set");
 
-  const res = await fetch(url, {
-    headers: BROWSER_HEADERS,
-    redirect: "follow",
-    signal: AbortSignal.timeout(22000),
+  const textQuery = `${category} in ${city}, India`;
+
+  const res = await fetch(PLACES_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": apiKey,
+      "X-Goog-FieldMask": FIELD_MASK,
+    },
+    body: JSON.stringify({
+      textQuery,
+      languageCode: "en",
+      regionCode: "IN",
+      maxResultCount: 20,
+    }),
+    signal: AbortSignal.timeout(20000),
   });
 
   if (!res.ok) {
-    throw new Error(`Google Maps returned HTTP ${res.status}`);
+    const errText = await res.text().catch(() => "");
+    logger.error({ status: res.status, errText }, "Places API error");
+    throw new Error(`Google Places API returned HTTP ${res.status}: ${errText.slice(0, 200)}`);
   }
 
-  const html = await res.text();
-  return parseGoogleMapsJSPB(html, category, city);
+  const data = (await res.json()) as { places?: any[] };
+  const places = data.places ?? [];
+
+  return places.map((p: any) => {
+    const name    = p.displayName?.text ?? "";
+    const address = p.formattedAddress ?? "";
+    const fp      = slugify(name) + "__" + slugify(address || city);
+
+    return {
+      id:       `gmaps_fp_${fp}`,
+      name,
+      address,
+      phone:    p.nationalPhoneNumber ?? "",
+      website:  p.websiteUri ?? undefined,
+      rating:   typeof p.rating === "number" ? p.rating : undefined,
+      reviews:  typeof p.userRatingCount === "number" ? p.userRatingCount : undefined,
+      category,
+      city,
+      source:   "google_maps" as const,
+      createdAt: Date.now(),
+    };
+  }).filter(l => l.name); // drop empty-name entries
 }
 
 // POST /api/leads/gmaps-generate
@@ -240,33 +123,32 @@ router.post("/leads/gmaps-generate", async (req, res) => {
       res.json({
         leads: [],
         newCount: 0,
-        message: `"${category} ${city}" ke liye Google Maps se result nahi aaya. Thodi der baad ya alag category try karein (jaise "computer institute" ya "coaching centre").`,
+        message: `"${category} ${city}" ke liye Google Maps se result nahi aaya. Alag category try karein.`,
       });
       return;
     }
 
-    const seenIds = new Set<string>();
+    const seenIds  = new Set<string>();
     const newLeads: Record<string, object> = {};
     const returned: object[] = [];
 
     for (const lead of rawLeads) {
       if (returned.length >= wanted) break;
-      // Skip duplicates within this batch, and against existing + excluded keys
       if (seenIds.has(lead.id)) continue;
       if (existingKeys[lead.id] || excludedKeys[lead.id]) continue;
       seenIds.add(lead.id);
 
       const savedLead = {
-        name: lead.name,
-        address: lead.address,
-        phone: lead.phone,
-        website: lead.website ?? "",
-        rating: lead.rating ?? null,
-        reviews: lead.reviews ?? null,
-        category: lead.category,
-        city: lead.city,
-        state: lead.city,   // kept for backwards-compat with OSM leads
-        source: "google_maps" as const,
+        name:      lead.name,
+        address:   lead.address,
+        phone:     lead.phone,
+        website:   lead.website ?? "",
+        rating:    lead.rating  ?? null,
+        reviews:   lead.reviews ?? null,
+        category:  lead.category,
+        city:      lead.city,
+        state:     lead.city,   // backward-compat with OSM leads
+        source:    "google_maps" as const,
         createdAt: lead.createdAt,
       };
 
@@ -274,7 +156,7 @@ router.post("/leads/gmaps-generate", async (req, res) => {
       returned.push({ id: lead.id, ...savedLead });
     }
 
-    // Persist to Firebase — treat write failure as a real error
+    // Persist to Firebase
     if (Object.keys(newLeads).length > 0) {
       const writeRes = await fetch(`${FIREBASE_DB_URL}/leads.json`, {
         method: "PATCH",
@@ -290,7 +172,7 @@ router.post("/leads/gmaps-generate", async (req, res) => {
     }
 
     res.json({
-      leads: returned,
+      leads:    returned,
       newCount: returned.length,
       message:
         returned.length === 0
