@@ -1,6 +1,6 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useEffect, useState } from "react";
-import { ref, onValue, get, push, set, update } from "firebase/database";
+import { ref, onValue, get, push, set, update, runTransaction } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -67,8 +67,11 @@ export default function AdminWallet() {
     const amount = Math.abs(Number(form.amount));
     const isDebit = form.type === "debit" || form.type === "payment";
     try {
-      const newBalance = isDebit ? Math.max(0, walletBalance - amount) : walletBalance + amount;
-      await update(ref(db, `wallet/${selected.id}`), { balance: newBalance });
+      // Use runTransaction for atomic balance update (prevents race conditions)
+      await runTransaction(ref(db, `wallet/${selected.id}/balance`), (currentBalance) => {
+        const bal = typeof currentBalance === "number" ? currentBalance : 0;
+        return isDebit ? Math.max(0, bal - amount) : bal + amount;
+      });
       const txRef = push(ref(db, `wallet/${selected.id}/transactions`));
       await set(txRef, {
         type: form.type,

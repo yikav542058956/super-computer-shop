@@ -1,6 +1,6 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useEffect, useState, useMemo } from "react";
-import { ref, onValue, update, remove } from "firebase/database";
+import { ref, onValue, update, remove, get } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -278,6 +278,10 @@ export default function AdminOrders() {
     if (!selected) return;
     setSaving(true);
     try {
+      // Fetch fresh order data to avoid overwriting concurrent changes to statusHistory
+      const freshSnap = await get(ref(db, `orders/${selected.id}`));
+      const freshOrder = freshSnap.exists() ? freshSnap.val() : {};
+
       const updates: any = {
         orderStatus: editStatus, paymentStatus: editPayStatus,
         notes: editNotes, advanceReceived: editAdvanceReceived, updatedAt: Date.now(),
@@ -289,7 +293,8 @@ export default function AdminOrders() {
       }
       if (editPaidAmount) updates.paidAmount = Number(editPaidAmount);
       if (editAdvanceReceived && selected.paymentMethod === "cod") { updates.paidAmount = selected.advanceAmount || 0; }
-      const history = [...(selected.statusHistory || [])];
+      // Use fresh statusHistory from DB (not stale dialog state)
+      const history = [...(freshOrder.statusHistory || selected.statusHistory || [])];
       if (editStatus !== selected.orderStatus || editPayStatus !== selected.paymentStatus) {
         history.push({ status: editStatus, paymentStatus: editPayStatus, timestamp: Date.now(), note: `Admin updated: ${editStatus}` });
       }

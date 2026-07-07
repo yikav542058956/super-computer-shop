@@ -238,7 +238,11 @@ export default function Checkout() {
   const isLocalDistrict = (city: string) => {
     if (!city.trim()) return false;
     const n = city.toLowerCase().trim();
-    return deliveryZones.localDistricts.split(",").some(d => n.includes(d.toLowerCase().trim()) || d.toLowerCase().trim().includes(n));
+    return deliveryZones.localDistricts.split(",").some(d => {
+      const district = d.toLowerCase().trim();
+      // Exact match only — prevents "Eta" matching "Etah"
+      return n === district;
+    });
   };
 
   const deliveryCharge = afterDiscount >= 50000 ? 0
