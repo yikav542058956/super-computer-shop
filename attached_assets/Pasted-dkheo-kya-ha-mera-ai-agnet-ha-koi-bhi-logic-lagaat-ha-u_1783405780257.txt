@@ -1,0 +1,66 @@
+dkheo kya ha mera ai agnet ha koi bhi logic lagaat ha usme bug rahte ha jasi ekabhi save nahi hota kabhi kuch kabhi kuch aap ek bug.md do jo mein hamesh usko boluga koi kam akrega to ok
+
+
+Architected comprehensive bug checklist for inconsistent agent issues
+Architected comprehensive bug checklist for inconsistent agent issues
+Samajh gaya — aapko ek reusable bug.md chahiye jo aap apne AI coding agent ko har baar de sakein, taaki wo common mistakes (jaise save kabhi work na karna, kabhi kuch break ho jaana) na kare. Ye file main English mein bana raha hoon kyunki ye directly agent ko instruction ke tor par doge — code/instructions English mein hi zyada reliably follow hoti hain.
+
+
+Created a file, read a file
+Created a file, read a file
+
+Creating a reusable bug-prevention checklist for the user's AI coding agent
+bug.md
+
+Presented file
+Done
+Ye file bana di hai — bas isko har baar apne AI agent ko copy-paste kar dena ya reference bana kar rakh dena, jab bhi koi naya feature/logic banwao.
+
+Sabse important cheez ismein: "kabhi kuch, kabhi kuch" wale bugs almost hamesha race condition, missing await, ya stale state ki wajah se hote hain — aur "save" wale bugs mein agent ko hamesha bolna chahiye ke wo save ke baad data re-check kare, sirf success message pe trust na kare.
+
+Agar aap batao ke tech stack kya hai (React, Node, Python, etc.) to main isko us stack ke hisaab se aur specific bana sakta hoon.
+
+
+Bug
+Document · MD 
+mujhe seo karn ah developer ko kya bolu website mein update kek liye meri coomputer shop ha website link ye ha super1computer.shop ok aap batao kya kaise jisse google par 1 st number par aaye site ok mireachi mein ha
+
+
+Devised practical SEO roadmap for local computer shop ranking
+Devised practical SEO roadmap for local computer shop ranking
+Maine aapki website check ki — achi baat ye hai ke basic meta tags already sahi set hain (Kasganj location, keywords, description). Ab SEO developer ko ye specific cheezein bolo taaki Google par rank improve ho:
+
+1. Google Business Profile (sabse important, local SEO ke liye)
+
+Google Business Profile (pehle Google My Business) claim/verify karwao agar nahi kiya
+Sahi category select karo: "Computer Store" / "Computer Repair Service"
+Address, phone (9761809960), timings, photos daalo
+Customers se Google reviews mangwao — reviews ranking mein bahut fark daalte hain
+2. On-Page SEO
+
+Har page (Home, Laptops, Desktop, Repair, Contact) ka apna unique title + description ho, sirf homepage nahi
+Har product/category page par "Kasganj", "Etah" jaisa location naturally use ho
+H1, H2 headings properly structured hon (sirf ek H1 per page)
+Images ke alt text mein product name + location ho (e.g. "HP laptop Kasganj")
+3. Schema Markup (structured data)
+
+LocalBusiness schema add karwao (address, phone, opening hours, geo-coordinates)
+Product schema agar products list ho rahe hain (price, availability)
+Ye Google ko search results mein rich snippets dikhane mein madad karta hai
+4. Site Speed & Mobile
+
+Page load speed check karwao (Google PageSpeed Insights se)
+Mobile-friendly hona zaroori hai — zyada log mobile se search karte hain
+5. Content
+
+Blog/articles likhwao: "Best laptop under 30000 in Kasganj", "Laptop repair tips" — isse organic traffic aata hai
+FAQ section add karo common questions ke saath
+6. Backlinks & Local Listings
+
+Local directories mein listing karwao: JustDial, IndiaMart, Sulekha
+Local Kasganj/Etah business groups/websites se backlink milne ki koshish karo
+7. Technical Basics
+
+Sitemap.xml aur robots.txt sahi ho
+Google Search Console mein site verify aur submit karo
+HTTPS (secure) hona chahiye

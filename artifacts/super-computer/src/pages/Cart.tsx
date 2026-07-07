@@ -9,9 +9,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Trash2, Plus, Minus, ArrowRight, Tag, CheckCircle,
   XCircle, Loader2, ShoppingCart, Package,
-  Truck, Shield, ChevronRight,
+  Truck, Shield,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 function WhatsAppIcon({ size = 18 }: { size?: number }) {
   return (
@@ -33,6 +34,7 @@ interface AppliedCoupon {
 
 export default function Cart() {
   const { cart, updateQty, removeFromCart, cartTotal } = useCart();
+  const { t } = useLanguage();
   const [couponCode, setCouponCode] = useState("");
   const [applied, setApplied] = useState<AppliedCoupon | null>(null);
   const [validating, setValidating] = useState(false);
@@ -50,17 +52,17 @@ export default function Cart() {
 
   const applyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
-    if (!code) { toast.error("Enter a coupon code"); return; }
+    if (!code) { toast.error(t("coupon_enter")); return; }
     setValidating(true);
     try {
       const couponsRef = query(ref(db, "coupons"), orderByChild("code"), equalTo(code));
       const snap = await get(couponsRef);
-      if (!snap.exists()) { toast.error("Invalid coupon code"); setValidating(false); return; }
+      if (!snap.exists()) { toast.error(t("coupon_invalid")); setValidating(false); return; }
       const [, couponData] = Object.entries(snap.val())[0] as [string, any];
-      if (!couponData.isActive) { toast.error("This coupon is not active"); setValidating(false); return; }
-      if (couponData.expiryDate && new Date(couponData.expiryDate) < new Date()) { toast.error("Coupon expired"); setValidating(false); return; }
+      if (!couponData.isActive) { toast.error(t("coupon_inactive")); setValidating(false); return; }
+      if (couponData.expiryDate && new Date(couponData.expiryDate) < new Date()) { toast.error(t("coupon_expired")); setValidating(false); return; }
       if (couponData.minOrderValue && cartTotal < couponData.minOrderValue) {
-        toast.error(`Min. order ${formatINR(couponData.minOrderValue)} required`);
+        toast.error(`${t("coupon_min_order")}: ${formatINR(couponData.minOrderValue)}`);
         setValidating(false); return;
       }
       const disc = couponData.discountType === "percentage"
@@ -68,8 +70,8 @@ export default function Cart() {
         : Math.min(couponData.discountValue, cartTotal);
       setApplied({ code, discountType: couponData.discountType, discountValue: couponData.discountValue, discount: disc });
       localStorage.setItem("appliedCoupon", JSON.stringify({ code, discountType: couponData.discountType, discountValue: couponData.discountValue, discount: disc }));
-      toast.success(`Coupon applied! You save ${formatINR(disc)}`);
-    } catch { toast.error("Failed to validate coupon"); }
+      toast.success(`${t("coupon_applied")} ${formatINR(disc)}`);
+    } catch { toast.error(t("coupon_failed")); }
     finally { setValidating(false); }
   };
 
@@ -94,14 +96,12 @@ export default function Cart() {
             <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-5 bg-green-50 border-2 border-green-100">
               <ShoppingCart size={36} className="text-green-500" />
             </div>
-            <h2 className="text-xl font-black text-gray-900 mb-2">Your cart is empty</h2>
-            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-              Add laptops you love and they'll appear here.
-            </p>
+            <h2 className="text-xl font-black text-gray-900 mb-2">{t("cart_empty")}</h2>
+            <p className="text-slate-500 text-sm mb-6 leading-relaxed">{t("cart_empty_sub")}</p>
             <Link href="/products">
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 className="w-full h-12 rounded-2xl font-bold text-black text-sm flex items-center justify-center gap-2 bg-green-500 hover:bg-green-400">
-                <Package size={16} /> Browse Laptops
+                <Package size={16} /> {t("browse_products")}
               </motion.button>
             </Link>
           </motion.div>
@@ -109,6 +109,8 @@ export default function Cart() {
       </Layout>
     );
   }
+
+  const totalQty = cart.reduce((s, i) => s + i.qty, 0);
 
   return (
     <Layout>
@@ -118,8 +120,8 @@ export default function Cart() {
           {/* Header */}
           <div className="flex items-center gap-2 text-sm text-slate-500 mb-5">
             <ShoppingCart className="h-4 w-4" />
-            <span className="text-gray-900 font-semibold">My Cart</span>
-            <span className="text-slate-400">({cart.length} item{cart.length > 1 ? "s" : ""})</span>
+            <span className="text-gray-900 font-semibold">{t("your_cart")}</span>
+            <span className="text-slate-400">({cart.length} {t("items")})</span>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -132,8 +134,8 @@ export default function Cart() {
                 <Truck size={16} className="text-green-600 flex-shrink-0" />
                 <p className="text-sm text-green-800">
                   {DELIVERY_CHARGE === 0
-                    ? <span><span className="font-bold">Free delivery</span> on your order! 🎉</span>
-                    : <span>Add <span className="font-bold">{formatINR(50000 - cartTotal)}</span> more for <span className="font-bold text-green-700">free delivery</span></span>
+                    ? <span><span className="font-bold">{t("free_delivery_note")}</span> 🎉</span>
+                    : <span>{t("free_delivery_note")}</span>
                   }
                 </p>
               </div>
@@ -208,7 +210,7 @@ export default function Cart() {
               <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
                   <Tag size={15} className="text-green-600" />
-                  <p className="text-gray-900 font-bold text-sm">Coupon Code</p>
+                  <p className="text-gray-900 font-bold text-sm">{t("coupon_code")}</p>
                 </div>
                 {applied ? (
                   <div className="flex items-center justify-between rounded-xl px-3 py-2.5 bg-green-50 border border-green-200">
@@ -216,17 +218,17 @@ export default function Cart() {
                       <CheckCircle size={15} className="text-green-600" />
                       <div>
                         <p className="font-mono font-bold text-green-700 text-sm">{applied.code}</p>
-                        <p className="text-xs text-slate-500">Saving {formatINR(discountAmount)}</p>
+                        <p className="text-xs text-slate-500">{t("saving")} {formatINR(discountAmount)}</p>
                       </div>
                     </div>
-                    <button onClick={removeCoupon}>
+                    <button onClick={removeCoupon} title={t("remove_coupon")}>
                       <XCircle size={16} className="text-slate-400 hover:text-red-400 transition-colors" />
                     </button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
                     <input
-                      placeholder="Enter coupon code"
+                      placeholder={t("coupon_code")}
                       value={couponCode}
                       onChange={e => setCouponCode(e.target.value.toUpperCase())}
                       onKeyDown={e => e.key === "Enter" && applyCoupon()}
@@ -234,7 +236,7 @@ export default function Cart() {
                     />
                     <button onClick={applyCoupon} disabled={validating}
                       className="h-10 px-4 rounded-xl text-sm font-bold text-black bg-green-500 hover:bg-green-400 flex items-center gap-1.5 disabled:opacity-60 transition-colors">
-                      {validating ? <Loader2 size={14} className="animate-spin" /> : "Apply"}
+                      {validating ? <Loader2 size={14} className="animate-spin" /> : t("apply_coupon")}
                     </button>
                   </div>
                 )}
@@ -243,9 +245,9 @@ export default function Cart() {
               {/* Trust badges */}
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { icon: Shield, label: "Secure Payment" },
-                  { icon: Truck, label: "Fast Delivery" },
-                  { icon: Package, label: "Easy Returns" },
+                  { icon: Shield, label: t("trust_secure") },
+                  { icon: Truck,  label: t("trust_delivery") },
+                  { icon: Package,label: t("trust_returns") },
                 ].map(({ icon: Icon, label }) => (
                   <div key={label} className="flex flex-col items-center gap-1.5 py-3 rounded-xl text-center bg-white border border-gray-100 shadow-sm">
                     <Icon size={18} className="text-green-500" />
@@ -259,38 +261,38 @@ export default function Cart() {
             <div className="lg:col-span-1">
               <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm sticky top-20">
                 <h3 className="font-black text-gray-900 text-base mb-4 flex items-center gap-2">
-                  <Shield size={16} className="text-green-500" /> Price Details
+                  <Shield size={16} className="text-green-500" /> {t("order_summary")}
                 </h3>
 
                 <div className="space-y-2.5 text-sm mb-4">
                   <div className="flex justify-between text-slate-500">
-                    <span>Subtotal ({cart.reduce((s, i) => s + i.qty, 0)} item{cart.reduce((s, i) => s + i.qty, 0) > 1 ? "s" : ""})</span>
+                    <span>{t("subtotal")} ({totalQty} {t("items")})</span>
                     <span className="text-gray-900 font-semibold">{formatINR(cartTotal)}</span>
                   </div>
 
                   {applied && discountAmount > 0 && (
                     <div className="flex justify-between text-green-600 font-semibold">
-                      <span>Coupon ({applied.code})</span>
+                      <span>{t("discount")} ({applied.code})</span>
                       <span>−{formatINR(discountAmount)}</span>
                     </div>
                   )}
 
                   <div className="flex justify-between text-slate-500">
-                    <span>Delivery</span>
+                    <span>{t("delivery_charge")}</span>
                     {DELIVERY_CHARGE === 0
-                      ? <span className="text-green-600 font-semibold">Free</span>
+                      ? <span className="text-green-600 font-semibold">{t("free")}</span>
                       : <span className="text-gray-900 font-semibold">{formatINR(DELIVERY_CHARGE)}</span>}
                   </div>
 
                   <div className="border-t border-gray-100 pt-2.5 flex justify-between font-black text-base">
-                    <span className="text-gray-900">Total</span>
+                    <span className="text-gray-900">{t("total")}</span>
                     <span className="text-green-600">{formatINR(finalTotal)}</span>
                   </div>
                 </div>
 
                 {applied && discountAmount > 0 && (
                   <div className="rounded-xl px-3 py-2 text-xs font-semibold bg-green-50 text-green-700 border border-green-200 mb-4">
-                    🎉 You're saving {formatINR(discountAmount)} on this order!
+                    🎉 {t("you_save")} {formatINR(discountAmount)} {t("on_this_order")}
                   </div>
                 )}
 
@@ -300,7 +302,7 @@ export default function Cart() {
                     whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                     className="w-full h-12 rounded-2xl font-black text-black text-sm flex items-center justify-center gap-2 bg-green-500 hover:bg-green-400 shadow-lg shadow-green-500/25 transition-colors"
                   >
-                    Proceed to Checkout <ArrowRight size={16} />
+                    {t("proceed_checkout")} <ArrowRight size={16} />
                   </motion.button>
                 </Link>
 
@@ -312,7 +314,7 @@ export default function Cart() {
                   style={{ background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)" }}
                 >
                   <WhatsAppIcon size={20} />
-                  Order via WhatsApp
+                  {t("order_on_whatsapp")}
                 </motion.button>
               </div>
             </div>

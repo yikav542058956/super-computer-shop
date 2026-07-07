@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { LoginDialogProvider } from "@/contexts/LoginDialogContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import { LoginDialog } from "@/components/auth/LoginDialog";
 import { useEffect } from "react";
 import { seedData } from "@/lib/seedData";
@@ -232,21 +233,23 @@ function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false}>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <LoginDialogProvider>
-            <CartProvider>
-              <WishlistProvider>
-                <TooltipProvider>
-                  <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                    <Router />
-                  </WouterRouter>
-                  <LoginDialog />
-                  <Toaster />
-                </TooltipProvider>
-              </WishlistProvider>
-            </CartProvider>
-          </LoginDialogProvider>
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <LoginDialogProvider>
+              <CartProvider>
+                <WishlistProvider>
+                  <TooltipProvider>
+                    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                      <Router />
+                    </WouterRouter>
+                    <LoginDialog />
+                    <Toaster />
+                  </TooltipProvider>
+                </WishlistProvider>
+              </CartProvider>
+            </LoginDialogProvider>
+          </AuthProvider>
+        </LanguageProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

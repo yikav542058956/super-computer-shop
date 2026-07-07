@@ -18,6 +18,7 @@ import { normalizeOffers } from "@/lib/offers";
 import useEmblaCarousel from "embla-carousel-react";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useCart } from "@/contexts/CartContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 /* ─── Animation Variants ────────────────────────────────────── */
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -53,34 +54,38 @@ const BRANDS: { name: string; logo: string; color: string; bg?: string }[] = [
   { name: "Gigabyte", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Gigabyte_Technology_logo_2020.svg/200px-Gigabyte_Technology_logo_2020.svg.png", color: "#E2001A", bg: "#FDEAEA" },
 ];
 
-const CATEGORIES = [
-  { href: "/search?q=Gaming",      label: "Gaming",      icon: Gamepad2,      color: "#EF4444", bg: "#EF44441A" },
-  { href: "/search?q=Business",    label: "Business",    icon: Briefcase,     color: "#3B82F6", bg: "#3B82F61A" },
-  { href: "/search?q=Student",     label: "Student",     icon: GraduationCap, color: "#8B5CF6", bg: "#8B5CF61A" },
-  { href: "/search?q=Creator",     label: "Creator",     icon: Palette,       color: "#F59E0B", bg: "#F59E0B1A" },
-  { href: "/search?q=Accessories", label: "Accessories", icon: Cpu,           color: "#10B981", bg: "#10B9811A" },
-  { href: "/search",               label: "All Laptops", icon: Laptop,        color: "#16a34a", bg: "#16a34a1A" },
-  { href: "/search?q=Refurbished", label: "Refurbished", icon: MonitorCheck,  color: "#64748B", bg: "#64748B1A" },
-  { href: "/search?q=Workstation", label: "Workstation", icon: Package,       color: "#F97316", bg: "#F973161A" },
+// CATEGORIES is currently unused in Home rendering (Navbar has its own).
+// Keep for potential future home category section. Labels are translated via tKey.
+const _CATEGORIES = [
+  { href: "/search?q=Gaming",      tKey: "cat_gaming",      icon: Gamepad2,      color: "#EF4444", bg: "#EF44441A" },
+  { href: "/search?q=Business",    tKey: "cat_business",    icon: Briefcase,     color: "#3B82F6", bg: "#3B82F61A" },
+  { href: "/search?q=Student",     tKey: "cat_student",     icon: GraduationCap, color: "#8B5CF6", bg: "#8B5CF61A" },
+  { href: "/search?q=Creator",     tKey: "cat_creator",     icon: Palette,       color: "#F59E0B", bg: "#F59E0B1A" },
+  { href: "/search?q=Accessories", tKey: "cat_accessories", icon: Cpu,           color: "#10B981", bg: "#10B9811A" },
+  { href: "/search",               tKey: "cat_all_laptops", icon: Laptop,        color: "#16a34a", bg: "#16a34a1A" },
+  { href: "/search?q=Refurbished", tKey: "cat_refurbished", icon: MonitorCheck,  color: "#64748B", bg: "#64748B1A" },
+  { href: "/search?q=Workstation", tKey: "cat_workstation", icon: Package,       color: "#F97316", bg: "#F973161A" },
 ];
 
 
-const FAQS = [
-  { q: "Do you provide genuine products with warranty?",        a: "Yes, 100% genuine products with manufacturer warranty. We are authorized resellers for HP, Dell, Lenovo, ASUS, and more." },
-  { q: "Do you offer EMI options?",                             a: "Yes! EMI available from ₹999/month with no-cost EMI on select products. We support multiple bank cards and finance options." },
-  { q: "What is your delivery policy?",                         a: "Free delivery within Kasganj and nearby areas. Express delivery available. Pan-India shipping available too." },
-  { q: "Can I exchange my old laptop?",                         a: "Yes, we accept old laptops and offer the best exchange value. Bring your old device to our store for evaluation." },
-  { q: "Do you provide laptop repair services?",                a: "Yes, we have an in-house service center for repairs, upgrades, data recovery, and software installation." },
-  { q: "Can I compare products before buying?",                 a: "Yes! Walk into our showroom at Kasganj Road or call us at 9761809960. We'll help you compare options side by side." },
+// FAQ keys — translated inside FAQ component using t()
+const FAQ_KEYS = [
+  { qKey: "faq_q1", aKey: "faq_a1" },
+  { qKey: "faq_q2", aKey: "faq_a2" },
+  { qKey: "faq_q3", aKey: "faq_a3" },
+  { qKey: "faq_q4", aKey: "faq_a4" },
+  { qKey: "faq_q5", aKey: "faq_a5" },
+  { qKey: "faq_q6", aKey: "faq_a6" },
 ];
 
+// Trust items — stat/label keys translated inside TrustSection using t()
 const TRUST_ITEMS = [
-  { img: "/images/trust/happy-customers.png",  stat: "12,000+", label: "Happy Customers",  color: "#16a34a", bg: "#16a34a15" },
-  { img: "/images/trust/free-delivery.png",    stat: "Free",    label: "Delivery Available",color: "#3B82F6", bg: "#3B82F615" },
-  { img: "/images/trust/genuine-products.png", stat: "100%",    label: "Genuine Products",  color: "#F59E0B", bg: "#F59E0B15" },
-  { img: "/images/trust/excellence.png",       stat: "5+ Yrs",  label: "of Excellence",     color: "#8B5CF6", bg: "#8B5CF615" },
-  { img: "/images/trust/secure-payments.png",  stat: "Safe",    label: "Secure Payments",   color: "#EF4444", bg: "#EF444415" },
-  { img: "/images/trust/easy-returns.png",     stat: "Easy",    label: "Returns & Support", color: "#10B981", bg: "#10B98115" },
+  { img: "/images/trust/happy-customers.png",  statKey: "trust_customers_stat", labelKey: "trust_customers",  color: "#16a34a", bg: "#16a34a15" },
+  { img: "/images/trust/free-delivery.png",    statKey: "trust_delivery_stat",  labelKey: "trust_delivery",  color: "#3B82F6", bg: "#3B82F615" },
+  { img: "/images/trust/genuine-products.png", statKey: "trust_genuine_stat",   labelKey: "trust_genuine",   color: "#F59E0B", bg: "#F59E0B15" },
+  { img: "/images/trust/excellence.png",       statKey: "trust_excellence_stat",labelKey: "trust_excellence",color: "#8B5CF6", bg: "#8B5CF615" },
+  { img: "/images/trust/secure-payments.png",  statKey: "trust_secure_stat",    labelKey: "trust_secure",    color: "#EF4444", bg: "#EF444415" },
+  { img: "/images/trust/easy-returns.png",     statKey: "trust_returns_stat",   labelKey: "trust_returns",   color: "#10B981", bg: "#10B98115" },
 ];
 
 const TYPE_STYLE: Record<string, { bar: string; icon: any }> = {
@@ -269,6 +274,7 @@ function HeroBanner({ banners }: { banners: any[] }) {
 
 /* ─── Film Strip Brand Carousel ─────────────────────────────── */
 function BrandCarousel() {
+  const { t } = useLanguage();
   const [fbBrands, setFbBrands] = useState<{ name: string; logo: string; color: string; bg?: string }[]>([]);
 
   // Read brands added via admin (from products' unique brand names)
@@ -303,12 +309,12 @@ function BrandCarousel() {
       <div className="container mx-auto px-4 mb-5 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#16a34a" }}>Authorized Reseller</p>
-          <h3 className="text-gray-900 font-black text-base mt-0.5">Top Brands</h3>
+          <h3 className="text-gray-900 font-black text-base mt-0.5">{t("top_brands")}</h3>
         </div>
         <Link href="/search">
           <span className="text-xs font-bold px-3 py-1.5 rounded-full"
             style={{ background: "rgba(22,163,74,0.08)", color: "#16a34a", border: "1px solid rgba(22,163,74,0.18)" }}>
-            View All →
+            {t("view_all")} →
           </span>
         </Link>
       </div>
@@ -373,6 +379,7 @@ function BrandCarousel() {
 function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
   const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
   const { addToCart } = useCart();
+  const { t } = useLanguage();
   const [, nav] = useLocation();
   const inWishlist = isWishlisted(product.id);
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
@@ -485,7 +492,7 @@ function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
                 style={{ background: "rgba(22,163,74,0.12)", border: "1px solid rgba(22,163,74,0.25)", color: "#16a34a" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#16a34a"; (e.currentTarget as HTMLButtonElement).style.color = "#000"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#16a34a"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(22,163,74,0.12)"; (e.currentTarget as HTMLButtonElement).style.color = "#16a34a"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(22,163,74,0.25)"; }}>
-                <ShoppingCart size={13} /><span className="hidden sm:inline">Add to Cart</span><span className="sm:hidden">Add</span>
+                <ShoppingCart size={13} /><span className="hidden sm:inline">{t("add_to_cart")}</span><span className="sm:hidden">{t("add_to_cart").split(" ")[0]}</span>
               </motion.button>
               <motion.button whileTap={{ scale: 0.95 }}
                 onClick={e => { e.preventDefault(); e.stopPropagation(); nav(`/products/${product.id}`); }}
@@ -493,7 +500,7 @@ function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
                 style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.25)", color: "#3B82F6" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#3B82F6"; (e.currentTarget as HTMLButtonElement).style.color = "#fff"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(59,130,246,0.12)"; (e.currentTarget as HTMLButtonElement).style.color = "#3B82F6"; }}>
-                Buy
+                {t("buy_now")}
               </motion.button>
             </div>
           </div>
@@ -507,6 +514,7 @@ function ProductCard({ product, index = 0 }: { product: any; index?: number }) {
 function ProductSection({ title, accent, badge, products, loading }: {
   title: string; accent: string; badge: string; products: any[] | null; loading?: boolean;
 }) {
+  const { t } = useLanguage();
   return (
     <section className="py-10 border-t" style={{ borderColor: "rgba(0,0,0,0.07)" }}>
       <div className="container mx-auto px-4">
@@ -521,7 +529,7 @@ function ProductSection({ title, accent, badge, products, loading }: {
             </h2>
           </div>
           <Link href="/products" className="flex items-center gap-1 text-sm font-semibold" style={{ color: "#16a34a" }}>
-            View All <ArrowRight size={15} />
+            {t("view_all")} <ArrowRight size={15} />
           </Link>
         </motion.div>
 
@@ -544,10 +552,11 @@ function ProductSection({ title, accent, badge, products, loading }: {
 
 /* ─── Trust Section ─────────────────────────────────────────── */
 function TrustSection() {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true });
+  const sectionRef = useRef(null);
+  useInView(sectionRef, { once: true });
+  const { t } = useLanguage();
   return (
-    <section ref={ref} className="py-12 border-t" style={{ borderColor: "rgba(0,0,0,0.07)", background: "#f8fafc" }}>
+    <section ref={sectionRef} className="py-12 border-t" style={{ borderColor: "rgba(0,0,0,0.07)", background: "#f8fafc" }}>
       <div className="container mx-auto px-4">
         <motion.div initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }} className="text-center mb-8">
           <h2 className="text-2xl md:text-3xl font-black text-gray-900">
@@ -557,17 +566,17 @@ function TrustSection() {
         </motion.div>
         <motion.div initial="hidden" whileInView="show" variants={staggerContainer} viewport={{ once: true }}
           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {TRUST_ITEMS.map(({ img, stat, label, color, bg }) => (
-            <motion.div key={label} variants={scaleIn}
+          {TRUST_ITEMS.map(({ img, statKey, labelKey, color, bg }) => (
+            <motion.div key={labelKey} variants={scaleIn}
               whileHover={{ scale: 1.05, y: -4 }}
               className="flex flex-col items-center text-center p-4 rounded-2xl bg-white"
               style={{ border: `1px solid ${color}30`, boxShadow: `0 2px 12px ${color}10` }}>
               <div className="h-14 w-14 rounded-2xl flex items-center justify-center mb-3"
                 style={{ background: bg }}>
-                <img src={img} alt={label} className="h-10 w-10 object-contain drop-shadow-md" />
+                <img src={img} alt={t(labelKey)} className="h-10 w-10 object-contain drop-shadow-md" />
               </div>
-              <p className="font-black text-gray-900 text-lg leading-none">{stat}</p>
-              <p className="text-gray-500 text-xs mt-1 leading-tight">{label}</p>
+              <p className="font-black text-gray-900 text-lg leading-none">{t(statKey)}</p>
+              <p className="text-gray-500 text-xs mt-1 leading-tight">{t(labelKey)}</p>
             </motion.div>
           ))}
         </motion.div>
@@ -581,6 +590,7 @@ const isVideoUrl = (url?: string) =>
   url ? /\.(mp4|mov|webm|avi|mkv|3gp)/i.test(url) || url.includes("/video/") : false;
 
 function HappyCustomers() {
+  const { t } = useLanguage();
   const [photos, setPhotos] = useState<any[]>([]);
   useEffect(() => {
     const unsub = onValue(ref(db, "customerPhotos"), snap => {
@@ -602,7 +612,7 @@ function HappyCustomers() {
         <motion.div initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }} className="mb-6">
           <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Our Community</p>
           <h2 className="text-xl font-black text-gray-900">
-            Happy <span style={{ color: "#16a34a" }}>Customers</span>
+            {t("customer_photos").split(" ")[0]} <span style={{ color: "#16a34a" }}>{t("customer_photos").split(" ").slice(1).join(" ")}</span>
           </h2>
         </motion.div>
         <div className="grid grid-cols-2 gap-3">
@@ -643,23 +653,24 @@ function HappyCustomers() {
 /* ─── FAQ ───────────────────────────────────────────────────── */
 function FAQ() {
   const [open, setOpen] = useState<number | null>(null);
+  const { t } = useLanguage();
   return (
     <section className="py-12 border-t" style={{ borderColor: "rgba(0,0,0,0.07)", background: "#f8fafc" }}>
       <div className="container mx-auto px-4 max-w-3xl">
         <motion.div initial="hidden" whileInView="show" variants={fadeUp} viewport={{ once: true }} className="text-center mb-8">
           <h2 className="text-2xl md:text-3xl font-black text-gray-900">
-            Frequently Asked <span style={{ color: "#16a34a" }}>Questions</span>
+            {t("faq_title").split(" ").slice(0, -1).join(" ")} <span style={{ color: "#16a34a" }}>{t("faq_title").split(" ").slice(-1)[0]}</span>
           </h2>
         </motion.div>
         <div className="space-y-2.5">
-          {FAQS.map((faq, i) => (
+          {FAQ_KEYS.map(({ qKey, aKey }, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }} transition={{ delay: i * 0.06 }}
               className="rounded-2xl overflow-hidden"
               style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)" }}>
               <button className="w-full flex items-center justify-between px-5 py-4 text-left"
                 onClick={() => setOpen(open === i ? null : i)}>
-                <span className="font-semibold text-gray-900 text-sm pr-4">{faq.q}</span>
+                <span className="font-semibold text-gray-900 text-sm pr-4">{t(qKey)}</span>
                 <motion.div animate={{ rotate: open === i ? 180 : 0 }} transition={{ duration: 0.25 }} className="shrink-0">
                   <ChevronDown size={18} style={{ color: "#16a34a" }} />
                 </motion.div>
@@ -668,7 +679,7 @@ function FAQ() {
                 {open === i && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}>
-                    <p className="px-5 pb-4 text-sm text-gray-600 leading-relaxed">{faq.a}</p>
+                    <p className="px-5 pb-4 text-sm text-gray-600 leading-relaxed">{t(aKey)}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -682,11 +693,12 @@ function FAQ() {
 
 /* ─── Still Looking ─────────────────────────────────────────── */
 function StillLooking({ products }: { products: any[] }) {
+  const { t } = useLanguage();
   if (!products.length) return null;
   return (
     <section className="py-4 border-b" style={{ borderColor: "rgba(0,0,0,0.07)", background: "#f1f5f9" }}>
       <div className="px-4">
-        <p className="text-gray-900 font-black text-sm mb-3">Recently Viewed</p>
+        <p className="text-gray-900 font-black text-sm mb-3">{t("recently_viewed")}</p>
         <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
           {products.map(p => (
             <Link key={p.id} href={`/products/${p.id}`}>
