@@ -6,26 +6,25 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Receipt, Plus, Search, Trash2, Edit, X, Download, Share2,
-  CheckCircle2, Clock, IndianRupee, Phone, User, Calendar,
-  StickyNote, ChevronDown, ChevronUp, Printer, FileText,
-  Building2, Tag, Percent, AlertCircle,
+  CheckCircle2, Clock, IndianRupee, Phone, Calendar,
+  StickyNote, ChevronDown, ChevronUp, FileText,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { formatINR } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 const PAYMENT_MODES = ["Cash", "UPI", "Card", "Net Banking", "Cheque", "Credit"];
 const PAYMENT_STATUSES = [
-  { value: "unpaid",   label: "Unpaid",   cls: "bg-red-100 text-red-600" },
-  { value: "partial",  label: "Partial",  cls: "bg-amber-100 text-amber-700" },
-  { value: "paid",     label: "Paid",     cls: "bg-green-100 text-green-700" },
+  { value: "unpaid",  label: "Unpaid",  cls: "bg-red-100 text-red-600" },
+  { value: "partial", label: "Partial", cls: "bg-amber-100 text-amber-700" },
+  { value: "paid",    label: "Paid",    cls: "bg-green-100 text-green-700" },
 ];
 
 interface BillItem {
@@ -41,8 +40,8 @@ interface Bill {
   billNo: number;
   date: string;
   customerName: string;
-  customerPhone?: string;
-  customerAddress?: string;
+  customerPhone: string;
+  customerAddress: string;
   items: BillItem[];
   subtotal: number;
   discountType: "flat" | "percent";
@@ -54,7 +53,7 @@ interface Bill {
   amountPaid: number;
   paymentMode: string;
   paymentStatus: "unpaid" | "partial" | "paid";
-  notes?: string;
+  notes: string;
   createdAt: number;
 }
 
@@ -63,14 +62,15 @@ interface ShopInfo {
   phone: string;
   address: string;
   email: string;
-  gstin?: string;
+  gstin: string;
+  tagline: string;
+  billFooter: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const uid = () => Math.random().toString(36).slice(2, 8);
 const today = () => new Date().toISOString().split("T")[0];
-const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtDate = (d: string) => {
   if (!d) return "";
   const [y, m, dd] = d.split("-");
@@ -79,144 +79,311 @@ const fmtDate = (d: string) => {
 };
 const psObj = (s: string) => PAYMENT_STATUSES.find(p => p.value === s) || PAYMENT_STATUSES[0];
 
-// ─── Empty item ───────────────────────────────────────────────────────────────
-
 const emptyItem = (): BillItem => ({ id: uid(), description: "", qty: 1, rate: 0, amount: 0 });
 
-// ─── PDF Generator ────────────────────────────────────────────────────────────
+// ─── Professional PDF Generator ───────────────────────────────────────────────
 
 function generateBillPDF(bill: Bill, shop: ShopInfo): jsPDF {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const pw = 210;
-  const margin = 14;
+  const doc = new jsPDF({ unit: "mm", format: "a5" });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const MARGIN = 7;
+  const COL = W - MARGIN * 2;
+  let y = 0;
+
+  const setColor = (r: number, g: number, b: number) => doc.setTextColor(r, g, b);
+  const fillRect = (x: number, yy: number, w: number, h: number, r: number, g: number, b: number) => {
+    doc.setFillColor(r, g, b); doc.rect(x, yy, w, h, "F");
+  };
+  const drawLine = (x1: number, y1: number, x2: number, y2: number, r = 220, g = 220, b = 220) => {
+    doc.setDrawColor(r, g, b); doc.line(x1, y1, x2, y2);
+  };
+
+  const FOOTER_RESERVE = 26;
+  const checkNewPage = (neededH: number) => {
+    if (y + neededH > H - FOOTER_RESERVE) {
+      doc.addPage();
+      fillRect(0, 0, W, 8, 37, 99, 235);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      setColor(255, 255, 255);
+      doc.text(`${(shop.storeName || "Super Computer").toUpperCase()} — continued`, MARGIN, 5.5);
+      doc.text(`Bill No: #${String(bill.billNo).padStart(4, "0")}`, W - MARGIN, 5.5, { align: "right" });
+      y = 12;
+    }
+  };
 
   // ── Header ──
-  doc.setFillColor(37, 99, 235);
-  doc.rect(0, 0, pw, 32, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
-  doc.text(shop.storeName || "Super Computer", margin, 13);
-  doc.setFontSize(8.5);
-  doc.setFont("helvetica", "normal");
-  const shopDetails = [shop.phone, shop.address, shop.email, shop.gstin ? `GSTIN: ${shop.gstin}` : ""]
-    .filter(Boolean).join("  |  ");
-  doc.text(shopDetails, margin, 20);
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("TAX INVOICE", pw - margin, 13, { align: "right" });
-  doc.setFontSize(8.5);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Bill No: #${String(bill.billNo).padStart(4, "0")}`, pw - margin, 20, { align: "right" });
-  doc.text(`Date: ${fmtDate(bill.date)}`, pw - margin, 26, { align: "right" });
+  fillRect(0, 0, W, 30, 37, 99, 235);
+  fillRect(0, 0, W, 2, 96, 165, 250);
 
-  // ── Customer ──
-  doc.setTextColor(30, 30, 30);
-  let y = 40;
-  doc.setFillColor(245, 247, 250);
-  doc.rect(margin, y, pw - margin * 2, 22, "F");
-  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text("BILL TO", margin + 3, y + 6);
-  doc.setFont("helvetica", "normal");
+  doc.setFontSize(16);
+  setColor(255, 255, 255);
+  doc.text((shop.storeName || "Super Computer").toUpperCase(), MARGIN, 11);
+
+  if (shop.tagline) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    setColor(191, 219, 254);
+    doc.text(shop.tagline, MARGIN, 17);
+  }
+
+  doc.setFontSize(6);
+  setColor(191, 219, 254);
+  const contactParts: string[] = [];
+  if (shop.phone) contactParts.push(`Tel: ${shop.phone}`);
+  if (shop.email) contactParts.push(`Email: ${shop.email}`);
+  if (contactParts.length) doc.text(contactParts.join("  |  "), MARGIN, 22);
+  if (shop.address) {
+    doc.setFontSize(5.5);
+    setColor(147, 197, 253);
+    doc.text(shop.address, MARGIN, 27);
+  }
+  if (shop.gstin) {
+    doc.setFontSize(6);
+    setColor(147, 197, 253);
+    doc.text(`GSTIN: ${shop.gstin}`, W - MARGIN, 27, { align: "right" });
+  }
+  y = 33;
+
+  // ── Invoice title bar ──
+  fillRect(0, y, W, 9, 239, 246, 255);
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text(bill.customerName || "—", margin + 3, y + 13);
-  doc.setFontSize(8);
-  const custLine = [bill.customerPhone, bill.customerAddress].filter(Boolean).join("  |  ");
-  if (custLine) doc.text(custLine, margin + 3, y + 19);
+  setColor(37, 99, 235);
+  doc.text("TAX INVOICE", MARGIN, y + 6.5);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  setColor(59, 130, 246);
+  doc.text(`Bill No: #${String(bill.billNo).padStart(4, "0")}`, W - MARGIN, y + 4, { align: "right" });
+  doc.text(`Date: ${fmtDate(bill.date)}`, W - MARGIN, y + 8, { align: "right" });
+  y += 12;
+
+  // ── Customer + Payment Status ──
+  const leftW = COL * 0.55;
+  const rightW = COL * 0.42;
+  const rightX = MARGIN + leftW + COL * 0.03;
+  const isPaid = bill.paymentStatus === "paid";
+  const isPartial = bill.paymentStatus === "partial";
+  const balance = Math.max(0, bill.total - bill.amountPaid);
+
+  // Customer box
+  fillRect(MARGIN, y, leftW, 24, 239, 246, 255);
+  doc.setDrawColor(147, 197, 253);
+  doc.rect(MARGIN, y, leftW, 24);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6);
+  setColor(37, 99, 235);
+  doc.text("BILL TO", MARGIN + 2.5, y + 4.5);
+  drawLine(MARGIN + 2, y + 5.5, MARGIN + leftW - 2, y + 5.5, 147, 197, 253);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  setColor(15, 23, 42);
+  doc.text(bill.customerName || "—", MARGIN + 2.5, y + 10.5);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  setColor(71, 85, 105);
+  if (bill.customerPhone) doc.text(`Ph: ${bill.customerPhone}`, MARGIN + 2.5, y + 15.5);
+  if (bill.customerAddress) {
+    const aLines = doc.splitTextToSize(bill.customerAddress, leftW - 5);
+    doc.text(aLines[0], MARGIN + 2.5, y + 20);
+  }
+
+  // Payment status box
+  fillRect(rightX, y, rightW, 24, isPaid ? 240 : isPartial ? 255 : 254, isPaid ? 253 : isPartial ? 251 : 242, isPaid ? 244 : isPartial ? 235 : 242);
+  doc.setDrawColor(isPaid ? 134 : isPartial ? 251 : 252, isPaid ? 239 : isPartial ? 191 : 165, isPaid ? 172 : isPartial ? 36 : 165);
+  doc.rect(rightX, y, rightW, 24);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6);
+  setColor(isPaid ? 22 : isPartial ? 180 : 185, isPaid ? 163 : isPartial ? 83 : 28, isPaid ? 74 : isPartial ? 9 : 28);
+  doc.text("PAYMENT", rightX + 2.5, y + 4.5);
+  drawLine(rightX + 2, y + 5.5, rightX + rightW - 2, y + 5.5, 200, 200, 200);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  setColor(40, 40, 40);
+  doc.text(`Total: ${formatINR(bill.total)}`, rightX + 2.5, y + 10.5);
+  setColor(22, 163, 74);
+  doc.text(`Paid: ${formatINR(bill.amountPaid)}`, rightX + 2.5, y + 15.5);
+  if (balance > 0) {
+    setColor(185, 28, 28);
+    doc.text(`Due: ${formatINR(balance)}`, rightX + 2.5, y + 20.5);
+  } else {
+    setColor(22, 163, 74);
+    doc.text("FULLY PAID ✓", rightX + 2.5, y + 20.5);
+  }
+  y += 27;
 
   // ── Items table ──
-  y += 28;
-  autoTable(doc, {
-    startY: y,
-    head: [["#", "Description", "Qty", "Rate (₹)", "Amount (₹)"]],
-    body: bill.items.map((item, i) => [
-      i + 1,
-      item.description || "—",
-      item.qty,
-      fmt(item.rate),
-      fmt(item.amount),
-    ]),
-    styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: "bold" },
-    columnStyles: {
-      0: { cellWidth: 10, halign: "center" },
-      2: { cellWidth: 15, halign: "center" },
-      3: { cellWidth: 28, halign: "right" },
-      4: { cellWidth: 30, halign: "right" },
-    },
-    alternateRowStyles: { fillColor: [249, 250, 251] },
+  const C_NO   = MARGIN;
+  const C_NAME = MARGIN + 6;
+  const C_QTY  = MARGIN + COL * 0.57;
+  const C_RATE = MARGIN + COL * 0.70;
+  const C_AMT  = W - MARGIN;
+  const NAME_W = C_QTY - C_NAME - 3;
+
+  fillRect(MARGIN, y, COL, 7.5, 37, 99, 235);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.5);
+  setColor(255, 255, 255);
+  doc.text("#",       C_NO + 1, y + 5);
+  doc.text("ITEM / DESCRIPTION", C_NAME, y + 5);
+  doc.text("QTY",    C_QTY,  y + 5, { align: "center" });
+  doc.text("RATE",   C_RATE, y + 5, { align: "center" });
+  doc.text("AMOUNT", C_AMT,  y + 5, { align: "right" });
+  y += 8;
+
+  (bill.items || []).forEach((item, idx) => {
+    const nameLines: string[] = doc.splitTextToSize(item.description || "—", NAME_W);
+    const visLines = nameLines.slice(0, 2);
+    const rowH = visLines.length > 1 ? 15 : 10;
+    checkNewPage(rowH + 2);
+    if (idx % 2 === 0) {
+      fillRect(MARGIN, y, COL, rowH, 239, 246, 255);
+    } else {
+      fillRect(MARGIN, y, COL, rowH, 255, 255, 255);
+    }
+    drawLine(MARGIN, y + rowH, MARGIN + COL, y + rowH, 219, 234, 254);
+    const rowMid = y + rowH / 2 + 2;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.5);
+    setColor(59, 130, 246);
+    doc.text(String(idx + 1), C_NO + 1, rowMid);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    setColor(15, 23, 42);
+    if (visLines.length > 1) {
+      doc.text(visLines[0], C_NAME, y + 5.5);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      setColor(71, 85, 105);
+      doc.text(visLines[1], C_NAME, y + 10.5);
+    } else {
+      doc.text(visLines[0] ?? "—", C_NAME, rowMid);
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    setColor(71, 85, 105);
+    doc.text(String(item.qty), C_QTY, rowMid, { align: "center" });
+    doc.text(formatINR(item.rate), C_RATE, rowMid, { align: "center" });
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    setColor(37, 99, 235);
+    doc.text(formatINR(item.amount), C_AMT, rowMid, { align: "right" });
+    y += rowH;
   });
 
   // ── Totals ──
-  const finalY = (doc as any).lastAutoTable.finalY + 4;
-  const col2 = pw - margin;
-  const col1 = col2 - 40;
+  checkNewPage(48);
+  y += 3;
+  drawLine(MARGIN, y, W - MARGIN, y, 147, 197, 253);
+  y += 4;
 
-  const addRow = (label: string, value: string, bold = false, color?: number[]) => {
-    doc.setFontSize(bold ? 10 : 9);
-    doc.setFont("helvetica", bold ? "bold" : "normal");
-    if (color) doc.setTextColor(...(color as [number, number, number]));
-    else doc.setTextColor(60, 60, 60);
-    doc.text(label, col1, finalY + addRow._y, { align: "right" });
-    doc.text(value, col2, finalY + addRow._y, { align: "right" });
-    addRow._y += (bold ? 7 : 5.5);
-  };
-  addRow._y = 0;
-
-  addRow("Subtotal:", `₹${fmt(bill.subtotal)}`);
+  type TotRow = { label: string; val: string; highlight?: boolean; red?: boolean; green?: boolean };
+  const totRows: TotRow[] = [
+    { label: "Subtotal", val: formatINR(bill.subtotal) },
+  ];
   if (bill.discountAmount > 0) {
-    addRow(
-      `Discount${bill.discountType === "percent" ? ` (${bill.discountValue}%)` : ""}:`,
-      `- ₹${fmt(bill.discountAmount)}`,
-      false, [180, 50, 50],
-    );
+    totRows.push({
+      label: `Discount${bill.discountType === "percent" ? ` (${bill.discountValue}%)` : ""}`,
+      val: `- ${formatINR(bill.discountAmount)}`,
+      red: true,
+    });
   }
   if (bill.gstPercent > 0) {
-    addRow(`GST (${bill.gstPercent}%):`, `₹${fmt(bill.gstAmount)}`);
+    totRows.push({ label: `GST (${bill.gstPercent}%)`, val: formatINR(bill.gstAmount) });
+  }
+  totRows.push({ label: "GRAND TOTAL", val: formatINR(bill.total), highlight: true });
+  totRows.push({ label: `Paid via ${bill.paymentMode || "Cash"}`, val: formatINR(bill.amountPaid), green: true });
+  if (balance > 0) {
+    totRows.push({ label: "⚠  BALANCE DUE", val: formatINR(balance), red: true });
   }
 
-  // Total line
-  const totalY = finalY + addRow._y + 1;
-  doc.setFillColor(37, 99, 235);
-  doc.rect(col1 - 40, totalY - 5, pw - margin - col1 + 40 + margin, 10, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("TOTAL:", col1, totalY + 2, { align: "right" });
-  doc.text(`₹${fmt(bill.total)}`, col2, totalY + 2, { align: "right" });
+  const totX = MARGIN + COL * 0.42;
+  const totW = COL * 0.58;
 
-  // Payment info
-  let py = totalY + 14;
-  doc.setTextColor(30, 30, 30);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Amount Paid: ₹${fmt(bill.amountPaid)}   |   Balance Due: ₹${fmt(Math.max(0, bill.total - bill.amountPaid))}   |   Mode: ${bill.paymentMode}`, margin, py);
+  totRows.forEach(row => {
+    if (row.highlight) {
+      fillRect(totX - 2, y - 1.5, totW + 4, 9, 37, 99, 235);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      setColor(255, 255, 255);
+      doc.text(row.label, totX, y + 5.5);
+      doc.text(row.val, W - MARGIN, y + 5.5, { align: "right" });
+      y += 10;
+    } else if (row.red) {
+      fillRect(totX - 2, y - 1.5, totW + 4, 8, 254, 242, 242);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.5);
+      setColor(185, 28, 28);
+      doc.text(row.label, totX, y + 5);
+      doc.text(row.val, W - MARGIN, y + 5, { align: "right" });
+      y += 9;
+    } else if (row.green) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      setColor(22, 101, 52);
+      doc.text(row.label, totX, y + 5);
+      doc.text(row.val, W - MARGIN, y + 5, { align: "right" });
+      y += 8;
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      setColor(100, 116, 139);
+      doc.text(row.label, totX, y + 5);
+      setColor(15, 23, 42);
+      doc.text(row.val, W - MARGIN, y + 5, { align: "right" });
+      y += 8;
+    }
+  });
 
-  // Notes
+  // ── Notes ──
   if (bill.notes) {
-    py += 8;
-    doc.setFontSize(8.5);
+    const noteLines = doc.splitTextToSize(bill.notes, COL - 20) as string[];
+    const visNoteLines = noteLines.slice(0, 3);
+    const noteBoxH = 6 + visNoteLines.length * 4.5;
+    checkNewPage(noteBoxH + 4);
+    y += 3;
+    fillRect(MARGIN, y, COL, noteBoxH, 255, 251, 235);
+    doc.setDrawColor(253, 224, 71);
+    doc.rect(MARGIN, y, COL, noteBoxH);
     doc.setFont("helvetica", "bold");
-    doc.text("Notes:", margin, py);
+    doc.setFontSize(6.5);
+    setColor(120, 80, 10);
+    doc.text("NOTE:", MARGIN + 2.5, y + 5);
     doc.setFont("helvetica", "normal");
-    doc.text(bill.notes, margin + 14, py);
+    setColor(80, 60, 10);
+    visNoteLines.forEach((line: string, li: number) => doc.text(line, MARGIN + 14, y + 5 + li * 4.5));
+    y += noteBoxH + 3;
   }
 
-  // Footer
-  const footerY = 285;
-  doc.setDrawColor(200, 200, 200);
-  doc.line(margin, footerY - 4, pw - margin, footerY - 4);
-  doc.setFontSize(8);
-  doc.setTextColor(140, 140, 140);
-  doc.text("Thank you for your business!", pw / 2, footerY, { align: "center" });
+  // ── Footer ──
+  const footerH = 22;
+  const footerY = Math.max(y + 6, H - footerH);
+  drawLine(MARGIN, footerY - 3, W - MARGIN, footerY - 3, 147, 197, 253);
+  fillRect(0, footerY, W, footerH, 239, 246, 255);
+  fillRect(0, H - 2, W, 2, 96, 165, 250);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  setColor(37, 99, 235);
+  doc.text(`Thank you for choosing ${shop.storeName || "Super Computer"}!`, W / 2, footerY + 7, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.5);
+  setColor(100, 116, 139);
+  const footerMsg = shop.billFooter || "Warranty claims — please keep this bill. No returns after 7 days.";
+  const fLines = (doc.splitTextToSize(footerMsg, COL - 4) as string[]).slice(0, 2);
+  if (fLines.length > 1) {
+    doc.text(fLines[0], W / 2, footerY + 12, { align: "center" });
+    doc.text(fLines[1], W / 2, footerY + 16, { align: "center" });
+  } else {
+    doc.text(fLines[0] ?? footerMsg, W / 2, footerY + 13, { align: "center" });
+  }
+  setColor(148, 163, 184);
+  doc.setFontSize(6);
+  doc.text("Computer generated document — no signature required", W / 2, footerY + 20, { align: "center" });
 
   return doc;
 }
-
-// Monkey-patch for _y
-(generateBillPDF as any)._y = 0;
-declare global { interface Function { _y: number; } }
 
 // ─── Empty form ────────────────────────────────────────────────────────────────
 
@@ -230,7 +397,6 @@ const emptyForm = () => ({
   gstPercent: "",
   amountPaid: "",
   paymentMode: "Cash",
-  paymentStatus: "paid" as "unpaid" | "partial" | "paid",
   notes: "",
 });
 
@@ -239,15 +405,22 @@ const emptyForm = () => ({
 export default function AdminBill() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
-  const [shop, setShop] = useState<ShopInfo>({ storeName: "Super Computer", phone: "", address: "", email: "" });
+  const [shop, setShop] = useState<ShopInfo>({
+    storeName: "Super Computer",
+    phone: "",
+    address: "",
+    email: "",
+    gstin: "",
+    tagline: "Laptop & Computer Store | Authorized Reseller",
+    billFooter: "Warranty claims — please keep this bill. No returns after 7 days.",
+  });
 
-  // Dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bill | null>(null);
   const [form, setForm] = useState(emptyForm());
   const [items, setItems] = useState<BillItem[]>([emptyItem()]);
+  const [saving, setSaving] = useState(false);
 
-  // Filters
   const [search, setSearch] = useState("");
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
@@ -263,11 +436,16 @@ export default function AdminBill() {
         .map(([id, v]) => ({ id, ...v }))
         .sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
       setBills(list as Bill[]);
+    }, (err) => {
+      setLoading(false);
+      console.error("Firebase bills read error:", err);
+      toast.error("Failed to load bills: " + err.message);
     });
-    // Load shop info
+
+    // Load shop info from settings
     get(dbRef(db, "settings/storeInfo")).then(snap => {
       if (snap.exists()) setShop(s => ({ ...s, ...snap.val() }));
-    });
+    }).catch(console.error);
     get(dbRef(db, "settings/general")).then(snap => {
       if (snap.exists()) {
         const g = snap.val();
@@ -277,9 +455,11 @@ export default function AdminBill() {
           phone: g.phone || s.phone,
           email: g.email || s.email,
           address: g.address || s.address,
+          gstin: g.gstin || s.gstin,
         }));
       }
-    });
+    }).catch(console.error);
+
     return () => unsub();
   }, []);
 
@@ -330,10 +510,10 @@ export default function AdminBill() {
 
   // ── Summary ──
   const stats = useMemo(() => {
-    const total = bills.reduce((s, b) => s + (b.total || 0), 0);
+    const tot = bills.reduce((s, b) => s + (b.total || 0), 0);
     const collected = bills.reduce((s, b) => s + (b.amountPaid || 0), 0);
     const unpaid = bills.filter(b => b.paymentStatus !== "paid").length;
-    return { total, collected, unpaid };
+    return { total: tot, collected, unpaid };
   }, [bills]);
 
   // ── Open dialog ──
@@ -356,7 +536,6 @@ export default function AdminBill() {
       gstPercent: bill.gstPercent > 0 ? String(bill.gstPercent) : "",
       amountPaid: String(bill.amountPaid || 0),
       paymentMode: bill.paymentMode,
-      paymentStatus: bill.paymentStatus,
       notes: bill.notes || "",
     });
     setItems(bill.items?.length ? bill.items : [emptyItem()]);
@@ -373,7 +552,7 @@ export default function AdminBill() {
       if (r.id !== id) return r;
       const updated = { ...r, [field]: value };
       if (field === "qty" || field === "rate") {
-        updated.amount = Math.round(updated.qty * updated.rate * 100) / 100;
+        updated.amount = Math.round(Number(updated.qty) * Number(updated.rate) * 100) / 100;
       }
       return updated;
     }));
@@ -382,27 +561,43 @@ export default function AdminBill() {
   const addItem = () => setItems(r => [...r, emptyItem()]);
   const removeItem = (id: string) => setItems(r => r.length > 1 ? r.filter(x => x.id !== id) : r);
 
-  // ── Save ──
-  const handleSave = async () => {
-    if (!form.customerName.trim()) { toast.error("Customer name is required"); return; }
-    if (items.every(i => !i.description.trim())) { toast.error("Add at least one item"); return; }
-
+  // ── Build bill object ──
+  const buildBill = () => {
     const validItems = items.filter(i => i.description.trim());
     const amountPaid = Number(form.amountPaid) || 0;
     const discValue = Number(form.discountValue) || 0;
     const gstPct = Number(form.gstPercent) || 0;
     const { subtotal, discountAmount, gstAmount, total } = computeTotals(validItems, form.discountType, discValue, gstPct);
-
     const autoStatus: "unpaid" | "partial" | "paid" =
-      amountPaid <= 0 ? "unpaid" :
-      amountPaid >= total ? "paid" : "partial";
+      amountPaid <= 0 ? "unpaid" : amountPaid >= total ? "paid" : "partial";
 
-    const payload: Omit<Bill, "id"> = {
+    return {
+      validItems,
+      amountPaid,
+      discValue,
+      gstPct,
+      subtotal,
+      discountAmount,
+      gstAmount,
+      total,
+      autoStatus,
+    };
+  };
+
+  // ── Save ──
+  const handleSave = async () => {
+    if (!form.customerName.trim()) { toast.error("Customer name is required"); return; }
+    if (items.every(i => !i.description.trim())) { toast.error("Add at least one item with a description"); return; }
+
+    const { validItems, amountPaid, discValue, gstPct, subtotal, discountAmount, gstAmount, total, autoStatus } = buildBill();
+
+    // Firebase RTDB does not accept undefined values — use empty strings instead
+    const payload = {
       billNo: editing ? editing.billNo : nextBillNo,
-      date: form.date,
+      date: form.date || today(),
       customerName: form.customerName.trim(),
-      customerPhone: form.customerPhone.trim() || undefined,
-      customerAddress: form.customerAddress.trim() || undefined,
+      customerPhone: form.customerPhone.trim() || "",
+      customerAddress: form.customerAddress.trim() || "",
       items: validItems,
       subtotal,
       discountType: form.discountType,
@@ -414,41 +609,79 @@ export default function AdminBill() {
       amountPaid,
       paymentMode: form.paymentMode,
       paymentStatus: autoStatus,
-      notes: form.notes.trim() || undefined,
+      notes: form.notes.trim() || "",
       createdAt: editing ? editing.createdAt : Date.now(),
     };
 
+    setSaving(true);
     try {
       if (editing) {
         await update(dbRef(db, `bills/${editing.id}`), payload);
         toast.success("Bill updated!");
       } else {
         await push(dbRef(db, "bills"), payload);
-        toast.success(`Bill #${nextBillNo} created!`);
+        toast.success(`Bill #${String(nextBillNo).padStart(4, "0")} created!`);
       }
       setDialogOpen(false);
     } catch (e: any) {
-      toast.error("Save failed: " + e.message);
+      console.error("Bill save error:", e);
+      toast.error("Save failed: " + (e.message || "Unknown error"));
+    } finally {
+      setSaving(false);
     }
   };
 
   // ── Delete ──
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this bill permanently?")) return;
-    await remove(dbRef(db, `bills/${id}`));
-    toast.success("Bill deleted");
+    try {
+      await remove(dbRef(db, `bills/${id}`));
+      toast.success("Bill deleted");
+    } catch (e: any) {
+      toast.error("Delete failed: " + e.message);
+    }
   };
 
-  // ── PDF ──
+  // ── PDF helpers ──
+  const makeBillObj = (bill: Bill): Bill => bill;
+
   const downloadPDF = (bill: Bill) => {
     const doc = generateBillPDF(bill, shop);
-    doc.save(`bill_${String(bill.billNo).padStart(4, "0")}_${bill.customerName.replace(/\s+/g, "_")}.pdf`);
+    doc.save(`Bill_${String(bill.billNo).padStart(4, "0")}_${bill.customerName.replace(/\s+/g, "_")}.pdf`);
     toast.success("PDF downloaded!");
+  };
+
+  const previewPDF = () => {
+    if (!form.customerName.trim()) { toast.error("Add customer name first"); return; }
+    const { validItems, amountPaid, discValue, gstPct, subtotal, discountAmount, gstAmount, total, autoStatus } = buildBill();
+    const previewBill: Bill = {
+      id: "preview",
+      billNo: editing ? editing.billNo : nextBillNo,
+      date: form.date,
+      customerName: form.customerName.trim(),
+      customerPhone: form.customerPhone.trim(),
+      customerAddress: form.customerAddress.trim(),
+      items: validItems,
+      subtotal,
+      discountType: form.discountType,
+      discountValue: discValue,
+      discountAmount,
+      gstPercent: gstPct,
+      gstAmount,
+      total,
+      amountPaid,
+      paymentMode: form.paymentMode,
+      paymentStatus: autoStatus,
+      notes: form.notes.trim(),
+      createdAt: Date.now(),
+    };
+    const doc = generateBillPDF(previewBill, shop);
+    window.open(doc.output("bloburl"), "_blank");
   };
 
   const shareWhatsApp = (bill: Bill) => {
     const balance = Math.max(0, bill.total - bill.amountPaid);
-    const text = `*${shop.storeName}*\nBill #${String(bill.billNo).padStart(4, "0")} | Date: ${fmtDate(bill.date)}\nCustomer: ${bill.customerName}\nTotal: ₹${fmt(bill.total)}\nPaid: ₹${fmt(bill.amountPaid)}${balance > 0 ? `\nBalance Due: ₹${fmt(balance)}` : ""}\n\nThank you for your business!`;
+    const text = `*${shop.storeName}*\nBill #${String(bill.billNo).padStart(4, "0")} | ${fmtDate(bill.date)}\nCustomer: ${bill.customerName}\nTotal: ${formatINR(bill.total)}\nPaid: ${formatINR(bill.amountPaid)}${balance > 0 ? `\nBalance Due: ${formatINR(balance)}` : ""}\n\nThank you!`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
@@ -472,10 +705,10 @@ export default function AdminBill() {
         {/* ── Stats ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Total Bills",    value: bills.length,                      color: "text-slate-700" },
-            { label: "Pending Payment",value: stats.unpaid,                       color: "text-red-600"   },
-            { label: "Total Billed",   value: `₹${stats.total.toLocaleString("en-IN")}`,   color: "text-blue-600" },
-            { label: "Total Collected",value: `₹${stats.collected.toLocaleString("en-IN")}`, color: "text-green-600" },
+            { label: "Total Bills",     value: bills.length,                                         color: "text-slate-700" },
+            { label: "Pending Payment", value: stats.unpaid,                                          color: "text-red-600"   },
+            { label: "Total Billed",    value: formatINR(stats.total),                                color: "text-blue-600"  },
+            { label: "Total Collected", value: formatINR(stats.collected),                            color: "text-green-600" },
           ].map(s => (
             <div key={s.label} className="bg-white rounded-2xl border border-slate-200 p-4">
               <p className="text-xs text-slate-400 font-medium">{s.label}</p>
@@ -547,10 +780,10 @@ export default function AdminBill() {
                           </a>
                         )}
                         <span className="flex items-center gap-1 font-semibold text-slate-700">
-                          <IndianRupee className="h-3.5 w-3.5" />₹{fmt(bill.total)}
+                          <IndianRupee className="h-3.5 w-3.5" />{formatINR(bill.total)}
                         </span>
-                        <span className="text-green-600 font-semibold">Paid: ₹{fmt(bill.amountPaid)}</span>
-                        {balance > 0 && <span className="text-red-500 font-semibold">Due: ₹{fmt(balance)}</span>}
+                        <span className="text-green-600 font-semibold">Paid: {formatINR(bill.amountPaid)}</span>
+                        {balance > 0 && <span className="text-red-500 font-semibold">Due: {formatINR(balance)}</span>}
                         <span className="text-slate-400">{bill.items?.length || 0} item{(bill.items?.length || 0) !== 1 ? "s" : ""}</span>
                       </div>
                     </div>
@@ -597,18 +830,18 @@ export default function AdminBill() {
                               <tr key={item.id} className="hover:bg-white">
                                 <td className="py-2 pr-3 font-medium text-slate-700">{item.description}</td>
                                 <td className="py-2 pr-3 text-center text-slate-500">{item.qty}</td>
-                                <td className="py-2 pr-3 text-right text-slate-500">₹{fmt(item.rate)}</td>
-                                <td className="py-2 text-right font-semibold text-slate-700">₹{fmt(item.amount)}</td>
+                                <td className="py-2 pr-3 text-right text-slate-500">{formatINR(item.rate)}</td>
+                                <td className="py-2 text-right font-semibold text-slate-700">{formatINR(item.amount)}</td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
                       <div className="flex flex-col items-end gap-1 text-sm border-t border-slate-200 pt-3">
-                        <div className="flex gap-8 text-slate-500"><span>Subtotal</span><span className="font-semibold text-slate-700 w-24 text-right">₹{fmt(bill.subtotal)}</span></div>
-                        {bill.discountAmount > 0 && <div className="flex gap-8 text-red-500"><span>Discount {bill.discountType === "percent" ? `(${bill.discountValue}%)` : ""}</span><span className="font-semibold w-24 text-right">- ₹{fmt(bill.discountAmount)}</span></div>}
-                        {bill.gstPercent > 0 && <div className="flex gap-8 text-slate-500"><span>GST ({bill.gstPercent}%)</span><span className="font-semibold text-slate-700 w-24 text-right">₹{fmt(bill.gstAmount)}</span></div>}
-                        <div className="flex gap-8 text-blue-700 font-black text-base border-t border-slate-200 pt-1.5 mt-0.5"><span>Total</span><span className="w-24 text-right">₹{fmt(bill.total)}</span></div>
+                        <div className="flex gap-8 text-slate-500"><span>Subtotal</span><span className="font-semibold text-slate-700 w-28 text-right">{formatINR(bill.subtotal)}</span></div>
+                        {bill.discountAmount > 0 && <div className="flex gap-8 text-red-500"><span>Discount {bill.discountType === "percent" ? `(${bill.discountValue}%)` : ""}</span><span className="font-semibold w-28 text-right">- {formatINR(bill.discountAmount)}</span></div>}
+                        {bill.gstPercent > 0 && <div className="flex gap-8 text-slate-500"><span>GST ({bill.gstPercent}%)</span><span className="font-semibold text-slate-700 w-28 text-right">{formatINR(bill.gstAmount)}</span></div>}
+                        <div className="flex gap-8 text-blue-700 font-black text-base border-t border-slate-200 pt-1.5 mt-0.5"><span>Total</span><span className="w-28 text-right">{formatINR(bill.total)}</span></div>
                       </div>
                       {bill.notes && (
                         <div className="bg-yellow-50 border border-yellow-100 rounded-lg px-3 py-2 text-xs text-slate-600">
@@ -621,7 +854,7 @@ export default function AdminBill() {
                           <Download className="h-3.5 w-3.5" /> Download PDF
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => shareWhatsApp(bill)} className="gap-1 text-xs text-green-700 border-green-200 hover:bg-green-50">
-                          <Share2 className="h-3.5 w-3.5" /> Share on WhatsApp
+                          <Share2 className="h-3.5 w-3.5" /> Share WhatsApp
                         </Button>
                       </div>
                     </div>
@@ -634,7 +867,7 @@ export default function AdminBill() {
       </div>
 
       {/* ───────────────── Create / Edit Bill Dialog ─────────────────── */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={o => { if (!saving) setDialogOpen(o); }}>
         <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -692,7 +925,6 @@ export default function AdminBill() {
                 </button>
               </div>
               <div className="space-y-2">
-                {/* Header */}
                 <div className="grid grid-cols-12 gap-2 text-[10px] text-slate-400 uppercase font-semibold px-1 hidden sm:grid">
                   <span className="col-span-5">Description</span>
                   <span className="col-span-2 text-center">Qty</span>
@@ -712,7 +944,7 @@ export default function AdminBill() {
                     </div>
                     <div className="col-span-4 sm:col-span-2">
                       <Input type="number" min={0} step="0.01" placeholder="Qty"
-                        value={item.qty}
+                        value={item.qty || ""}
                         onChange={e => updateItem(item.id, "qty", parseFloat(e.target.value) || 0)}
                         className="text-sm text-center" />
                     </div>
@@ -724,7 +956,7 @@ export default function AdminBill() {
                     </div>
                     <div className="col-span-3 sm:col-span-2 text-right">
                       <div className="h-10 flex items-center justify-end pr-1 font-semibold text-sm text-slate-700">
-                        ₹{fmt(item.amount)}
+                        {formatINR(item.amount)}
                       </div>
                     </div>
                     <div className="col-span-1 flex justify-center">
@@ -763,30 +995,30 @@ export default function AdminBill() {
                 </div>
                 <div>
                   <Label className="text-xs mb-1 block">GST (%)</Label>
-                  <Input type="number" min={0} max={100} placeholder="0 (skip if not applicable)"
+                  <Input type="number" min={0} max={100} placeholder="0"
                     value={form.gstPercent} onChange={f("gstPercent")} />
                 </div>
               </div>
             </section>
 
             {/* ── Totals preview ── */}
-            <section className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+            <section className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-2">
               <div className="flex justify-between text-sm text-slate-600">
-                <span>Subtotal</span><span className="font-semibold">₹{fmt(subtotal)}</span>
+                <span>Subtotal</span><span className="font-semibold">{formatINR(subtotal)}</span>
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-sm text-red-500">
                   <span>Discount {form.discountType === "percent" ? `(${form.discountValue}%)` : ""}</span>
-                  <span className="font-semibold">- ₹{fmt(discountAmount)}</span>
+                  <span className="font-semibold">- {formatINR(discountAmount)}</span>
                 </div>
               )}
               {gstAmount > 0 && (
                 <div className="flex justify-between text-sm text-slate-600">
-                  <span>GST ({form.gstPercent}%)</span><span className="font-semibold">₹{fmt(gstAmount)}</span>
+                  <span>GST ({form.gstPercent}%)</span><span className="font-semibold">{formatINR(gstAmount)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-base font-black text-blue-700 border-t border-slate-200 pt-2">
-                <span>TOTAL</span><span>₹{fmt(total)}</span>
+              <div className="flex justify-between text-base font-black text-blue-700 border-t border-blue-200 pt-2">
+                <span>TOTAL</span><span>{formatINR(total)}</span>
               </div>
             </section>
 
@@ -796,11 +1028,11 @@ export default function AdminBill() {
               <div className="grid sm:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs mb-1 block">Amount Paid (₹)</Label>
-                  <Input type="number" min={0} placeholder={`Max ₹${fmt(total)}`}
+                  <Input type="number" min={0} placeholder={`0 — max ${formatINR(total)}`}
                     value={form.amountPaid} onChange={f("amountPaid")} />
                   {Number(form.amountPaid) > 0 && Number(form.amountPaid) < total && (
                     <p className="text-xs text-amber-600 mt-1">
-                      Balance due: ₹{fmt(Math.max(0, total - Number(form.amountPaid)))}
+                      Balance due: {formatINR(Math.max(0, total - Number(form.amountPaid)))}
                     </p>
                   )}
                 </div>
@@ -814,36 +1046,13 @@ export default function AdminBill() {
           </div>
 
           <DialogFooter className="gap-2 flex-wrap">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button variant="outline" onClick={() => {
-              // Preview PDF without saving
-              if (!form.customerName.trim()) { toast.error("Add customer name first"); return; }
-              const previewBill: Bill = {
-                id: "preview",
-                billNo: editing ? editing.billNo : nextBillNo,
-                date: form.date,
-                customerName: form.customerName.trim(),
-                customerPhone: form.customerPhone.trim() || undefined,
-                customerAddress: form.customerAddress.trim() || undefined,
-                items: items.filter(i => i.description.trim()),
-                subtotal, discountType: form.discountType,
-                discountValue: Number(form.discountValue) || 0,
-                discountAmount, gstPercent: Number(form.gstPercent) || 0,
-                gstAmount, total,
-                amountPaid: Number(form.amountPaid) || 0,
-                paymentMode: form.paymentMode,
-                paymentStatus: "paid",
-                notes: form.notes.trim() || undefined,
-                createdAt: Date.now(),
-              };
-              const doc = generateBillPDF(previewBill, shop);
-              window.open(doc.output("bloburl"), "_blank");
-            }} className="gap-1">
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button>
+            <Button variant="outline" onClick={previewPDF} className="gap-1" disabled={saving}>
               <FileText className="h-4 w-4" /> Preview PDF
             </Button>
-            <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 gap-1">
+            <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 gap-1 min-w-[140px]">
               <Receipt className="h-4 w-4" />
-              {editing ? "Save Changes" : "Create & Save Bill"}
+              {saving ? "Saving…" : editing ? "Save Changes" : "Create & Save Bill"}
             </Button>
           </DialogFooter>
         </DialogContent>
