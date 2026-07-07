@@ -1,0 +1,97 @@
+# Feature Spec: Dynamic Fields in "New Other Work Order" Form (based on Work Type)
+
+**Exact Screen This Applies To:** The **"New Other Work Order"** form/modal in the Admin Panel — the same screen shown in the reference screenshot, with the title "New Other Work Order" at the top, containing sections: Customer Details, Work Details, Payment.
+
+**Where exactly to make changes:** Inside this SAME "New Other Work Order" form — do NOT create a separate/new screen. Only ADD a new dynamic section to it (as described below). Everything else already on this form (Customer Name, Phone Number, Work Type dropdown, Status, Size/Dimensions, Quantity, Work Description, Delivery Deadline, Extra Notes, Total Amount, Advance Received, Payment Mode, Payment Note, Cancel/Create Order buttons) stays exactly as it is — untouched.
+
+**What changes:** Right now, no matter which option is picked from the **Work Type** dropdown (Flex/Banner, Poster/Pamphlet, Visiting Card, Wedding/Invitation Card, Photo Frame/Print, ID Card, Sticker/Label, Custom/Other), the form looks the same. This needs to change: as soon as admin picks a Work Type, a new section should appear inside this SAME "New Other Work Order" form, directly below the Work Type dropdown, showing fields specific to that type. For "Custom / Other", instead of fixed fields, show one open text box so literally any kind of order can be described in words.
+
+**Goal (summary):** One form ("New Other Work Order"), one Work Type dropdown — but the form becomes smart: it reshapes itself below the dropdown to ask exactly what's relevant for the selected type, and falls back to a free-text box when the type is "Custom / Other" (i.e. something not in the list).
+
+---
+
+## 1. Current Form (as-is, keep this as the base — do not remove)
+
+- Customer Name *
+- Phone Number
+- Work Type * (dropdown: Flex/Banner, Poster/Pamphlet, Visiting Card, Wedding/Invitation Card, Photo Frame/Print, ID Card, Sticker/Label, Custom/Other)
+- Status (Pending / In Progress / Ready / Delivered / Cancelled)
+- Size / Dimensions
+- Quantity
+- Work Description *
+- Delivery Deadline
+- Extra Notes
+- Total Amount (₹) *
+- Advance Received (₹)
+- Payment Mode (Cash / UPI / Card / Net Banking / Cheque)
+- Payment Note
+
+## 2. New Behavior — Dynamic Section (inside the same "New Other Work Order" form)
+
+Add a new section called **"Additional Details"** inside the "New Other Work Order" form itself — positioned right below the **Work Type** dropdown and right above **Status**. Its fields change automatically based on which Work Type is selected. This section is IN ADDITION to the existing common fields already on this form (Size, Quantity, Work Description, etc. stay exactly as-is for all types, no changes to them).
+
+To be very clear: this is ONE single form. Admin opens "New Other Work Order" → fills Customer Details → picks a Work Type → immediately sees the matching "Additional Details" fields appear right there on the same screen → continues filling Status, Size, Quantity, Work Description, Payment, etc. → clicks "Create Order". Nothing opens in a popup or a different page — it's all inline on this one form.
+
+### When Work Type = Flex / Banner
+- Banner Text (multi-line)
+- Material (Flex / Vinyl / Cloth)
+- Eyelets Required? (Yes/No)
+
+### When Work Type = Poster / Pamphlet
+- Paper Type (Glossy / Matte)
+- Number of Copies
+- Design File Provided by Customer? (Yes/No)
+
+### When Work Type = Visiting Card
+- Company Name
+- Designation
+- Details to Print (Name, Address, Phone, Email — multi-line)
+- Card Finish (Matte / Glossy / Textured)
+
+### When Work Type = Wedding / Invitation Card
+- Dulha (Groom) Name
+- Dulhan (Bride) Name
+- Wedding Date
+- Venue
+- Card Design / Theme Reference (text or note)
+- Number of Cards
+
+### When Work Type = Photo Frame / Print
+- Number of Photos
+- Frame Size
+- Frame Type (Wooden / PVC / Metal)
+- Photos Provided (Physical / Digital / WhatsApp)
+
+### When Work Type = ID Card
+- Name to Print
+- Designation / Class-Roll No.
+- Photo Provided? (Yes/No)
+- Card Type (Student / Employee / Other)
+
+### When Work Type = Sticker / Label
+- Shape (Round / Square / Custom Cut)
+- Material (Paper / Vinyl / Transparent)
+- Number of Stickers
+
+### When Work Type = Custom / Other
+- **Describe Your Order** — a large free-text box (multi-line, no character limit) where admin can type ANY kind of order that doesn't fit the above categories.
+- This is the fallback for literally anything — the whole point of "Other" is flexibility, so don't restrict this field with any format.
+
+---
+
+## 3. How Switching Works (Important Behavior Rules)
+
+- When admin changes **Work Type**, the "Additional Details" section instantly updates to show only the fields relevant to the NEWLY selected type.
+- Fields from the PREVIOUSLY selected type must be **hidden AND cleared** — their old values should not be silently carried over or submitted in the background. (This is a common bug: switching from "Wedding Card" to "Visiting Card" and the Dulha/Dulhan Name still being saved in the database even though it's not shown anymore.)
+- Only the fields visible for the currently selected Work Type should be validated/required — don't force "Dulha Name" as required when Work Type is "Sticker/Label".
+- If admin is editing an EXISTING order and changes Work Type, show a confirmation popup: "Changing work type will clear type-specific details you entered. Continue?" — to avoid accidental data loss.
+
+## 4. Database Note
+- Store the dynamic fields as a single JSON field (e.g. `additional_details`) linked to the order, rather than separate DB columns for every possible field across all types. This avoids adding a new column every time a new Work Type or field is introduced later.
+- Example: `additional_details: { "dulha_name": "Raj", "dulhan_name": "Priya", "wedding_date": "2026-12-05" }`
+
+## 5. Bugs to Specifically Avoid
+- Don't let hidden fields' old data get saved when the form is submitted — only save what's currently visible for the selected Work Type.
+- Don't crash or show blank fields if `additional_details` is empty/missing for old orders created before this feature existed.
+- When editing an old order, correctly re-populate the right set of fields based on its saved Work Type.
+- "Custom / Other" text box should support long text without breaking layout or truncating on save.

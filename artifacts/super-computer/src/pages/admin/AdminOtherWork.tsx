@@ -1,6 +1,6 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useEffect, useMemo, useState } from "react";
-import { ref, onValue, push, remove, update, serverTimestamp } from "firebase/database";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ref, onValue, push, remove, update } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
   Clock, PackageCheck, Truck, IndianRupee, Phone, User,
   Calendar, StickyNote, Printer, CreditCard, Image as ImageIcon,
   ChevronDown, ChevronUp, BadgeIndianRupee, History, FileText, Download,
+  AlertTriangle,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -22,22 +23,22 @@ import autoTable from "jspdf-autotable";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 const WORK_TYPES = [
-  { value: "flex",          label: "Flex / Banner",       icon: "🖼️" },
-  { value: "poster",        label: "Poster / Pamphlet",   icon: "📄" },
-  { value: "visiting_card", label: "Visiting Card",       icon: "💳" },
-  { value: "wedding_card",  label: "Wedding / Invitation Card", icon: "💌" },
-  { value: "photo_frame",   label: "Photo Frame / Print", icon: "🖼️" },
-  { value: "id_card",       label: "ID Card",             icon: "🪪" },
-  { value: "sticker",       label: "Sticker / Label",     icon: "🔖" },
-  { value: "custom",        label: "Custom / Other",      icon: "✨" },
+  { value: "flex",          label: "Flex / Banner",            icon: "🖼️" },
+  { value: "poster",        label: "Poster / Pamphlet",        icon: "📄" },
+  { value: "visiting_card", label: "Visiting Card",            icon: "💳" },
+  { value: "wedding_card",  label: "Wedding / Invitation Card",icon: "💌" },
+  { value: "photo_frame",   label: "Photo Frame / Print",      icon: "🖼️" },
+  { value: "id_card",       label: "ID Card",                  icon: "🪪" },
+  { value: "sticker",       label: "Sticker / Label",          icon: "🔖" },
+  { value: "custom",        label: "Custom / Other",           icon: "✨" },
 ];
 
 const STATUSES = [
-  { value: "pending",     label: "Pending",     color: "bg-yellow-100 text-yellow-700",  icon: Clock },
-  { value: "in_progress", label: "In Progress", color: "bg-blue-100 text-blue-700",      icon: Printer },
-  { value: "ready",       label: "Ready",       color: "bg-purple-100 text-purple-700",  icon: PackageCheck },
-  { value: "delivered",   label: "Delivered",   color: "bg-green-100 text-green-700",    icon: Truck },
-  { value: "cancelled",   label: "Cancelled",   color: "bg-red-100 text-red-600",        icon: X },
+  { value: "pending",     label: "Pending",     color: "bg-yellow-100 text-yellow-700", icon: Clock },
+  { value: "in_progress", label: "In Progress", color: "bg-blue-100 text-blue-700",     icon: Printer },
+  { value: "ready",       label: "Ready",       color: "bg-purple-100 text-purple-700", icon: PackageCheck },
+  { value: "delivered",   label: "Delivered",   color: "bg-green-100 text-green-700",   icon: Truck },
+  { value: "cancelled",   label: "Cancelled",   color: "bg-red-100 text-red-600",       icon: X },
 ];
 
 const PAYMENT_MODES = ["Cash", "UPI", "Card", "Net Banking", "Cheque"];
@@ -49,18 +50,6 @@ interface PaymentEntry {
   mode: string;
   note?: string;
   date: number;
-}
-
-interface CardDetails {
-  groomName?: string;
-  brideName?: string;
-  fatherNameGroom?: string;
-  fatherNameBride?: string;
-  motherNameGroom?: string;
-  motherNameBride?: string;
-  weddingDate?: string;
-  venue?: string;
-  functionType?: string;
 }
 
 interface OtherWorkOrder {
@@ -77,58 +66,239 @@ interface OtherWorkOrder {
   deadline?: string;
   status: WorkStatus;
   extraNotes?: string;
-  cardDetails?: CardDetails;
+  additional_details?: Record<string, string>;
+  // Legacy field — kept for backward compat display only
+  cardDetails?: Record<string, string>;
   createdAt: number;
 }
+
+// ─── Dynamic field definitions ────────────────────────────────────────────────
+
+type FieldType = "text" | "textarea" | "select" | "date" | "number";
+
+interface FieldDef {
+  key: string;
+  label: string;
+  type: FieldType;
+  placeholder?: string;
+  options?: string[];
+  colSpan?: "full";
+}
+
+const DYNAMIC_FIELDS: Record<string, FieldDef[]> = {
+  flex: [
+    { key: "bannerText",  label: "Banner Text",       type: "textarea", placeholder: "Full text to print on the banner…", colSpan: "full" },
+    { key: "material",    label: "Material",           type: "select",   options: ["Flex", "Vinyl", "Cloth"] },
+    { key: "eyelets",     label: "Eyelets Required?",  type: "select",   options: ["Yes", "No"] },
+  ],
+  poster: [
+    { key: "paperType",      label: "Paper Type",                        type: "select", options: ["Glossy", "Matte"] },
+    { key: "numCopies",      label: "Number of Copies",                  type: "text",   placeholder: "e.g. 500" },
+    { key: "designProvided", label: "Design File Provided by Customer?", type: "select", options: ["Yes", "No"] },
+  ],
+  visiting_card: [
+    { key: "companyName",    label: "Company Name",                                  type: "text",    placeholder: "e.g. ABC Enterprises" },
+    { key: "designation",    label: "Designation",                                   type: "text",    placeholder: "e.g. Manager, Director" },
+    { key: "detailsToPrint", label: "Details to Print (Name, Address, Phone, Email)",type: "textarea",placeholder: "Name: …\nAddress: …\nPhone: …\nEmail: …", colSpan: "full" },
+    { key: "cardFinish",     label: "Card Finish",                                   type: "select",  options: ["Matte", "Glossy", "Textured"] },
+  ],
+  wedding_card: [
+    { key: "groomName",   label: "Dulha (Groom) Name",            type: "text", placeholder: "e.g. Rahul Sharma" },
+    { key: "brideName",   label: "Dulhan (Bride) Name",           type: "text", placeholder: "e.g. Priya Singh" },
+    { key: "weddingDate", label: "Wedding Date (Shadi ki Tarikh)",type: "date" },
+    { key: "numCards",    label: "Number of Cards",               type: "text", placeholder: "e.g. 200" },
+    { key: "venue",       label: "Venue (Jagah)",                 type: "text", placeholder: "e.g. Ramleela Ground, Sector 12, Noida", colSpan: "full" },
+    { key: "cardTheme",   label: "Card Design / Theme Reference", type: "textarea", placeholder: "Describe the theme, color scheme, or attach a reference note…", colSpan: "full" },
+  ],
+  photo_frame: [
+    { key: "numPhotos",      label: "Number of Photos", type: "text",   placeholder: "e.g. 5" },
+    { key: "frameSize",      label: "Frame Size",       type: "text",   placeholder: 'e.g. 8"×10", A4' },
+    { key: "frameType",      label: "Frame Type",       type: "select", options: ["Wooden", "PVC", "Metal"] },
+    { key: "photosProvided", label: "Photos Provided via", type: "select", options: ["Physical", "Digital", "WhatsApp"] },
+  ],
+  id_card: [
+    { key: "nameToPrint",      label: "Name to Print",                 type: "text",   placeholder: "Full name to print on card" },
+    { key: "designationClass", label: "Designation / Class-Roll No.",  type: "text",   placeholder: "e.g. Class 10-A, Roll No. 25  /  Manager" },
+    { key: "photoProvided",    label: "Photo Provided?",               type: "select", options: ["Yes", "No"] },
+    { key: "cardType",         label: "Card Type",                     type: "select", options: ["Student", "Employee", "Other"] },
+  ],
+  sticker: [
+    { key: "shape",       label: "Shape",              type: "select", options: ["Round", "Square", "Custom Cut"] },
+    { key: "material",    label: "Material",           type: "select", options: ["Paper", "Vinyl", "Transparent"] },
+    { key: "numStickers", label: "Number of Stickers", type: "text",   placeholder: "e.g. 100" },
+  ],
+  custom: [
+    { key: "customDescription", label: "Describe Your Order", type: "textarea", placeholder: "Describe your order in full detail — what you need, what to print, dimensions, colors, any special requirements…", colSpan: "full" },
+  ],
+};
+
+// Section accent colours per type
+const TYPE_ACCENT: Record<string, { bg: string; border: string; text: string; label: string }> = {
+  flex:          { bg: "bg-orange-50",  border: "border-orange-100",  text: "text-orange-700",  label: "🖼️  Flex / Banner Details" },
+  poster:        { bg: "bg-blue-50",    border: "border-blue-100",    text: "text-blue-700",    label: "📄  Poster / Pamphlet Details" },
+  visiting_card: { bg: "bg-teal-50",    border: "border-teal-100",    text: "text-teal-700",    label: "💳  Visiting Card Details" },
+  wedding_card:  { bg: "bg-pink-50",    border: "border-pink-100",    text: "text-pink-700",    label: "💌  Wedding Card Details" },
+  photo_frame:   { bg: "bg-purple-50",  border: "border-purple-100",  text: "text-purple-700",  label: "🖼️  Photo Frame / Print Details" },
+  id_card:       { bg: "bg-indigo-50",  border: "border-indigo-100",  text: "text-indigo-700",  label: "🪪  ID Card Details" },
+  sticker:       { bg: "bg-lime-50",    border: "border-lime-100",    text: "text-lime-700",    label: "🔖  Sticker / Label Details" },
+  custom:        { bg: "bg-slate-50",   border: "border-slate-200",   text: "text-slate-700",   label: "✨  Custom Order — Describe in Detail" },
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function amountPaid(order: OtherWorkOrder): number {
   return (order.payments || []).reduce((s, p) => s + (p.amount || 0), 0);
 }
-
 function balanceDue(order: OtherWorkOrder): number {
   return Math.max(0, (order.totalAmount || 0) - amountPaid(order));
 }
-
 function paymentBadge(order: OtherWorkOrder): { label: string; cls: string } {
   const paid = amountPaid(order);
   if (paid <= 0) return { label: "Unpaid", cls: "bg-red-100 text-red-600" };
   if (paid >= (order.totalAmount || 0)) return { label: "Paid", cls: "bg-green-100 text-green-700" };
   return { label: `Partial (₹${paid})`, cls: "bg-amber-100 text-amber-700" };
 }
-
 const workLabel = (type: string) => WORK_TYPES.find(w => w.value === type)?.label || type;
 const workIcon  = (type: string) => WORK_TYPES.find(w => w.value === type)?.icon || "📋";
 const statusObj = (s: string) => STATUSES.find(st => st.value === s) || STATUSES[0];
 
+/** Build additional_details from legacy cardDetails for old orders.
+ *  Includes ALL previously-stored fields so no data is invisible on display/PDF. */
+function migrateCardDetails(order: OtherWorkOrder): Record<string, string> {
+  if (order.additional_details && Object.keys(order.additional_details).length > 0)
+    return order.additional_details;
+  if (order.cardDetails && order.workType === "wedding_card") {
+    const c = order.cardDetails;
+    const result: Record<string, string> = {};
+    // Fields that map directly to new DYNAMIC_FIELDS keys
+    if (c.groomName   || c.groomname)   result.groomName   = c.groomName   || c.groomname   || "";
+    if (c.brideName   || c.bridename)   result.brideName   = c.brideName   || c.bridename   || "";
+    if (c.weddingDate || c.weddingdate) result.weddingDate = c.weddingDate || c.weddingdate || "";
+    if (c.venue)                        result.venue       = c.venue;
+    if (c.functionType)                 result.cardTheme   = c.functionType;
+    // Legacy-only fields (not in new form, but preserve for display/PDF on old orders)
+    if (c.fatherNameGroom) result.fatherNameGroom = c.fatherNameGroom;
+    if (c.fatherNameBride) result.fatherNameBride = c.fatherNameBride;
+    if (c.motherNameGroom) result.motherNameGroom = c.motherNameGroom;
+    if (c.motherNameBride) result.motherNameBride = c.motherNameBride;
+    return result;
+  }
+  return {};
+}
+
+/** Friendly label for a field key — falls back to a humanised version of the key itself */
+function fieldLabelFallback(key: string): string {
+  const map: Record<string, string> = {
+    fatherNameGroom: "Father of Groom",
+    fatherNameBride: "Father of Bride",
+    motherNameGroom: "Mother of Groom",
+    motherNameBride: "Mother of Bride",
+  };
+  return map[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
+}
+
+/** Get a display-friendly label for a dynamic field key */
+function fieldLabel(workType: string, key: string): string {
+  const fd = (DYNAMIC_FIELDS[workType] || []).find(f => f.key === key);
+  return fd?.label || fieldLabelFallback(key);
+}
+
 // ─── Empty form state ─────────────────────────────────────────────────────────
 
 const emptyForm = () => ({
-  customerName: "",
+  customerName:  "",
   customerPhone: "",
-  workType: "flex",
-  size: "",
-  quantity: "",
-  description: "",
-  totalAmount: "",
+  workType:      "flex",
+  size:          "",
+  quantity:      "",
+  description:   "",
+  totalAmount:   "",
   advanceAmount: "",
-  advanceMode: "Cash",
-  advanceNote: "",
-  deadline: "",
-  status: "pending" as WorkStatus,
-  extraNotes: "",
-  // card fields
-  groomName: "",
-  brideName: "",
-  fatherNameGroom: "",
-  fatherNameBride: "",
-  motherNameGroom: "",
-  motherNameBride: "",
-  weddingDate: "",
-  venue: "",
-  functionType: "",
+  advanceMode:   "Cash",
+  advanceNote:   "",
+  deadline:      "",
+  status:        "pending" as WorkStatus,
+  extraNotes:    "",
 });
+
+// ─── DynamicFieldsSection ─────────────────────────────────────────────────────
+
+function DynamicFieldsSection({
+  workType,
+  values,
+  onChange,
+}: {
+  workType: string;
+  values: Record<string, string>;
+  onChange: (key: string, val: string) => void;
+}) {
+  const fields = DYNAMIC_FIELDS[workType] || [];
+  if (fields.length === 0) return null;
+  const accent = TYPE_ACCENT[workType] || TYPE_ACCENT.custom;
+
+  return (
+    <section className={`${accent.bg} ${accent.border} border rounded-xl p-4 space-y-3`}>
+      <p className={`text-xs font-bold uppercase tracking-wide ${accent.text}`}>{accent.label}</p>
+      <div className="grid sm:grid-cols-2 gap-3">
+        {fields.map((fd) => {
+          const val = values[fd.key] ?? "";
+          const cls = `${fd.colSpan === "full" ? "sm:col-span-2" : ""}`;
+
+          if (fd.type === "textarea") {
+            return (
+              <div key={fd.key} className={cls}>
+                <Label className="text-xs mb-1 block">{fd.label}</Label>
+                <Textarea
+                  rows={3}
+                  placeholder={fd.placeholder}
+                  value={val}
+                  onChange={e => onChange(fd.key, e.target.value)}
+                />
+              </div>
+            );
+          }
+          if (fd.type === "select") {
+            return (
+              <div key={fd.key} className={cls}>
+                <Label className="text-xs mb-1 block">{fd.label}</Label>
+                <select
+                  value={val}
+                  onChange={e => onChange(fd.key, e.target.value)}
+                  className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                >
+                  <option value="">— select —</option>
+                  {(fd.options || []).map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+            );
+          }
+          if (fd.type === "date") {
+            return (
+              <div key={fd.key} className={cls}>
+                <Label className="text-xs mb-1 block">{fd.label}</Label>
+                <Input type="date" value={val} onChange={e => onChange(fd.key, e.target.value)} />
+              </div>
+            );
+          }
+          // text / number
+          return (
+            <div key={fd.key} className={cls}>
+              <Label className="text-xs mb-1 block">{fd.label}</Label>
+              <Input
+                type={fd.type === "number" ? "number" : "text"}
+                placeholder={fd.placeholder}
+                value={val}
+                onChange={e => onChange(fd.key, e.target.value)}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -140,6 +310,11 @@ export default function AdminOtherWork() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<OtherWorkOrder | null>(null);
   const [form, setForm] = useState(emptyForm());
+  const [additionalDetails, setAdditionalDetails] = useState<Record<string, string>>({});
+
+  // Work-type change confirmation (edit mode)
+  const [confirmWorkTypeOpen, setConfirmWorkTypeOpen] = useState(false);
+  const pendingWorkType = useRef<string>("");
 
   // Payment dialog
   const [payDialogOpen, setPayDialogOpen] = useState(false);
@@ -172,7 +347,6 @@ export default function AdminOtherWork() {
     return Math.max(...orders.map(o => o.orderNo || 0)) + 1;
   }, [orders]);
 
-  // ── Filters ──
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return orders.filter(o => {
@@ -186,12 +360,11 @@ export default function AdminOtherWork() {
     });
   }, [orders, search, filterStatus, filterType]);
 
-  // ── Summary stats ──
   const stats = useMemo(() => {
-    const total = orders.reduce((s, o) => s + (o.totalAmount || 0), 0);
+    const total     = orders.reduce((s, o) => s + (o.totalAmount || 0), 0);
     const collected = orders.reduce((s, o) => s + amountPaid(o), 0);
-    const pending = orders.filter(o => o.status === "pending").length;
-    const inprog  = orders.filter(o => o.status === "in_progress").length;
+    const pending   = orders.filter(o => o.status === "pending").length;
+    const inprog    = orders.filter(o => o.status === "in_progress").length;
     return { total, collected, pending, inprog };
   }, [orders]);
 
@@ -199,86 +372,96 @@ export default function AdminOtherWork() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm());
+    setAdditionalDetails({});
     setDialogOpen(true);
   };
 
   // ── Open edit dialog ──
   const openEdit = (order: OtherWorkOrder) => {
     setEditing(order);
-    const c = order.cardDetails || {};
     setForm({
-      customerName: order.customerName,
+      customerName:  order.customerName,
       customerPhone: order.customerPhone,
-      workType: order.workType,
-      size: order.size || "",
-      quantity: order.quantity != null ? String(order.quantity) : "",
-      description: order.description,
-      totalAmount: String(order.totalAmount || ""),
+      workType:      order.workType,
+      size:          order.size || "",
+      quantity:      order.quantity != null ? String(order.quantity) : "",
+      description:   order.description,
+      totalAmount:   String(order.totalAmount || ""),
       advanceAmount: "",
-      advanceMode: "Cash",
-      advanceNote: "",
-      deadline: order.deadline || "",
-      status: order.status,
-      extraNotes: order.extraNotes || "",
-      groomName: c.groomName || "",
-      brideName: c.brideName || "",
-      fatherNameGroom: c.fatherNameGroom || "",
-      fatherNameBride: c.fatherNameBride || "",
-      motherNameGroom: c.motherNameGroom || "",
-      motherNameBride: c.motherNameBride || "",
-      weddingDate: c.weddingDate || "",
-      venue: c.venue || "",
-      functionType: c.functionType || "",
+      advanceMode:   "Cash",
+      advanceNote:   "",
+      deadline:      order.deadline || "",
+      status:        order.status,
+      extraNotes:    order.extraNotes || "",
     });
+    setAdditionalDetails(migrateCardDetails(order));
     setDialogOpen(true);
   };
 
-  const f = (key: keyof ReturnType<typeof emptyForm>) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    setForm(prev => ({ ...prev, [key]: e.target.value }));
+  const f = (key: keyof ReturnType<typeof emptyForm>) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+      setForm(prev => ({ ...prev, [key]: e.target.value }));
 
-  const isWeddingCard = form.workType === "wedding_card";
+  const handleAdditionalChange = (key: string, val: string) => {
+    setAdditionalDetails(prev => ({ ...prev, [key]: val }));
+  };
+
+  // ── Work type change — confirm if editing & has data ──
+  const handleWorkTypeChange = (newType: string) => {
+    const hasData = Object.values(additionalDetails).some(v => v.trim() !== "");
+    if (editing && hasData && newType !== form.workType) {
+      pendingWorkType.current = newType;
+      setConfirmWorkTypeOpen(true);
+    } else {
+      setForm(prev => ({ ...prev, workType: newType }));
+      setAdditionalDetails({});
+    }
+  };
+
+  const confirmWorkTypeSwitch = () => {
+    setForm(prev => ({ ...prev, workType: pendingWorkType.current }));
+    setAdditionalDetails({});
+    setConfirmWorkTypeOpen(false);
+  };
 
   // ── Save order ──
   const handleSave = async () => {
-    if (!form.customerName.trim()) { toast.error("Customer name required"); return; }
+    if (!form.customerName.trim())              { toast.error("Customer name required"); return; }
     if (!form.totalAmount || Number(form.totalAmount) <= 0) { toast.error("Total amount required"); return; }
-    if (!form.description.trim()) { toast.error("Work description required"); return; }
+    if (!form.description.trim())              { toast.error("Work description required"); return; }
 
     const payments: PaymentEntry[] = editing ? (editing.payments || []) : [];
     if (!editing && Number(form.advanceAmount) > 0) {
       payments.push({
         amount: Number(form.advanceAmount),
-        mode: form.advanceMode,
-        note: form.advanceNote || "Advance payment",
-        date: Date.now(),
+        mode:   form.advanceMode,
+        note:   form.advanceNote || "Advance payment",
+        date:   Date.now(),
       });
     }
 
-    const cardDetails: CardDetails | undefined = isWeddingCard ? {
-      groomName: form.groomName,
-      brideName: form.brideName,
-      fatherNameGroom: form.fatherNameGroom,
-      fatherNameBride: form.fatherNameBride,
-      motherNameGroom: form.motherNameGroom,
-      motherNameBride: form.motherNameBride,
-      weddingDate: form.weddingDate,
-      venue: form.venue,
-      functionType: form.functionType,
-    } : undefined;
+    // Only save non-empty additional_details values for the CURRENT work type
+    const fields = DYNAMIC_FIELDS[form.workType] || [];
+    const filteredDetails: Record<string, string> = {};
+    for (const fd of fields) {
+      const v = (additionalDetails[fd.key] || "").trim();
+      if (v) filteredDetails[fd.key] = v;
+    }
 
     const payload: Partial<OtherWorkOrder> = {
-      customerName: form.customerName.trim(),
-      customerPhone: form.customerPhone.trim(),
-      workType: form.workType,
-      size: form.size.trim() || undefined,
-      quantity: form.quantity ? Number(form.quantity) : undefined,
-      description: form.description.trim(),
-      totalAmount: Number(form.totalAmount),
+      customerName:       form.customerName.trim(),
+      customerPhone:      form.customerPhone.trim(),
+      workType:           form.workType,
+      size:               form.size.trim() || undefined,
+      quantity:           form.quantity ? Number(form.quantity) : undefined,
+      description:        form.description.trim(),
+      totalAmount:        Number(form.totalAmount),
       payments,
-      deadline: form.deadline || undefined,
-      status: form.status,
-      extraNotes: form.extraNotes.trim() || undefined,
-      cardDetails,
+      deadline:           form.deadline || undefined,
+      status:             form.status,
+      extraNotes:         form.extraNotes.trim() || undefined,
+      additional_details: Object.keys(filteredDetails).length > 0 ? filteredDetails : undefined,
+      cardDetails:        undefined, // clear legacy field on edit
     };
 
     try {
@@ -332,32 +515,25 @@ export default function AdminOtherWork() {
     doc.line(14, 25, 194, 25);
 
     const rows: string[][] = [
-      ["Customer", order.customerName],
-      ["Phone", order.customerPhone || "—"],
-      ["Work Type", workLabel(order.workType)],
+      ["Customer",    order.customerName],
+      ["Phone",       order.customerPhone || "—"],
+      ["Work Type",   workLabel(order.workType)],
       ["Description", order.description],
     ];
-    if (order.size) rows.push(["Size", order.size]);
-    if (order.quantity) rows.push(["Quantity", String(order.quantity)]);
-    if (order.deadline) rows.push(["Deadline", order.deadline]);
-    if (order.extraNotes) rows.push(["Notes", order.extraNotes]);
+    if (order.size)      rows.push(["Size",     order.size]);
+    if (order.quantity)  rows.push(["Quantity", String(order.quantity)]);
+    if (order.deadline)  rows.push(["Deadline", order.deadline]);
+    if (order.extraNotes)rows.push(["Notes",    order.extraNotes]);
 
-    const c = order.cardDetails;
-    if (c) {
-      if (c.groomName)       rows.push(["Groom", c.groomName]);
-      if (c.brideName)       rows.push(["Bride", c.brideName]);
-      if (c.fatherNameGroom) rows.push(["Father (Groom)", c.fatherNameGroom]);
-      if (c.fatherNameBride) rows.push(["Father (Bride)", c.fatherNameBride]);
-      if (c.venue)           rows.push(["Venue", c.venue]);
-      if (c.weddingDate)     rows.push(["Wedding Date", c.weddingDate]);
-      if (c.functionType)    rows.push(["Function", c.functionType]);
+    // Dynamic additional_details
+    const ad = migrateCardDetails(order);
+    for (const [key, val] of Object.entries(ad)) {
+      if (val) rows.push([fieldLabel(order.workType, key), val]);
     }
 
     autoTable(doc, {
-      startY: 30,
-      body: rows,
-      styles: { fontSize: 9 },
-      columnStyles: { 0: { fontStyle: "bold", cellWidth: 40 } },
+      startY: 30, body: rows, styles: { fontSize: 9 },
+      columnStyles: { 0: { fontStyle: "bold", cellWidth: 42 } },
     });
 
     const finalY = (doc as any).lastAutoTable.finalY + 6;
@@ -366,8 +542,8 @@ export default function AdminOtherWork() {
       head: [["", "Amount"]],
       body: [
         ["Total Amount", `₹${order.totalAmount}`],
-        ["Paid", `₹${amountPaid(order)}`],
-        ["Balance Due", `₹${balanceDue(order)}`],
+        ["Paid",         `₹${amountPaid(order)}`],
+        ["Balance Due",  `₹${balanceDue(order)}`],
       ],
       styles: { fontSize: 9 },
       headStyles: { fillColor: [37, 99, 235] },
@@ -381,10 +557,7 @@ export default function AdminOtherWork() {
         startY: py + 4,
         head: [["Date", "Amount", "Mode", "Note"]],
         body: (order.payments || []).map(p => [
-          new Date(p.date).toLocaleDateString("en-IN"),
-          `₹${p.amount}`,
-          p.mode,
-          p.note || "",
+          new Date(p.date).toLocaleDateString("en-IN"), `₹${p.amount}`, p.mode, p.note || "",
         ]),
         styles: { fontSize: 8 },
       });
@@ -393,7 +566,7 @@ export default function AdminOtherWork() {
     doc.save(`order_${order.orderNo}_receipt.pdf`);
   };
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <AdminLayout>
@@ -413,10 +586,10 @@ export default function AdminOtherWork() {
         {/* ── Stats ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Total Orders", value: orders.length, color: "text-slate-700" },
-            { label: "Pending",      value: stats.pending,  color: "text-yellow-600" },
-            { label: "In Progress",  value: stats.inprog,   color: "text-blue-600" },
-            { label: "Total Collected", value: `₹${stats.collected.toLocaleString("en-IN")}`, color: "text-green-600" },
+            { label: "Total Orders",     value: orders.length,                                          color: "text-slate-700" },
+            { label: "Pending",          value: stats.pending,                                          color: "text-yellow-600" },
+            { label: "In Progress",      value: stats.inprog,                                           color: "text-blue-600" },
+            { label: "Total Collected",  value: `₹${stats.collected.toLocaleString("en-IN")}`,         color: "text-green-600" },
           ].map(s => (
             <div key={s.label} className="bg-white rounded-2xl border border-slate-200 p-4">
               <p className="text-xs text-slate-400 font-medium">{s.label}</p>
@@ -468,13 +641,13 @@ export default function AdminOtherWork() {
               const paid = amountPaid(order);
               const balance = balanceDue(order);
               const isExpanded = expandedId === order.id;
+              const ad = migrateCardDetails(order);
+              const adEntries = Object.entries(ad).filter(([, v]) => v.trim() !== "");
 
               return (
                 <div key={order.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                   {/* ── Card header ── */}
                   <div className="p-4 flex flex-col sm:flex-row sm:items-start gap-3">
-
-                    {/* Left: order info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <span className="text-lg">{workIcon(order.workType)}</span>
@@ -497,8 +670,6 @@ export default function AdminOtherWork() {
                         {balance > 0 && <span className="text-red-500 font-semibold">Balance: ₹{balance}</span>}
                       </div>
                     </div>
-
-                    {/* Right: actions */}
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button onClick={() => setExpandedId(isExpanded ? null : order.id)}
                         className="h-8 w-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50">
@@ -538,28 +709,31 @@ export default function AdminOtherWork() {
                   {/* ── Expanded details ── */}
                   {isExpanded && (
                     <div className="border-t border-slate-100 p-4 bg-slate-50 space-y-4 text-sm">
-                      {/* Card details */}
-                      {order.cardDetails && (
-                        <div className="bg-pink-50 border border-pink-100 rounded-xl p-3 space-y-1">
-                          <p className="text-xs font-bold text-pink-700 uppercase tracking-wide mb-2">💌 Card Details</p>
-                          <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-slate-700">
-                            {order.cardDetails.groomName       && <p><span className="font-semibold text-slate-500">Groom:</span> {order.cardDetails.groomName}</p>}
-                            {order.cardDetails.brideName       && <p><span className="font-semibold text-slate-500">Bride:</span> {order.cardDetails.brideName}</p>}
-                            {order.cardDetails.fatherNameGroom && <p><span className="font-semibold text-slate-500">Father (Groom):</span> {order.cardDetails.fatherNameGroom}</p>}
-                            {order.cardDetails.fatherNameBride && <p><span className="font-semibold text-slate-500">Father (Bride):</span> {order.cardDetails.fatherNameBride}</p>}
-                            {order.cardDetails.motherNameGroom && <p><span className="font-semibold text-slate-500">Mother (Groom):</span> {order.cardDetails.motherNameGroom}</p>}
-                            {order.cardDetails.motherNameBride && <p><span className="font-semibold text-slate-500">Mother (Bride):</span> {order.cardDetails.motherNameBride}</p>}
-                            {order.cardDetails.weddingDate     && <p><span className="font-semibold text-slate-500">Wedding Date:</span> {order.cardDetails.weddingDate}</p>}
-                            {order.cardDetails.venue           && <p><span className="font-semibold text-slate-500">Venue:</span> {order.cardDetails.venue}</p>}
-                            {order.cardDetails.functionType    && <p><span className="font-semibold text-slate-500">Function:</span> {order.cardDetails.functionType}</p>}
+
+                      {/* Additional Details */}
+                      {adEntries.length > 0 && (() => {
+                        const accent = TYPE_ACCENT[order.workType] || TYPE_ACCENT.custom;
+                        return (
+                          <div className={`${accent.bg} ${accent.border} border rounded-xl p-3 space-y-1`}>
+                            <p className={`text-xs font-bold uppercase tracking-wide mb-2 ${accent.text}`}>
+                              {workIcon(order.workType)} Additional Details
+                            </p>
+                            <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-slate-700">
+                              {adEntries.map(([key, val]) => (
+                                <p key={key} className={val.length > 60 ? "sm:col-span-2" : ""}>
+                                  <span className="font-semibold text-slate-500">{fieldLabel(order.workType, key)}: </span>
+                                  {val}
+                                </p>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Size / Qty / Notes */}
                       <div className="grid sm:grid-cols-3 gap-3 text-slate-600">
-                        {order.size     && <p><span className="font-semibold text-slate-500">Size:</span> {order.size}</p>}
-                        {order.quantity && <p><span className="font-semibold text-slate-500">Quantity:</span> {order.quantity}</p>}
+                        {order.size      && <p><span className="font-semibold text-slate-500">Size:</span> {order.size}</p>}
+                        {order.quantity  && <p><span className="font-semibold text-slate-500">Quantity:</span> {order.quantity}</p>}
                         {order.extraNotes && (
                           <div className="sm:col-span-3 bg-yellow-50 border border-yellow-100 rounded-lg px-3 py-2">
                             <p className="text-xs font-bold text-yellow-700 mb-0.5"><StickyNote className="h-3.5 w-3.5 inline mr-1" />Notes</p>
@@ -604,6 +778,7 @@ export default function AdminOtherWork() {
           </DialogHeader>
 
           <div className="space-y-5 py-2">
+
             {/* ── Customer Info ── */}
             <section>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Customer Details</p>
@@ -619,92 +794,64 @@ export default function AdminOtherWork() {
               </div>
             </section>
 
-            {/* ── Work Type ── */}
+            {/* ── Work Details ── */}
             <section>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Work Details</p>
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-3">
+
+                {/* Work Type — full width, triggers dynamic section below */}
                 <div>
                   <Label className="text-xs mb-1 block">Work Type *</Label>
-                  <select value={form.workType} onChange={f("workType")}
-                    className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white">
+                  <select
+                    value={form.workType}
+                    onChange={e => handleWorkTypeChange(e.target.value)}
+                    className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                  >
                     {WORK_TYPES.map(w => <option key={w.value} value={w.value}>{w.icon} {w.label}</option>)}
                   </select>
                 </div>
-                <div>
-                  <Label className="text-xs mb-1 block">Status</Label>
-                  <select value={form.status} onChange={f("status")}
-                    className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white">
-                    {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <Label className="text-xs mb-1 block">Size / Dimensions</Label>
-                  <Input placeholder='e.g. 4ft × 2ft, A4, 3.5" × 2"' value={form.size} onChange={f("size")} />
-                </div>
-                <div>
-                  <Label className="text-xs mb-1 block">Quantity</Label>
-                  <Input type="number" min={1} placeholder="How many?" value={form.quantity} onChange={f("quantity")} />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label className="text-xs mb-1 block">Work Description *</Label>
-                  <Textarea placeholder="Describe the work in detail — what to print, design instructions, color, etc."
-                    value={form.description} onChange={f("description")} rows={2} />
-                </div>
-                <div>
-                  <Label className="text-xs mb-1 block">Delivery Deadline</Label>
-                  <Input type="date" value={form.deadline} onChange={f("deadline")} />
-                </div>
-                <div>
-                  <Label className="text-xs mb-1 block">Extra Notes</Label>
-                  <Input placeholder="Any special instructions…" value={form.extraNotes} onChange={f("extraNotes")} />
+
+                {/* ── Dynamic Additional Details — right below Work Type ── */}
+                <DynamicFieldsSection
+                  workType={form.workType}
+                  values={additionalDetails}
+                  onChange={handleAdditionalChange}
+                />
+
+                {/* Remaining common fields */}
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs mb-1 block">Status</Label>
+                    <select value={form.status} onChange={f("status")}
+                      className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white">
+                      {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1 block">Size / Dimensions</Label>
+                    <Input placeholder='e.g. 4ft × 2ft, A4, 3.5" × 2"' value={form.size} onChange={f("size")} />
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1 block">Quantity</Label>
+                    <Input type="number" min={1} placeholder="How many?" value={form.quantity} onChange={f("quantity")} />
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1 block">Delivery Deadline</Label>
+                    <Input type="date" value={form.deadline} onChange={f("deadline")} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs mb-1 block">Work Description *</Label>
+                    <Textarea
+                      placeholder="Describe the work in detail — what to print, design instructions, color, etc."
+                      value={form.description} onChange={f("description")} rows={2} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs mb-1 block">Extra Notes</Label>
+                    <Input placeholder="Any special instructions…" value={form.extraNotes} onChange={f("extraNotes")} />
+                  </div>
                 </div>
               </div>
             </section>
-
-            {/* ── Wedding / Invitation Card Details ── */}
-            {isWeddingCard && (
-              <section className="bg-pink-50 border border-pink-100 rounded-xl p-4 space-y-3">
-                <p className="text-xs font-bold text-pink-700 uppercase tracking-wide">💌 Wedding Card Details</p>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs mb-1 block">Groom's Name (Dulha)</Label>
-                    <Input placeholder="e.g. Rahul Sharma" value={form.groomName} onChange={f("groomName")} />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1 block">Bride's Name (Dulhan)</Label>
-                    <Input placeholder="e.g. Priya Singh" value={form.brideName} onChange={f("brideName")} />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1 block">Father of Groom (Dulhe ka Pita)</Label>
-                    <Input placeholder="e.g. Suresh Sharma" value={form.fatherNameGroom} onChange={f("fatherNameGroom")} />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1 block">Father of Bride (Dulhan ka Pita)</Label>
-                    <Input placeholder="e.g. Vijay Singh" value={form.fatherNameBride} onChange={f("fatherNameBride")} />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1 block">Mother of Groom</Label>
-                    <Input placeholder="e.g. Sunita Sharma" value={form.motherNameGroom} onChange={f("motherNameGroom")} />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1 block">Mother of Bride</Label>
-                    <Input placeholder="e.g. Kavita Singh" value={form.motherNameBride} onChange={f("motherNameBride")} />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1 block">Wedding Date (Shadi ki Tarikh)</Label>
-                    <Input type="date" value={form.weddingDate} onChange={f("weddingDate")} />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1 block">Function Type</Label>
-                    <Input placeholder="e.g. Vivah, Reception, Haldi, Sangeet" value={form.functionType} onChange={f("functionType")} />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Label className="text-xs mb-1 block">Venue (Jagah)</Label>
-                    <Input placeholder="e.g. Ramleela Ground, Sector 12, Noida" value={form.venue} onChange={f("venue")} />
-                  </div>
-                </div>
-              </section>
-            )}
 
             {/* ── Payment ── */}
             <section>
@@ -742,6 +889,25 @@ export default function AdminOtherWork() {
             <Button onClick={handleSave} className="bg-violet-600 hover:bg-violet-700">
               {editing ? "Save Changes" : "Create Order"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Work-type change confirmation (edit mode) ── */}
+      <Dialog open={confirmWorkTypeOpen} onOpenChange={setConfirmWorkTypeOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Change Work Type?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-600 py-2">
+            Changing work type will clear the type-specific details you entered. Continue?
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmWorkTypeOpen(false)}>Keep Current</Button>
+            <Button onClick={confirmWorkTypeSwitch} className="bg-amber-500 hover:bg-amber-600">Yes, Change Type</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
