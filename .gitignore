@@ -48,3 +48,9 @@ Thumbs.db
 .cache/
 .local/
 .vercel
+.config/
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
