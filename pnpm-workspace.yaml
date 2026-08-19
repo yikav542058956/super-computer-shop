@@ -147,6 +147,8 @@ overrides:
   esbuild: "0.27.3"
 
 allowBuilds:
+  "@firebase/util": false # dyad-auto-denied
+  protobufjs: false # dyad-auto-denied
   # dyad-default-allow-builds begin
   # dyad-default-allow-builds-schema=v1
   # dyad-default-allow-builds-data-version=2026-07-08.1
@@ -194,7 +196,6 @@ allowBuilds:
   "@ffprobe-installer/linux-ia32": true
   "@ffprobe-installer/linux-x64": true
   "@fingerprintjs/fingerprintjs-pro-react": true
-  '@firebase/util': set this to true or false
   "@ghaiklor/x509": true
   "@go-task/cli": true
   "@injectivelabs/sdk-ts": true
@@ -441,7 +442,6 @@ allowBuilds:
   pre-commit: true
   pre-push: true
   prisma: true
-  protobufjs: set this to true or false
   protoc: true
   protoc-gen-grpc-web: true
   puppeteer: true
