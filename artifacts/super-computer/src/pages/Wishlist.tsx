@@ -1,8 +1,8 @@
 import { Layout } from "@/components/layout/Layout";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useCart } from "@/contexts/CartContext";
-import { Link } from "wouter";
-import { Heart, ShoppingCart, Trash2, ArrowRight, Package } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Heart, ShoppingCart, Trash2, ArrowLeft, ArrowRight, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { formatINR } from "@/lib/utils";
@@ -11,6 +11,12 @@ import { WhatsAppProductButton } from "@/components/WhatsAppButton";
 export default function Wishlist() {
   const { wishlist, removeFromWishlist, wishlistCount } = useWishlist();
   const { addToCart } = useCart();
+  const [, navigate] = useLocation();
+
+  const handleBack = () => {
+    if (window.history.length > 1) window.history.back();
+    else navigate("/");
+  };
 
   const handleAddToCart = (item: typeof wishlist[0]) => {
     addToCart({
@@ -44,25 +50,24 @@ export default function Wishlist() {
   }, 0);
 
   return (
-    <Layout>
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center">
-              <Heart className="h-5 w-5 text-red-500 fill-red-500" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">My Wishlist</h1>
-              <p className="text-sm text-slate-500">{wishlistCount} item{wishlistCount !== 1 ? "s" : ""} saved</p>
-            </div>
-          </div>
-          {wishlist.length > 0 && (
-            <Button onClick={handleMoveAllToCart} variant="outline" className="gap-2 hidden sm:flex">
-              <ShoppingCart className="h-4 w-4" /> Add All to Cart
-            </Button>
-          )}
+    <Layout noNav>
+      <div className="min-h-screen bg-slate-50">
+        <div className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-gray-200 bg-white px-4 shadow-sm">
+          <button onClick={handleBack} aria-label="Go back" className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-gray-100">
+            <ArrowLeft className="h-5 w-5 text-gray-900" />
+          </button>
+          <h1 className="text-base font-bold text-gray-900">My Wishlist</h1>
+          <span className="text-sm text-slate-500">({wishlistCount})</span>
         </div>
+
+        <div className="container mx-auto px-4 py-6 max-w-5xl">
+          {wishlist.length > 0 && (
+            <div className="mb-5 flex justify-end">
+              <Button onClick={handleMoveAllToCart} variant="outline" className="gap-2">
+                <ShoppingCart className="h-4 w-4" /> Add All to Cart
+              </Button>
+            </div>
+          )}
 
         {/* Savings banner */}
         {savings > 0 && (
@@ -166,13 +171,6 @@ export default function Wishlist() {
               })}
             </div>
 
-            {/* Mobile — add all to cart */}
-            <div className="mt-6 sm:hidden">
-              <Button onClick={handleMoveAllToCart} className="w-full gap-2" variant="outline">
-                <ShoppingCart className="h-4 w-4" /> Add All to Cart ({wishlistCount} items)
-              </Button>
-            </div>
-
             {/* Continue shopping */}
             <div className="mt-8 text-center">
               <Link href="/products">
@@ -183,6 +181,7 @@ export default function Wishlist() {
             </div>
           </>
         )}
+        </div>
       </div>
     </Layout>
   );
