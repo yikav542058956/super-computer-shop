@@ -16,15 +16,19 @@ export function MobileBottomNav() {
     return location.startsWith(path);
   };
 
+  const navigateTo = (path: string) => {
+    if (location !== path) setLocation(path);
+  };
+
   const handleAccount = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isLoggedIn) setLocation("/profile");
+    if (isLoggedIn) navigateTo("/profile");
     else openLoginDialog();
   };
 
   const tabs = [
-    { label: "Home",    icon: Home,   path: "/",        active: location === "/",      onClick: () => setLocation("/") },
-    { label: "Search",  icon: Search, path: "/search",  active: isActive("/search"),    onClick: () => setLocation("/search") },
+    { label: "Home",    icon: Home,   path: "/",        active: location === "/",      onClick: () => navigateTo("/") },
+    { label: "Search",  icon: Search, path: "/search",  active: isActive("/search"),    onClick: () => navigateTo("/search") },
     { label: "Account", icon: User,   path: "/profile", active: isActive("/profile") || isActive("/orders") || isActive("/wallet"), onClick: handleAccount },
   ];
 
@@ -66,7 +70,7 @@ export function MobileBottomNav() {
 
         {/* Cart */}
         <button
-          onClick={() => setLocation("/cart")}
+          onClick={() => navigateTo("/cart")}
           className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative ripple"
         >
           <motion.span
