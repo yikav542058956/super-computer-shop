@@ -227,8 +227,8 @@ export default function Login() {
   };
 
   return (
-    <Layout>
-      <div className="min-h-[calc(100vh-160px)] flex items-center justify-center px-4 py-10 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
+    <Layout noNav>
+      <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
         <div className="w-full max-w-md">
           <div className="text-center mb-6 md:mb-8">
             <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-primary shadow-lg shadow-primary/30 mb-4">
