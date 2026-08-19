@@ -7,7 +7,7 @@ import { formatINR } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Trash2, Plus, Minus, ArrowRight, Tag, CheckCircle,
+  Trash2, Plus, Minus, ArrowLeft, ArrowRight, Tag, CheckCircle,
   XCircle, Loader2, ShoppingCart, Package,
   Truck, Shield,
 } from "lucide-react";
@@ -77,6 +77,11 @@ export default function Cart() {
 
   const removeCoupon = () => { setApplied(null); setCouponCode(""); localStorage.removeItem("appliedCoupon"); };
 
+  const handleBack = () => {
+    if (window.history.length > 1) window.history.back();
+    else navigate("/");
+  };
+
   const handleWhatsAppOrder = () => {
     const items = cart.map(i => `• ${i.name} x${i.qty} — ${formatINR(i.price * i.qty)}`).join("\n");
     const msg = `Hi! I want to place an order:\n\n${items}\n\nTotal: ${formatINR(finalTotal)}\n\nPlease confirm my order.`;
@@ -86,8 +91,15 @@ export default function Cart() {
   /* ── Empty state ── */
   if (cart.length === 0) {
     return (
-      <Layout>
-        <div className="min-h-[70vh] flex items-center justify-center px-4 bg-gray-50">
+      <Layout noNav>
+        <div className="min-h-screen bg-gray-50">
+          <div className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-gray-200 bg-white px-4 shadow-sm">
+            <button onClick={handleBack} aria-label="Go back" className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-gray-100">
+              <ArrowLeft className="h-5 w-5 text-gray-900" />
+            </button>
+            <h1 className="text-base font-bold text-gray-900">{t("your_cart")}</h1>
+          </div>
+          <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center px-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -105,6 +117,7 @@ export default function Cart() {
               </motion.button>
             </Link>
           </motion.div>
+          </div>
         </div>
       </Layout>
     );
@@ -113,17 +126,17 @@ export default function Cart() {
   const totalQty = cart.reduce((s, i) => s + i.qty, 0);
 
   return (
-    <Layout>
+    <Layout noNav>
       <div className="bg-gray-50 min-h-screen">
-        <div className="container mx-auto px-4 py-6 pb-28 max-w-5xl">
+        <div className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-gray-200 bg-white px-4 shadow-sm">
+          <button onClick={handleBack} aria-label="Go back" className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-gray-100">
+            <ArrowLeft className="h-5 w-5 text-gray-900" />
+          </button>
+          <h1 className="text-base font-bold text-gray-900">{t("your_cart")}</h1>
+          <span className="text-sm text-slate-500">({cart.length} {t("items")})</span>
+        </div>
 
-          {/* Header */}
-          <div className="flex items-center gap-2 text-sm text-slate-500 mb-5">
-            <ShoppingCart className="h-4 w-4" />
-            <span className="text-gray-900 font-semibold">{t("your_cart")}</span>
-            <span className="text-slate-400">({cart.length} {t("items")})</span>
-          </div>
-
+        <div className="container mx-auto px-4 py-5 pb-10 max-w-5xl">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             {/* ── Left: Items ── */}
