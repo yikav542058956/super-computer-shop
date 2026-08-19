@@ -562,7 +562,7 @@ function TrustSection() {
           <h2 className="text-2xl md:text-3xl font-black text-gray-900">
             Why <span style={{ color: "#16a34a" }}>Super Computer</span>?
           </h2>
-          <p className="text-gray-500 mt-2 text-sm">Serving Kasganj Road since 5+ years</p>
+          <p className="text-gray-500 mt-2 text-sm">Serving Mirhachi, Kasganj Road, Etah and nearby areas for 5+ years</p>
         </motion.div>
         <motion.div initial="hidden" whileInView="show" variants={staggerContainer} viewport={{ once: true }}
           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -761,6 +761,7 @@ export default function Home() {
 
   return (
     <Layout>
+      <h1 className="sr-only">Super Computer Mirhachi — Laptop and Computer Shop on Kasganj Road, Etah, Uttar Pradesh</h1>
       <AnnouncementTicker items={announcements.filter(a => a.showAsTicker)} />
       <AnnouncementPopup  items={announcements.filter(a => a.showAsPopup)} />
 

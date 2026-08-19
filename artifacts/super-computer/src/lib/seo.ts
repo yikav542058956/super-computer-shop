@@ -11,12 +11,12 @@ export function useDynamicSEO() {
       if (d.metaTitle) {
         document.title = d.metaTitle;
         setMeta("og:title", d.metaTitle);
-        setMeta("twitter:title", d.metaTitle);
+        setMetaName("twitter:title", d.metaTitle);
       }
       if (d.metaDescription) {
         setMetaName("description", d.metaDescription);
         setMeta("og:description", d.metaDescription);
-        setMeta("twitter:description", d.metaDescription);
+        setMetaName("twitter:description", d.metaDescription);
       }
       if (d.metaKeywords) {
         setMetaName("keywords", d.metaKeywords);

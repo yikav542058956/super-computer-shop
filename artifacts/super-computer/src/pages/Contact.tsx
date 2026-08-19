@@ -17,8 +17,8 @@ export default function Contact() {
     <Layout>
       <div className="bg-gradient-to-br from-green-700 to-green-900 py-16 text-center">
         <div className="container mx-auto px-4">
-          <h1 className="text-4xl font-bold text-white mb-4">Contact Us</h1>
-          <p className="text-green-100/80">Have a question? We're here to help.</p>
+          <h1 className="text-4xl font-bold text-white mb-4">Contact Super Computer Mirhachi</h1>
+          <p className="text-green-100/80">Visit our laptop and computer shop on Kasganj Road, Mirhachi, Etah.</p>
         </div>
       </div>
 
@@ -30,8 +30,8 @@ export default function Contact() {
               <CardContent className="flex items-start gap-4 p-6">
                 <MapPin className="h-6 w-6 text-primary shrink-0 mt-1" />
                 <div>
-                  <h3 className="font-bold mb-1">Our HQ</h3>
-                  <p className="text-slate-500 text-sm">123 Tech Avenue, Silicon Valley<br />San Francisco, CA 94107</p>
+                  <h3 className="font-bold mb-1">Store Address</h3>
+                  <p className="text-slate-500 text-sm">Super Computer, Kasganj Road<br />Mirhachi, Distt. Etah, Uttar Pradesh</p>
                 </div>
               </CardContent>
             </Card>
@@ -40,7 +40,8 @@ export default function Contact() {
                 <Phone className="h-6 w-6 text-primary shrink-0 mt-1" />
                 <div>
                   <h3 className="font-bold mb-1">Phone</h3>
-                  <p className="text-slate-500 text-sm">+1 (800) 123-4567<br />Mon-Fri, 9am-6pm PST</p>
+                  <a href="tel:+919761809960" className="text-slate-500 text-sm hover:text-primary">+91 9761809960</a>
+                  <p className="text-slate-500 text-sm">Monday–Saturday, 10 AM–8 PM</p>
                 </div>
               </CardContent>
             </Card>
@@ -49,7 +50,7 @@ export default function Contact() {
                 <Mail className="h-6 w-6 text-primary shrink-0 mt-1" />
                 <div>
                   <h3 className="font-bold mb-1">Email</h3>
-                  <p className="text-slate-500 text-sm">support@supercomputer.com<br />sales@supercomputer.com</p>
+                  <a href="mailto:supercomputer@gmail.com" className="text-slate-500 text-sm hover:text-primary">supercomputer@gmail.com</a>
                 </div>
               </CardContent>
             </Card>
